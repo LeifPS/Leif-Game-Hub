@@ -7,7 +7,10 @@
       "url": "https://tonlinge.leifps.workers.dev",
       "repo": "LeifPS/Tonlinge",
       "farbe": "#6fa86a",
-      "kategorien": ["Abenteuer", "Sammeln"],
+      "kategorien": [
+        "Abenteuer",
+        "Sammeln"
+      ],
       "featured": true
     },
     {
@@ -17,7 +20,10 @@
       "url": "https://foil-xi.pages.dev",
       "repo": "LeifPS/foil-xi",
       "farbe": "#e0b94a",
-      "kategorien": ["Karten", "Sport"]
+      "kategorien": [
+        "Karten",
+        "Sport"
+      ]
     },
     {
       "id": "brutjagd",
@@ -25,8 +31,11 @@
       "text": "3D-Abenteuer mit Haustieren und Eiern, zusammen mit bis zu 6 Spielern pro Raum.",
       "url": "https://brutjagd.leifps.workers.dev",
       "repo": "LeifPS/brutjagd",
-      "farbe": "#8a6bc4",
-      "kategorien": ["Abenteuer", "Online"]
+      "farbe": "#7a6bd6",
+      "kategorien": [
+        "Abenteuer",
+        "Online"
+      ]
     },
     {
       "id": "fischerdock",
@@ -34,8 +43,11 @@
       "text": "Fische auf den Inseln, fahre mit Booten und finde versteckte Geheimnisse, auch zu zweit.",
       "url": "https://fisch.leifps.workers.dev",
       "repo": "LeifPS/fisch",
-      "farbe": "#4fa3d1",
-      "kategorien": ["Simulation", "Online"]
+      "farbe": "#36a3b8",
+      "kategorien": [
+        "Simulation",
+        "Online"
+      ]
     },
     {
       "id": "ballgegenball",
@@ -44,7 +56,10 @@
       "url": "https://ballvsball.leifps.workers.dev",
       "repo": "LeifPS/ballvsball",
       "farbe": "#d98a3d",
-      "kategorien": ["Sammeln", "Online"]
+      "kategorien": [
+        "Sammeln",
+        "Online"
+      ]
     },
     {
       "id": "papierhelden",
@@ -53,7 +68,10 @@
       "url": "https://papierhelden.leifps.workers.dev",
       "repo": "LeifPS/papierhelden",
       "farbe": "#c9a15a",
-      "kategorien": ["Action", "Abenteuer"]
+      "kategorien": [
+        "Action",
+        "Abenteuer"
+      ]
     },
     {
       "id": "pizzafabrik",
@@ -62,7 +80,11 @@
       "url": "https://pizzafabrik.pages.dev",
       "repo": "LeifPS/pizzafabrik",
       "farbe": "#d9654e",
-      "kategorien": ["Fabrik", "Strategie"]
+      "kategorien": [
+        "Fabrik",
+        "Strategie"
+      ],
+      "privat": true
     },
     {
       "id": "businessempire",
@@ -71,7 +93,58 @@
       "url": "https://businessempire.leifps.workers.dev",
       "repo": "LeifPS/businessempire",
       "farbe": "#7a9a54",
-      "kategorien": ["Idle", "Tycoon"]
+      "kategorien": [
+        "Idle",
+        "Tycoon"
+      ]
+    },
+    {
+      "id": "spells",
+      "name": "Spells",
+      "text": "Zeichne Formen mit Maus oder Finger, das Spiel erkennt deinen Zauber und wirkt ihn sofort im Online-Duell.",
+      "url": "https://spells.leifps.workers.dev",
+      "repo": "LeifPS/spells",
+      "farbe": "#a65bd6",
+      "kategorien": [
+        "Duell",
+        "Online"
+      ]
+    },
+    {
+      "id": "schleimmerge",
+      "name": "Schleimmerge",
+      "text": "Kaufe Schleime, verschmelze zwei gleiche zu einem besseren und schicke sie mit Waffen gegen Monster.",
+      "url": "https://schleimmerge.leifps.workers.dev",
+      "repo": "LeifPS/schleimmerge",
+      "farbe": "#86c45f",
+      "kategorien": [
+        "Merge",
+        "Idle"
+      ]
+    },
+    {
+      "id": "zahlenwerk",
+      "name": "Zahlenwerk",
+      "text": "Ein ruhiges Fabrik-Spiel mit Zahlen: abbauen, mit Maschinen rechnen, Aufträge erfüllen und erforschen.",
+      "url": "https://zahlenwerk.leifps.workers.dev",
+      "repo": "LeifPS/zahlenwerk",
+      "farbe": "#3fb6b0",
+      "kategorien": [
+        "Fabrik",
+        "Strategie"
+      ]
+    },
+    {
+      "id": "wasserschlacht",
+      "name": "Wasserschlacht",
+      "text": "Gestalte deinen eigenen Wassertropfen und kämpfe im Querformat online gegen andere.",
+      "url": "https://wasserschlacht.leifps.workers.dev",
+      "repo": "LeifPS/wasserschlacht",
+      "farbe": "#4a8fe8",
+      "kategorien": [
+        "Action",
+        "Online"
+      ]
     },
     {
       "id": "tippspiel",
@@ -80,7 +153,10 @@
       "url": "https://tippspiel.leifps.workers.dev",
       "repo": "LeifPS/tippspiel",
       "farbe": "#4aa66b",
-      "kategorien": ["Sport", "Online"]
+      "kategorien": [
+        "Sport",
+        "Online"
+      ]
     },
     {
       "id": "erntezeit",
@@ -89,7 +165,10 @@
       "url": "https://rangspiel.leifps.workers.dev",
       "repo": "LeifPS/rangspiel",
       "farbe": "#a3b84a",
-      "kategorien": ["Simulation", "Idle"]
+      "kategorien": [
+        "Simulation",
+        "Idle"
+      ]
     },
     {
       "id": "tierspiel",
@@ -98,7 +177,10 @@
       "url": "https://tierspiel.pages.dev",
       "repo": "LeifPS/tierspiel",
       "farbe": "#e08aa0",
-      "kategorien": ["Idle", "Sammeln"]
+      "kategorien": [
+        "Idle",
+        "Sammeln"
+      ]
     },
     {
       "id": "cookierng2",
@@ -107,7 +189,10 @@
       "url": "https://cookie-rng.web.app",
       "repo": "LeifPS/cookierng2",
       "farbe": "#b86a3a",
-      "kategorien": ["Glück", "Sammeln"]
+      "kategorien": [
+        "Glück",
+        "Sammeln"
+      ]
     },
     {
       "id": "cookierng",
@@ -116,7 +201,10 @@
       "url": "https://cookierng.pages.dev",
       "repo": "LeifPS/cookierng1",
       "farbe": "#c98a5a",
-      "kategorien": ["Glück", "Sammeln"]
+      "kategorien": [
+        "Glück",
+        "Sammeln"
+      ]
     },
     {
       "id": "chessrng",
@@ -125,7 +213,33 @@
       "url": "https://chessrng.web.app",
       "repo": "LeifPS/chessrng",
       "farbe": "#5b8fc9",
-      "kategorien": ["Glück", "Sammeln"]
+      "kategorien": [
+        "Glück",
+        "Sammeln"
+      ]
+    },
+    {
+      "id": "supermarkttycoon",
+      "name": "Supermarkt Tycoon",
+      "text": "Handgezeichnetes Idle-Spiel: Baue vom Kiosk zum Weltkonzern auf und verbessere jede Abteilung.",
+      "url": null,
+      "repo": "LeifPS/supermarkttycoon",
+      "farbe": "#e08a4a",
+      "kategorien": [
+        "Idle",
+        "Tycoon"
+      ]
+    },
+    {
+      "id": "idletraintycoon",
+      "name": "Idle Train Tycoon",
+      "text": "Verwalte deinen Bahnhof und lass das Geschäft laufen.",
+      "url": null,
+      "farbe": "#8a7a6a",
+      "kategorien": [
+        "Idle",
+        "Tycoon"
+      ]
     }
   ]
 }

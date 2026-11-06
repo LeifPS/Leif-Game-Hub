@@ -1,0 +1,28 @@
+{
+ "name": "Leifs Spiele",
+ "short_name": "Leifs Spiele",
+ "description": "Alle Spiele von Leif an einem Ort.",
+ "start_url": "./",
+ "display": "standalone",
+ "background_color": "#0d1016",
+ "theme_color": "#0d1016",
+ "lang": "de",
+ "icons": [
+  {
+   "src": "logo/icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "logo/icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  },
+  {
+   "src": "logo/icon-maskable-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}

@@ -1,0 +1,52 @@
+name: Update-Logs aktualisieren
+
+on:
+  schedule:
+    - cron: "17 * * * *"      # stündlich
+  workflow_dispatch:           # von Hand startbar (Actions-Tab -> "Run workflow")
+    inputs:
+      force:
+        description: "Alles neu berechnen, auch ohne neue Commits"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: changelog
+  cancel-in-progress: false
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # Bereits geladene Spiele-Repos (nur Commit-Verlauf, keine Dateien) werden zwischengespeichert,
+      # damit jede Stunde nur das Neue geholt wird.
+      - uses: actions/cache@v4
+        with:
+          path: .cache/repos
+          key: repos-${{ github.run_id }}
+          restore-keys: repos-
+
+      - name: Update-Logs berechnen
+        env:
+          GAME_REPOS_TOKEN: ${{ secrets.GAME_REPOS_TOKEN }}   # nur für private Spiel-Repos (Pizzafabrik)
+        run: |
+          python3 tools/changelog.py --freeze --cache .cache/repos ${{ inputs.force && '--force' || '' }}
+
+      - name: Änderungen speichern
+        run: |
+          git config user.name "game-hub-bot"
+          git config user.email "game-hub-bot@users.noreply.github.com"
+          git add data public/changelog public/versions.json
+          if git diff --cached --quiet; then
+            echo "Keine Änderungen."
+          else
+            git commit -m "Update-Logs aktualisiert"
+            git pull --rebase --quiet
+            git push
+          fi

@@ -1,0 +1,116 @@
+{
+ "ballgegenball": {
+  "anzahl": 178,
+  "datum": "2026-10-29T13:56:27+00:00",
+  "offiziell": false,
+  "version": "0.59.0.0"
+ },
+ "brutjagd": {
+  "anzahl": 47,
+  "datum": "2026-10-14T14:03:17+02:00",
+  "offiziell": false,
+  "version": "0.16.2.0"
+ },
+ "businessempire": {
+  "anzahl": 3,
+  "datum": "2026-10-24T20:52:42+02:00",
+  "offiziell": false,
+  "version": "0.1.2.0"
+ },
+ "chessrng": {
+  "anzahl": 6,
+  "datum": "2026-09-27T11:38:52+02:00",
+  "offiziell": false,
+  "version": "0.1.3.0"
+ },
+ "cookierng": {
+  "anzahl": 2,
+  "datum": "2026-09-27T12:17:51+02:00",
+  "offiziell": false,
+  "version": "0.1.0.1"
+ },
+ "cookierng2": {
+  "anzahl": 2,
+  "datum": "2026-09-27T12:17:53+02:00",
+  "offiziell": false,
+  "version": "0.1.0.1"
+ },
+ "erntezeit": {
+  "anzahl": 70,
+  "datum": "2026-09-27T12:17:48+02:00",
+  "offiziell": false,
+  "version": "0.30.1.1"
+ },
+ "fischerdock": {
+  "anzahl": 9,
+  "datum": "2026-09-30T19:03:41+02:00",
+  "offiziell": false,
+  "version": "0.6.0.2"
+ },
+ "foilxi": {
+  "anzahl": 875,
+  "datum": "2026-10-22T17:54:30+02:00",
+  "offiziell": false,
+  "version": "0.95.1.0"
+ },
+ "papierhelden": {
+  "anzahl": 9,
+  "datum": "2026-10-24T12:02:06+02:00",
+  "offiziell": false,
+  "version": "0.6.1.0"
+ },
+ "pizzafabrik": {
+  "anzahl": 83,
+  "datum": "2026-11-03T18:21:19+01:00",
+  "offiziell": false,
+  "version": "0.21.3.2"
+ },
+ "schleimmerge": {
+  "anzahl": 18,
+  "datum": "2026-11-02T15:06:59+01:00",
+  "offiziell": false,
+  "version": "0.5.5.0"
+ },
+ "spells": {
+  "anzahl": 19,
+  "datum": "2026-11-05T17:39:21+01:00",
+  "offiziell": false,
+  "version": "0.9.3.1"
+ },
+ "supermarkttycoon": {
+  "anzahl": 5,
+  "datum": "2026-10-27T14:45:19+01:00",
+  "offiziell": false,
+  "version": "0.5.0.0"
+ },
+ "tierspiel": {
+  "anzahl": 145,
+  "datum": "2026-09-27T12:17:46+02:00",
+  "offiziell": false,
+  "version": "0.19.1.1"
+ },
+ "tippspiel": {
+  "anzahl": 13,
+  "datum": "2026-11-06T15:05:06+01:00",
+  "offiziell": false,
+  "version": "0.3.7.0"
+ },
+ "tonlinge": {
+  "anzahl": 282,
+  "datum": "2026-10-28T16:15:39+00:00",
+  "offiziell": false,
+  "version": "0.60.0.0"
+ },
+ "wasserschlacht": {
+  "anzahl": 12,
+  "datum": "2026-10-28T15:20:31+01:00",
+  "offiziell": false,
+  "version": "0.8.0.0"
+ },
+ "zahlenwerk": {
+  "anzahl": 4,
+  "datum": "2026-11-03T18:52:13+01:00",
+  "offiziell": false,
+  "version": "0.2.1.0"
+ }
+}

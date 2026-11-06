@@ -8,6 +8,10 @@
   var aktuell = null;
   var hinweisTimer = null;
   var artZaehler = 0;
+  var versionen = {};
+  var logCache = {};
+  var LOG_SEITE = 30;
+  var ARTEN = { start: 'Start', major: 'Major', minor: 'Minor', patch: 'Patch', build: 'Build' };
 
   var body = document.body;
   var inhalt = document.getElementById('inhalt');
@@ -32,6 +36,11 @@
     return h;
   }
   function hsl(h, s, l, a) { h = ((h % 360) + 360) % 360; return a == null ? 'hsl(' + h.toFixed(0) + ',' + s + '%,' + l + '%)' : 'hsla(' + h.toFixed(0) + ',' + s + '%,' + l + '%,' + a + ')'; }
+  var datumFmt = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Berlin' });
+  var tagFmt = new Intl.DateTimeFormat('de-DE', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Europe/Berlin' });
+  function tagKey(iso) { return tagFmt.format(new Date(iso)); }
+  function datumText(iso) { return datumFmt.format(new Date(iso)); }
+  function ver(sp) { return versionen[sp.id] || null; }
   function kategorien(sp) { return sp.kategorien || []; }
   function spielbar() { return spiele.filter(function (s) { return s.url; }); }
   function sortiert() { return spielbar().concat(spiele.filter(function (s) { return !s.url; })); }
@@ -80,6 +89,7 @@
     s += art(sp, 300, 400) + '<div class="scrim"></div>';
     s += '<div class="tile-title"><strong>' + esc(sp.name) + '</strong><span>' + esc(kategorien(sp).join(' · ')) + '</span></div>';
     if (!offen) s += '<span class="badge">Bald</span>';
+    else if (ver(sp)) s += '<span class="ver-tag">' + (ver(sp).offiziell ? '' : 'Beta ') + 'v' + esc(ver(sp).version) + '</span>';
     s += offen ? '</a>' : '</div>';
     if (offen) s += '<a class="play" href="#spiel/' + id + '/play" aria-label="' + esc(sp.name) + ' spielen">' + playIcon() + '</a>';
     return s + '</article>';
@@ -133,13 +143,44 @@
     var id = encodeURIComponent(sp.id);
     var h = '<div class="detail-banner">' + art(sp, 1400, 420) + '<a class="zurueck-link" href="#"><svg aria-hidden="true"><use href="#i-back"/></svg>Alle Spiele</a></div>';
     h += '<div class="detail-wrap"><div class="detail-kopf"><div class="detail-cover">' + art(sp, 300, 400) + '</div><div class="detail-info">';
+    var v = ver(sp);
     h += '<h1>' + esc(sp.name) + '</h1>' + pills(sp);
+    if (v) h += '<div class="ver-zeile"><span class="ver-pill' + (v.offiziell ? ' offiziell' : '') + '">' + (v.offiziell ? 'Offiziell' : 'Beta') + '</span><span class="ver-nr">Version ' + esc(v.version) + '</span><span class="ver-datum">zuletzt aktualisiert am ' + esc(datumText(v.datum)) + '</span></div>';
     h += '<div class="btn-row"><a class="btn btn-primary" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a>';
     h += '<a class="btn btn-ghost" href="' + esc(sp.url) + '" target="_blank" rel="noopener">In neuem Tab öffnen</a></div></div></div>';
     h += '<div class="detail-text"><h2>Über das Spiel</h2><p>' + esc(sp.beschreibung || sp.text) + '</p></div>';
+    h += '<section class="log" id="log"><h2>Update-Log</h2><div class="log-liste" id="log-liste"><div class="log-leer">Lädt …</div></div></section>';
     var mehr = spielbar().filter(function (s) { return s.id !== sp.id; }).slice(0, 6);
     if (mehr.length) h += '<section class="mehr"><h2>Weitere Spiele</h2><div class="grid">' + mehr.map(tile).join('') + '</div></section>';
     inhalt.innerHTML = h + '</div>';
+    ladeLog(sp);
+  }
+
+  /* ---------- Update-Log ---------- */
+  function ladeLog(sp) {
+    var ziel = document.getElementById('log-liste');
+    if (!ver(sp)) { ziel.innerHTML = '<div class="log-leer">Für dieses Spiel gibt es noch keinen Update-Log.</div>'; return; }
+    var fertig = function (d) { if (aktuell === null && document.getElementById('log-liste') === ziel) zeigeLog(sp, ziel, d.eintraege || [], LOG_SEITE); };
+    if (logCache[sp.id]) return fertig(logCache[sp.id]);
+    fetch('changelog/' + encodeURIComponent(sp.id) + '.json')
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (d) { logCache[sp.id] = d; fertig(d); })
+      .catch(function () { ziel.innerHTML = '<div class="log-leer">Der Update-Log konnte nicht geladen werden.</div>'; });
+  }
+  function zeigeLog(sp, ziel, liste, anzahl) {
+    var sicht = liste.slice(0, anzahl), h = '', tag = null;
+    sicht.forEach(function (e) {
+      var k = tagKey(e.datum);
+      if (k !== tag) { tag = k; h += '<div class="log-tag">' + esc(datumText(e.datum)) + '</div>'; }
+      var art = ARTEN[e.art] ? e.art : 'build';
+      h += '<div class="log-eintrag"><span class="log-v">' + esc(e.v) + '</span><span class="log-art ' + art + '">' + ARTEN[art] + '</span><span class="log-text">' + esc(e.text) + '</span>';
+      if (!sp.privat && sp.repo && e.sha) h += '<a class="log-sha" href="https://github.com/' + esc(sp.repo) + '/commit/' + esc(e.sha) + '" target="_blank" rel="noopener" aria-label="Commit ansehen">' + esc(e.sha.slice(0, 7)) + '</a>';
+      h += '</div>';
+    });
+    if (liste.length > anzahl) h += '<button type="button" class="btn btn-ghost log-mehr" data-mehr="' + (anzahl + LOG_SEITE) + '">Mehr laden (' + (liste.length - anzahl) + ' weitere)</button>';
+    ziel.innerHTML = h;
+    var b = ziel.querySelector('.log-mehr');
+    if (b) b.addEventListener('click', function () { zeigeLog(sp, ziel, liste, parseInt(b.getAttribute('data-mehr'), 10)); });
   }
 
   /* ---------- Spieleansicht ---------- */
@@ -225,8 +266,8 @@
     else (buehne.requestFullscreen || buehne.webkitRequestFullscreen).call(buehne);
   });
 
-  fetch('games.json', { cache: 'no-cache' })
-    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-    .then(function (d) { spiele = d.games || []; route(); })
+  function json(url) { return fetch(url, { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); }
+  Promise.all([json('games.json'), json('versions.json').catch(function () { return {}; })])
+    .then(function (d) { spiele = d[0].games || []; versionen = d[1] || {}; route(); })
     .catch(function () { inhalt.innerHTML = '<div class="leer" style="padding:80px 28px">Die Spieleliste konnte nicht geladen werden.</div>'; });
 })();
