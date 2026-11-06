@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3ead6">
+<title>Leifs Spiele</title>
+<meta name="description" content="Alle Spiele von Leif an einem Ort.">
+<link rel="icon" href="data:,">
+<style>
+  :root {
+    --papier: #f3ead6;
+    --papier-dunkel: #e8dcc0;
+    --tinte: #3a2f25;
+    --tinte-hell: #7a6a58;
+    --schrift: 'Patrick Hand', 'Caveat Brush', 'Bradley Hand', 'Segoe Print', 'Comic Sans MS', 'Marker Felt', cursive;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--papier);
+    background-image:
+      radial-gradient(circle at 20% 15%, rgba(255,255,255,.55), transparent 45%),
+      radial-gradient(circle at 85% 80%, rgba(190,160,110,.18), transparent 50%);
+    color: var(--tinte);
+    font-family: var(--schrift);
+    font-size: 18px;
+    line-height: 1.3;
+  }
+  button { font: inherit; color: inherit; }
+
+  /* ---------- Startseite ---------- */
+  #start { min-height: 100%; padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 40px max(16px, env(safe-area-inset-left)); }
+  .kopf { max-width: 1100px; margin: 0 auto; padding: 18px 4px 6px; }
+  .kopf h1 { margin: 0; font-size: clamp(38px, 7vw, 64px); font-weight: 400; letter-spacing: .5px; transform: rotate(-1.2deg); display: inline-block; }
+  .kopf h1 svg { display: block; width: 100%; height: 14px; margin-top: -2px; }
+  .kopf p { margin: 10px 0 0; color: var(--tinte-hell); font-size: 20px; }
+  .gitter { max-width: 1100px; margin: 22px auto 0; display: grid; gap: 22px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+
+  .karte {
+    position: relative; display: block; text-align: left; cursor: pointer; border: 0; padding: 12px 12px 14px;
+    background: transparent; text-decoration: none; color: inherit;
+    transition: transform .15s ease;
+  }
+  .karte::before {
+    content: ''; position: absolute; inset: 0; z-index: 0;
+    background: #fbf6e8; border: 3px solid var(--tinte); border-radius: 14px 18px 12px 20px / 18px 12px 20px 14px;
+    box-shadow: 5px 6px 0 rgba(58,47,37,.18);
+    filter: url(#rau);
+  }
+  .karte > * { position: relative; z-index: 1; }
+  .karte:nth-child(3n+1) { transform: rotate(-.8deg); }
+  .karte:nth-child(3n+2) { transform: rotate(.6deg); }
+  .karte:nth-child(3n) { transform: rotate(-.3deg); }
+  .karte:hover, .karte:focus-visible { transform: rotate(0deg) translateY(-4px) scale(1.015); outline: none; }
+  .karte:focus-visible::before { border-color: #c2553a; }
+  .karte .bild { display: block; width: 100%; height: auto; border-radius: 10px; filter: url(#rau); }
+  .karte h2 { margin: 10px 2px 2px; font-size: 26px; font-weight: 400; line-height: 1.1; }
+  .karte p { margin: 0 2px; color: var(--tinte-hell); font-size: 17px; }
+  .karte.bald { cursor: default; opacity: .62; }
+  .karte.bald:hover { transform: none; }
+  .marke { position: absolute; top: 18px; right: 14px; z-index: 2; background: #fbf6e8; border: 2.5px solid var(--tinte); border-radius: 12px 8px 14px 9px; padding: 1px 10px 2px; font-size: 17px; transform: rotate(4deg); }
+  .fuss { max-width: 1100px; margin: 40px auto 0; padding: 0 4px; color: var(--tinte-hell); font-size: 16px; }
+
+  /* ---------- Spieleansicht ---------- */
+  #spiel { display: none; position: fixed; inset: 0; background: #1d1913; flex-direction: column; }
+  body.im-spiel #spiel { display: flex; }
+  body.im-spiel #start { display: none; }
+  .leiste {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 10px;
+    padding: max(6px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 6px max(10px, env(safe-area-inset-left));
+    background: var(--papier); border-bottom: 3px solid var(--tinte);
+  }
+  .leiste .titel { flex: 1; min-width: 0; font-size: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .knopf {
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+    background: #fbf6e8; border: 2.5px solid var(--tinte); border-radius: 12px 9px 13px 10px / 10px 13px 9px 12px;
+    padding: 4px 12px 5px; font-size: 18px; min-height: 40px; text-decoration: none; color: var(--tinte);
+    box-shadow: 2px 3px 0 rgba(58,47,37,.2);
+  }
+  .knopf:active { transform: translate(1px, 2px); box-shadow: 1px 1px 0 rgba(58,47,37,.2); }
+  .knopf svg { width: 20px; height: 20px; flex: none; }
+  .rahmen { position: relative; flex: 1 1 auto; min-height: 0; }
+  .rahmen iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff; }
+  .hinweis {
+    position: absolute; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+    background: #fbf6e8; border: 2.5px solid var(--tinte); border-radius: 14px 10px 15px 11px; padding: 6px 14px 8px;
+    font-size: 17px; max-width: calc(100% - 24px); text-align: center; display: none; z-index: 3;
+  }
+  .hinweis.sichtbar { display: block; }
+  .hinweis a { color: #b2452d; }
+  @media (max-width: 520px) { .knopf .text { display: none; } .knopf { padding: 4px 10px 5px; } }
+  @media (prefers-reduced-motion: reduce) { .karte { transition: none; } }
+</style>
+</head>
+<body>
+
+<!-- Filter für den leicht wackeligen, gezeichneten Strich -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <filter id="rau" x="-3%" y="-3%" width="106%" height="106%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="7" result="r"/>
+    <feDisplacementMap in="SourceGraphic" in2="r" scale="3.5" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<main id="start">
+  <header class="kopf">
+    <h1>Leifs Spiele
+      <svg viewBox="0 0 300 14" preserveAspectRatio="none" aria-hidden="true"><path d="M3 8 C 40 2, 70 12, 110 7 S 190 3, 230 8 S 280 10, 297 5" fill="none" stroke="#c2553a" stroke-width="4" stroke-linecap="round"/></svg>
+    </h1>
+    <p>Alle meine Spiele an einem Ort.</p>
+  </header>
+  <section class="gitter" id="gitter" aria-label="Spiele"></section>
+  <div class="fuss" id="fuss"></div>
+</main>
+
+<div id="spiel" role="dialog" aria-label="Spiel">
+  <div class="leiste">
+    <button class="knopf" id="zurueck" type="button" aria-label="Zurück zur Übersicht">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4 L7 12 L15 20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="text">Zurück</span>
+    </button>
+    <div class="titel" id="spieltitel"></div>
+    <button class="knopf" id="neuladen" type="button" aria-label="Spiel neu laden">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12 A7 7 0 1 1 15.5 6 M19 4 L19 9 L14 9" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="text">Neu laden</span>
+    </button>
+    <a class="knopf" id="extern" target="_blank" rel="noopener" aria-label="In neuem Tab öffnen">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5 H5 V19 H19 V14 M13 4 H20 V11 M20 4 L10 14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="text">Neuer Tab</span>
+    </a>
+  </div>
+  <div class="rahmen">
+    <iframe id="rahmen" title="Spiel" allow="fullscreen; autoplay; clipboard-write; gamepad; accelerometer; gyroscope"
+      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-pointer-lock allow-modals allow-downloads allow-orientation-lock"></iframe>
+    <div class="hinweis" id="hinweis">Lädt nicht? <a id="hinweis-link" target="_blank" rel="noopener">Spiel in neuem Tab öffnen</a></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var spiele = [];
+  var gitter = document.getElementById('gitter');
+  var rahmen = document.getElementById('rahmen');
+  var hinweisTimer = null;
+  var aktuell = null;
+
+  // ---- kleine, immer gleiche Zufallszahlen pro Spiel (damit jedes Titelbild eigen aussieht) ----
+  function hash(s) { var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  function zufall(seed) { var a = seed; return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+  function klecks(r, cx, cy, rad, punkte) {
+    var pts = [];
+    for (var i = 0; i < punkte; i++) {
+      var w = (i / punkte) * Math.PI * 2, rr = rad * (0.78 + r() * 0.4);
+      pts.push([cx + Math.cos(w) * rr * 1.25, cy + Math.sin(w) * rr]);
+    }
+    var d = 'M' + mid(pts[punkte - 1], pts[0]).join(' ');
+    for (var j = 0; j < punkte; j++) {
+      var n = pts[(j + 1) % punkte], m = mid(pts[j], n);
+      d += ' Q' + pts[j][0].toFixed(1) + ' ' + pts[j][1].toFixed(1) + ' ' + m[0].toFixed(1) + ' ' + m[1].toFixed(1);
+    }
+    return d + 'Z';
+  }
+  function mid(a, b) { return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; }
+
+  function titelbild(spiel) {
+    var r = zufall(hash(spiel.id));
+    var f = spiel.farbe || '#999';
+    var hell = f + '55';
+    var s = '<svg class="bild" viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">';
+    s += '<rect width="240" height="150" fill="' + hell + '"/>';
+    // Schraffur
+    for (var i = -2; i < 14; i++) {
+      var x = i * 22 + r() * 6;
+      s += '<path d="M' + x + ' 160 L' + (x + 70) + ' -10" stroke="' + f + '" stroke-opacity=".28" stroke-width="3" stroke-linecap="round"/>';
+    }
+    // Hauptklecks mit versetzter Kontur
+    var cx = 90 + r() * 60, cy = 70 + r() * 15, rad = 40 + r() * 10;
+    var k = klecks(r, cx, cy, rad, 9);
+    s += '<path d="' + k + '" fill="' + f + '" stroke="#3a2f25" stroke-width="4" stroke-linejoin="round"/>';
+    s += '<path d="' + klecks(r, cx + 4, cy + 3, rad + 5, 9) + '" fill="none" stroke="#3a2f25" stroke-width="2" stroke-opacity=".55" stroke-dasharray="7 6" stroke-linecap="round"/>';
+    // kleine Kringel
+    for (var j = 0; j < 4; j++) {
+      var kx = 20 + r() * 200, ky = 15 + r() * 120;
+      if (Math.abs(kx - cx) < rad * 1.4 && Math.abs(ky - cy) < rad * 1.2) continue;
+      s += '<circle cx="' + kx.toFixed(1) + '" cy="' + ky.toFixed(1) + '" r="' + (4 + r() * 6).toFixed(1) + '" fill="none" stroke="#3a2f25" stroke-width="3" stroke-opacity=".7"/>';
+    }
+    // Anfangsbuchstabe
+    var buchstabe = spiel.name.charAt(0).toUpperCase();
+    s += '<text x="' + cx.toFixed(1) + '" y="' + (cy + 22).toFixed(1) + '" text-anchor="middle" font-family="Patrick Hand, Bradley Hand, Segoe Print, Comic Sans MS, cursive" font-size="64" fill="#fbf6e8" stroke="#3a2f25" stroke-width="3.5" paint-order="stroke">' + buchstabe + '</text>';
+    s += '<rect x="1.5" y="1.5" width="237" height="147" fill="none" stroke="#3a2f25" stroke-width="3" rx="6"/>';
+    return s + '</svg>';
+  }
+
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
+
+  function zeichneStart() {
+    gitter.textContent = '';
+    spiele.forEach(function (sp) {
+      var offen = !!sp.url;
+      var k = offen ? el('a', 'karte') : el('div', 'karte bald');
+      if (offen) k.href = '#spiel/' + encodeURIComponent(sp.id);
+      k.insertAdjacentHTML('beforeend', titelbild(sp));
+      k.appendChild(el('h2', null, sp.name));
+      k.appendChild(el('p', null, sp.text || ''));
+      if (!offen) k.appendChild(el('span', 'marke', 'Bald'));
+      gitter.appendChild(k);
+    });
+    var n = spiele.filter(function (s) { return s.url; }).length;
+    document.getElementById('fuss').textContent = n + (n === 1 ? ' Spiel' : ' Spiele') + ' spielbar';
+  }
+
+  // ---- Spieleansicht ----
+  function oeffne(sp) {
+    document.getElementById('spieltitel').textContent = sp.name;
+    document.title = sp.name + ' – Leifs Spiele';
+    var ext = document.getElementById('extern'); ext.href = sp.url;
+    document.getElementById('hinweis-link').href = sp.url;
+    var h = document.getElementById('hinweis'); h.classList.remove('sichtbar');
+    clearTimeout(hinweisTimer);
+    hinweisTimer = setTimeout(function () { h.classList.add('sichtbar'); }, 7000);
+    neuerRahmen(sp.url, function () { clearTimeout(hinweisTimer); h.classList.remove('sichtbar'); });
+    aktuell = sp;
+    document.body.classList.add('im-spiel');
+  }
+  function schliesse() {
+    clearTimeout(hinweisTimer);
+    neuerRahmen(null);
+    aktuell = null;
+    document.body.classList.remove('im-spiel');
+    document.title = 'Leifs Spiele';
+  }
+  // Der iframe wird jedes Mal komplett ersetzt, damit er keine eigenen Einträge im Browser-Verlauf anlegt.
+  function neuerRahmen(url, beiLaden) {
+    var n = rahmen.cloneNode(false);
+    n.removeAttribute('src');
+    if (beiLaden) n.addEventListener('load', beiLaden);
+    if (url) n.src = url;
+    rahmen.parentNode.replaceChild(n, rahmen);
+    rahmen = n;
+  }
+
+  function route() {
+    var m = /^#spiel\/(.+)$/.exec(location.hash);
+    if (m) {
+      var id = decodeURIComponent(m[1]);
+      var sp = spiele.filter(function (s) { return s.id === id && s.url; })[0];
+      if (sp) { oeffne(sp); return; }
+      location.replace('#');
+    }
+    schliesse();
+  }
+
+  // "Zurück" führt immer zur Übersicht (auch wenn das Spiel in sich selbst navigiert hat).
+  document.getElementById('zurueck').addEventListener('click', function () { location.replace('#'); route(); });
+  document.getElementById('neuladen').addEventListener('click', function () {
+    if (aktuell) neuerRahmen(aktuell.url);
+  });
+  window.addEventListener('hashchange', route);
+
+  fetch('games.json', { cache: 'no-cache' })
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (d) { spiele = d.games || []; zeichneStart(); route(); })
+    .catch(function () { gitter.textContent = 'Die Spieleliste konnte nicht geladen werden.'; });
+})();
+</script>
+</body>
+</html>

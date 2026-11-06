@@ -1,0 +1,7 @@
+{
+  "name": "leif-game-hub",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./public"
+  }
+}
