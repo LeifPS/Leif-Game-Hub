@@ -325,6 +325,27 @@
     rahmen.parentNode.replaceChild(n, rahmen);
     rahmen = n;
   }
+  /* Spielstand im Hub: Spiele laufen hier eingebettet, und manche Browser (vor allem die installierte App auf dem iPhone) behalten den Speicher
+     eingebetteter Seiten nicht. Deshalb schickt das Spiel jede Änderung per postMessage an den Hub, der sie im eigenen Speicher ablegt
+     und beim nächsten Start über #lgh=<Base64url(JSON)> an die Spieladresse zurückgibt. */
+  var STAND = 'lgh.stand.';
+  function bytesZuB64(u8) { var s = ''; for (var i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+  function standHash(id) {
+    try {
+      var j = localStorage.getItem(STAND + id);
+      if (!j) return '';
+      var h = bytesZuB64(new TextEncoder().encode(j));
+      return h.length < 1500000 ? '#lgh=' + h : '';
+    } catch (e) { return ''; }
+  }
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!aktuell || !d || d.lgh !== 'stand' || d.spiel !== aktuell.id || !d.d || typeof d.d !== 'object') return;
+    try { if (e.origin !== new URL(aktuell.url).origin) return; } catch (x) { return; }
+    if (!rahmen.contentWindow || e.source !== rahmen.contentWindow) return;
+    if (!Object.keys(d.d).length) return;
+    try { localStorage.setItem(STAND + aktuell.id, JSON.stringify({ t: d.t || Date.now(), d: d.d })); } catch (x) { }
+  });
   function starteSpiel(sp) {
     aktuell = sp;
     document.getElementById('spieltitel').textContent = sp.name;
@@ -333,7 +354,7 @@
     hinweis.classList.remove('sichtbar');
     clearTimeout(hinweisTimer);
     hinweisTimer = setTimeout(function () { hinweis.classList.add('sichtbar'); }, 7000);
-    neuerRahmen(sp.url, function () { clearTimeout(hinweisTimer); hinweis.classList.remove('sichtbar'); });
+    neuerRahmen(sp.url + standHash(sp.id), function () { clearTimeout(hinweisTimer); hinweis.classList.remove('sichtbar'); });
   }
   function stoppeSpiel() {
     clearTimeout(hinweisTimer);

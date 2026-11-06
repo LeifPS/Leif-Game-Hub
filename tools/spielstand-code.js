@@ -72,8 +72,29 @@
   function einspielen(o) {
     // Das Spiel speichert ggf. beim Verlassen noch einmal. Das würde den neuen Stand überschreiben, deshalb Schreiben bis zum Neuladen sperren.
     for (var k in o.d) if (Object.prototype.hasOwnProperty.call(o.d, k)) setItem.call(ls, k, String(o.d[k]));
+    if (window.parent !== window) { try { window.parent.postMessage({ lgh: 'stand', spiel: SPIEL, t: Date.now(), d: dump() }, '*'); } catch (e) { } }
+    if (window.__lghMeldenAus) window.__lghMeldenAus();
     Storage.prototype.setItem = function () { };
     location.reload();
+  }
+
+  /* Eingebettet im Spiele-Hub: Änderungen am Speicher an den Hub melden, der sie dauerhaft aufbewahrt (siehe Vorlade-Skript). */
+  if (window.parent !== window) {
+    var timer = 0, sperre = false;
+    var melden = function () {
+      clearTimeout(timer); timer = 0;
+      if (sperre) return;
+      try { var d = dump(); if (Object.keys(d).length) window.parent.postMessage({ lgh: 'stand', spiel: SPIEL, t: Date.now(), d: d }, '*'); } catch (e) { }
+    };
+    var plan = function () { if (!timer) timer = setTimeout(melden, 800); };
+    var rem = Storage.prototype.removeItem, clr = Storage.prototype.clear;
+    Storage.prototype.setItem = function () { var r = setItem.apply(this, arguments); if (this === ls) plan(); return r; };
+    Storage.prototype.removeItem = function () { var r = rem.apply(this, arguments); if (this === ls) plan(); return r; };
+    Storage.prototype.clear = function () { var r = clr.apply(this, arguments); if (this === ls) plan(); return r; };
+    window.addEventListener('pagehide', melden);
+    document.addEventListener('visibilitychange', function () { if (document.hidden) melden(); });
+    setTimeout(melden, 1500);
+    window.__lghMeldenAus = function () { sperre = true; };
   }
 
   var css = document.createElement('style');
