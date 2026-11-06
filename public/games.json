@@ -11,7 +11,9 @@
         "Abenteuer",
         "Sammeln"
       ],
-      "featured": true
+      "featured": true,
+      "bild": "screens/tonlinge.webp",
+      "banner": "screens/tonlinge-wide.webp"
     },
     {
       "id": "foilxi",
@@ -24,7 +26,9 @@
         "Karten",
         "Sport"
       ],
-      "offiziell_ab": "2026-08-01"
+      "offiziell_ab": "2026-08-01",
+      "bild": "screens/foilxi.webp",
+      "banner": "screens/foilxi-wide.webp"
     },
     {
       "id": "brutjagd",
@@ -36,7 +40,9 @@
       "kategorien": [
         "Abenteuer",
         "Online"
-      ]
+      ],
+      "bild": "screens/brutjagd.webp",
+      "banner": "screens/brutjagd-wide.webp"
     },
     {
       "id": "fischerdock",
@@ -48,7 +54,9 @@
       "kategorien": [
         "Simulation",
         "Online"
-      ]
+      ],
+      "bild": "screens/fischerdock.webp",
+      "banner": "screens/fischerdock-wide.webp"
     },
     {
       "id": "ballgegenball",
@@ -60,7 +68,9 @@
       "kategorien": [
         "Sammeln",
         "Online"
-      ]
+      ],
+      "bild": "screens/ballgegenball.webp",
+      "banner": "screens/ballgegenball-wide.webp"
     },
     {
       "id": "papierhelden",
@@ -72,7 +82,9 @@
       "kategorien": [
         "Action",
         "Abenteuer"
-      ]
+      ],
+      "bild": "screens/papierhelden.webp",
+      "banner": "screens/papierhelden-wide.webp"
     },
     {
       "id": "pizzafabrik",
@@ -85,7 +97,9 @@
         "Fabrik",
         "Strategie"
       ],
-      "privat": true
+      "privat": true,
+      "bild": "screens/pizzafabrik.webp",
+      "banner": "screens/pizzafabrik-wide.webp"
     },
     {
       "id": "businessempire",
@@ -97,7 +111,9 @@
       "kategorien": [
         "Idle",
         "Tycoon"
-      ]
+      ],
+      "bild": "screens/businessempire.webp",
+      "banner": "screens/businessempire-wide.webp"
     },
     {
       "id": "spells",
@@ -109,7 +125,9 @@
       "kategorien": [
         "Duell",
         "Online"
-      ]
+      ],
+      "bild": "screens/spells.webp",
+      "banner": "screens/spells-wide.webp"
     },
     {
       "id": "schleimmerge",
@@ -121,7 +139,9 @@
       "kategorien": [
         "Merge",
         "Idle"
-      ]
+      ],
+      "bild": "screens/schleimmerge.webp",
+      "banner": "screens/schleimmerge-wide.webp"
     },
     {
       "id": "zahlenwerk",
@@ -133,7 +153,9 @@
       "kategorien": [
         "Fabrik",
         "Strategie"
-      ]
+      ],
+      "bild": "screens/zahlenwerk.webp",
+      "banner": "screens/zahlenwerk-wide.webp"
     },
     {
       "id": "wasserschlacht",
@@ -145,7 +167,9 @@
       "kategorien": [
         "Action",
         "Online"
-      ]
+      ],
+      "bild": "screens/wasserschlacht.webp",
+      "banner": "screens/wasserschlacht-wide.webp"
     },
     {
       "id": "tippspiel",
@@ -157,7 +181,9 @@
       "kategorien": [
         "Sport",
         "Online"
-      ]
+      ],
+      "bild": "screens/tippspiel.webp",
+      "banner": "screens/tippspiel-wide.webp"
     },
     {
       "id": "erntezeit",
@@ -169,7 +195,9 @@
       "kategorien": [
         "Simulation",
         "Idle"
-      ]
+      ],
+      "bild": "screens/erntezeit.webp",
+      "banner": "screens/erntezeit-wide.webp"
     },
     {
       "id": "tierspiel",
@@ -181,7 +209,9 @@
       "kategorien": [
         "Idle",
         "Sammeln"
-      ]
+      ],
+      "bild": "screens/tierspiel.webp",
+      "banner": "screens/tierspiel-wide.webp"
     },
     {
       "id": "cookierng2",
@@ -193,7 +223,9 @@
       "kategorien": [
         "Glück",
         "Sammeln"
-      ]
+      ],
+      "bild": "screens/cookierng2.webp",
+      "banner": "screens/cookierng2-wide.webp"
     },
     {
       "id": "cookierng",
@@ -206,7 +238,9 @@
         "Glück",
         "Sammeln"
       ],
-      "offiziell_ab": "2026-09-27"
+      "offiziell_ab": "2026-09-27",
+      "bild": "screens/cookierng.webp",
+      "banner": "screens/cookierng-wide.webp"
     },
     {
       "id": "chessrng",
@@ -218,7 +252,9 @@
       "kategorien": [
         "Glück",
         "Sammeln"
-      ]
+      ],
+      "bild": "screens/chessrng.webp",
+      "banner": "screens/chessrng-wide.webp"
     },
     {
       "id": "supermarkttycoon",

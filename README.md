@@ -29,7 +29,8 @@ Pflicht sind `id` (kurz, klein, ohne Leerzeichen), `name`, `text`, `url` und `fa
 | `kategorien` | Filter-Chips und Suche |
 | `featured: true` | Spiel steht groß oben auf der Startseite |
 | `beschreibung` | Längerer Text auf der Spielseite (sonst `text`) |
-| `bild` | Eigenes Titelbild (Pfad oder URL, Hochformat 3:4 ideal); ohne Angabe zeichnet der Hub automatisch ein Platzhalterbild aus `farbe` |
+| `bild` | Titelbild für Kacheln (Hochformat 3:4, z. B. `screens/meinspiel.webp`); ohne Angabe zeichnet der Hub automatisch ein Platzhalterbild aus `farbe` |
+| `banner` | Breites Bild (16:9) für Empfehlung und Kopfbild der Spielseite; ohne Angabe wird `bild` zugeschnitten |
 
 ## Versionen und Update-Log
 

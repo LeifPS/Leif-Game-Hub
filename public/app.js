@@ -47,7 +47,8 @@
 
   /* ---------- Automatisch gezeichnete Titelbilder (Platzhalter, bis es echte Bilder gibt: Feld "bild" in games.json) ---------- */
   function art(sp, W, H) {
-    if (sp.bild) return '<img class="art" src="' + esc(sp.bild) + '" alt="" loading="lazy" decoding="async">';
+    var bild = (W / H > 1.6 && sp.banner) ? sp.banner : sp.bild;
+    if (bild) return '<img class="art" src="' + esc(bild) + '" alt="" loading="lazy" decoding="async">';
     var uid = 'g' + (artZaehler++);
     var seed = hash(sp.id), r = rng(seed);
     var h = hexToHue(sp.farbe), S = Math.min(W, H), M = Math.max(W, H);
