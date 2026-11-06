@@ -5,7 +5,7 @@
    Das Spiel kann eigene Schalter ergänzen: window.LGH_ZEILEN = function () { return [{ text: 'Ton', an: true, setze: function (v) { } }]; }
    Format: LGH1.<spiel>.<z|p>.<prüfsumme>.<daten>   (z = komprimiert, p = unkomprimiert, Daten = Base64url von {Schlüssel: Wert}) */
 (function () {
-  var SPIEL = 'schleimmerge';
+  var SPIEL = window.LGH_SPIEL || 'spiel';
   if (window.__lghSpielstandCode) return;
   window.__lghSpielstandCode = true;
 
@@ -109,9 +109,14 @@
     });
   }
 
+  // Lage des Zahnrads: window.LGH_POS = 'bc' (unten Mitte, Standard), 'br', 'bl', 'tr', 'tl', 'mr' (rechts Mitte), 'ml'
+  var P = window.LGH_POS || 'bc', S6 = '6px', SAFE_B = 'calc(6px + env(safe-area-inset-bottom,0px))', SAFE_T = 'calc(6px + env(safe-area-inset-top,0px))';
+  var POS = { bc: 'left:50%;transform:translateX(-50%);bottom:' + SAFE_B + ';', br: 'right:' + S6 + ';bottom:' + SAFE_B + ';', bl: 'left:' + S6 + ';bottom:' + SAFE_B + ';',
+    tr: 'right:' + S6 + ';top:' + SAFE_T + ';', tl: 'left:' + S6 + ';top:' + SAFE_T + ';', mr: 'right:' + S6 + ';top:50%;margin-top:-17px;', ml: 'left:' + S6 + ';top:50%;margin-top:-17px;' }[P] || '';
+  if (window.LGH_OHNE_MENUE) { window.LGH = { oeffnen: function () { } }; return; }
   var css = document.createElement('style');
   css.textContent =
-    '#lgh-sc-knopf{position:fixed;z-index:2147483000;left:50%;transform:translateX(-50%);bottom:calc(6px + env(safe-area-inset-bottom,0px));width:34px;height:34px;padding:0;display:grid;place-items:center;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(20,26,45,.72);color:#fff;opacity:.6;cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:manipulation}' +
+    '#lgh-sc-knopf{position:fixed;z-index:2147483000;' + POS + 'width:34px;height:34px;padding:0;display:grid;place-items:center;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(20,26,45,.72);color:#fff;opacity:.6;cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:manipulation}' +
     '#lgh-sc-knopf:hover,#lgh-sc-knopf:focus-visible{opacity:1}#lgh-sc-knopf svg{width:18px;height:18px}' +
     '#lgh-sc{position:fixed;inset:0;z-index:2147483001;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(5,8,18,.72);font:15px/1.45 system-ui,-apple-system,sans-serif;color:#e9eefb;-webkit-user-select:text;user-select:text;touch-action:auto}' +
     '#lgh-sc.offen{display:flex}' +
