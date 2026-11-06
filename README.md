@@ -98,3 +98,9 @@ oder den Ordner `public/` mit einem beliebigen statischen Server öffnen.
 ## Deploy
 
 Cloudflare Worker mit statischen Dateien (`wrangler.jsonc`), automatisch bei jedem Push auf `main`.
+
+## Spielbilder
+
+Jedes Spiel hat in `games.json` ein `icon` (1:1, 512 px, für Kacheln und Bibliothek) und ein `wallpaper` (ca. 5:1, 2000 px breit, mit eingebautem Spielnamen). Der Hub zeigt das Wallpaper auf der Startseite und der Detailseite in voller Breite, ohne Zuschnitt. Die Spielnamen stehen als unsichtbarer Text (`sr-only`) daneben, damit Suche, Screenreader und Seitentitel weiter funktionieren.
+
+Die Wallpapers ohne Titel liegen in `grafik/wallpaper-ohne-titel/`, die Varianten mit Titel in `grafik/wallpaper-mit-titel/` (diese sind dieselben Dateien, die im Hub liegen). Fehlt `wallpaper`, zeigt der Hub die alte Ansicht mit Screenshot (`banner`) bzw. gezeichnetem Platzhalter.

@@ -263,3 +263,28 @@ body[data-view="play"] .spiel { display: flex; }
 .icon-art { overflow: hidden; background: var(--panel-2); }
 .icon-art .bg { position: absolute; inset: -12%; width: 124%; height: 124%; object-fit: cover; filter: blur(22px) brightness(.5) saturate(1.2); }
 .icon-art .fg { position: absolute; left: 9%; top: 7%; width: 82%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 20%; box-shadow: 0 14px 34px rgba(0, 0, 0, .5), 0 0 0 1px rgba(255, 255, 255, .1); }
+
+/* ---------- Titel-Wallpaper (Spielname ist ins Bild eingebaut) ---------- */
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.hero-titel { display: block; min-height: 0; background: var(--panel); }
+.hero-titel::after { display: none; }
+.hero-bild { display: block; }
+.hero-bild img { display: block; width: 100%; height: auto; }
+.hero-leiste { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 24px 18px; }
+.hero-text { min-width: 0; }
+.hero-text .eyebrow { margin-bottom: 4px; }
+.hero-text p { margin: 0; color: #d3dae7; font-size: 16px; max-width: 64ch; }
+.hero-leiste .btn-row { flex: none; }
+.detail-banner.titel { height: auto; background: var(--bg); }
+.detail-banner.titel::after { display: none; }
+.detail-banner .titelbild { display: block; width: 100%; height: auto; }
+.detail-banner.titel { display: flex; flex-direction: column-reverse; }
+.detail-banner.titel .zurueck-link { position: static; align-self: flex-start; margin: 14px 28px 14px; }
+.detail-wrap.titel .detail-cover { aspect-ratio: 1 / 1; width: 180px; }
+.detail-wrap.titel { margin-top: 26px; }
+@media (max-width: 900px) {
+  .hero-leiste { flex-direction: column; align-items: flex-start; gap: 14px; padding: 14px 16px 16px; }
+  .detail-banner.titel .zurueck-link { margin: 12px 16px; }
+  .detail-wrap.titel .detail-cover { width: 140px; }
+  .detail-wrap.titel { margin-top: 20px; }
+}

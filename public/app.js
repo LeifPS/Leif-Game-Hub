@@ -126,7 +126,13 @@
     var hero = null;
     if (filter === 'Alle' && !suche) hero = spielbar().filter(function (s) { return s.featured; })[0] || spielbar()[0];
     var h = '';
-    if (hero) {
+    if (hero && hero.wallpaper) {
+      h += '<section class="hero hero-titel" aria-label="Empfohlen"><h1 class="sr-only">' + esc(hero.name) + '</h1>';
+      h += '<a class="hero-bild" href="#spiel/' + encodeURIComponent(hero.id) + '"><img src="' + esc(hero.wallpaper) + '" alt="' + esc(hero.name) + '" decoding="async"></a>';
+      h += '<div class="hero-leiste"><div class="hero-text"><span class="eyebrow">Empfohlen</span><p>' + esc(hero.text) + '</p></div>';
+      h += '<div class="btn-row"><a class="btn btn-primary" href="#spiel/' + encodeURIComponent(hero.id) + '/play">' + playIcon() + 'Jetzt spielen</a>';
+      h += '<a class="btn btn-ghost" href="#spiel/' + encodeURIComponent(hero.id) + '">Mehr erfahren</a></div></div></section>';
+    } else if (hero) {
       h += '<section class="hero" aria-label="Empfohlen">' + art(hero, 1200, 480) + '<div class="hero-body">';
       h += '<span class="eyebrow">Empfohlen</span><h1>' + esc(hero.name) + '</h1><p>' + esc(hero.text) + '</p>';
       h += '<div class="btn-row"><a class="btn btn-primary" href="#spiel/' + encodeURIComponent(hero.id) + '/play">' + playIcon() + 'Jetzt spielen</a>';
@@ -145,10 +151,11 @@
 
   function renderDetail(sp) {
     var id = encodeURIComponent(sp.id);
-    var h = '<div class="detail-banner">' + art(sp, 1400, 420) + '<a class="zurueck-link" href="#"><svg aria-hidden="true"><use href="#i-back"/></svg>Alle Spiele</a></div>';
-    h += '<div class="detail-wrap"><div class="detail-kopf"><div class="detail-cover">' + art(sp, 300, 400) + '</div><div class="detail-info">';
+    var titel = !!sp.wallpaper;
+    var h = '<div class="detail-banner' + (titel ? ' titel' : '') + '">' + (titel ? '<img class="titelbild" src="' + esc(sp.wallpaper) + '" alt="' + esc(sp.name) + '" decoding="async">' : art(sp, 1400, 420)) + '<a class="zurueck-link" href="#"><svg aria-hidden="true"><use href="#i-back"/></svg>Alle Spiele</a></div>';
+    h += '<div class="detail-wrap' + (titel ? ' titel' : '') + '"><div class="detail-kopf"><div class="detail-cover">' + (titel ? art(sp, 300, 300) : art(sp, 300, 400)) + '</div><div class="detail-info">';
     var v = ver(sp);
-    h += '<h1>' + esc(sp.name) + '</h1>' + pills(sp);
+    h += '<h1' + (titel ? ' class="sr-only"' : '') + '>' + esc(sp.name) + '</h1>' + pills(sp);
     if (v) h += '<div class="ver-zeile"><span class="ver-pill' + (v.offiziell ? ' offiziell' : '') + '">' + (v.offiziell ? 'Offiziell' : 'Beta') + '</span><span class="ver-nr">Version ' + esc(v.version) + '</span><span class="ver-datum">zuletzt aktualisiert am ' + esc(datumText(v.datum)) + '</span></div>';
     h += '<div class="btn-row"><a class="btn btn-primary" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a>';
     h += '<a class="btn btn-ghost" href="' + esc(sp.url) + '" target="_blank" rel="noopener">In neuem Tab öffnen</a></div></div></div>';
