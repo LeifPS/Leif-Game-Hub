@@ -24,7 +24,10 @@
         "fuell": "#fff3d0",
         "rand": "#2c3a14",
         "randbreite": 0.15
-      }
+      },
+      "screenshots": [
+        "screens/tonlinge-wide.webp"
+      ]
     },
     {
       "id": "foilxi",
@@ -50,7 +53,10 @@
         "fuell": "linear-gradient(180deg,#fff6c9 0%,#ffd75e 45%,#d9941a 100%)",
         "rand": "#0b1c10",
         "randbreite": 0.14
-      }
+      },
+      "screenshots": [
+        "screens/foilxi-wide.webp"
+      ]
     },
     {
       "id": "brutjagd",
@@ -75,7 +81,10 @@
         "fuell": "#ffffff",
         "rand": "#4b2a8c",
         "randbreite": 0.169
-      }
+      },
+      "screenshots": [
+        "screens/brutjagd-wide.webp"
+      ]
     },
     {
       "id": "fischerdock",
@@ -100,7 +109,10 @@
         "fuell": "#fff2d6",
         "rand": "#7a3b0c",
         "randbreite": 0.226
-      }
+      },
+      "screenshots": [
+        "screens/fischerdock-wide.webp"
+      ]
     },
     {
       "id": "ballgegenball",
@@ -125,7 +137,10 @@
         "fuell": "#fff7e0",
         "rand": "#1d1d1d",
         "randbreite": 0.197
-      }
+      },
+      "screenshots": [
+        "screens/ballgegenball-wide.webp"
+      ]
     },
     {
       "id": "papierhelden",
@@ -150,7 +165,10 @@
         "fuell": "#f5ecd2",
         "rand": "#0e1428",
         "randbreite": 0.142
-      }
+      },
+      "screenshots": [
+        "screens/papierhelden-wide.webp"
+      ]
     },
     {
       "id": "pizzafabrik",
@@ -176,7 +194,10 @@
         "fuell": "#fff4dc",
         "rand": "#a8281a",
         "randbreite": 0.169
-      }
+      },
+      "screenshots": [
+        "screens/pizzafabrik-wide.webp"
+      ]
     },
     {
       "id": "businessempire",
@@ -201,7 +222,10 @@
         "fuell": "linear-gradient(180deg,#fff6c9 0%,#ffd75e 45%,#d9941a 100%)",
         "rand": "#050a1c",
         "randbreite": 0.215
-      }
+      },
+      "screenshots": [
+        "screens/businessempire-wide.webp"
+      ]
     },
     {
       "id": "spells",
@@ -226,7 +250,10 @@
         "fuell": "linear-gradient(180deg,#ffffff,#d6b8ff 60%,#9a6bff)",
         "rand": "#12062e",
         "randbreite": 0.133
-      }
+      },
+      "screenshots": [
+        "screens/spells-wide.webp"
+      ]
     },
     {
       "id": "schleimmerge",
@@ -251,7 +278,10 @@
         "fuell": "linear-gradient(180deg,#fff7b0,#ffc83a)",
         "rand": "#3a1670",
         "randbreite": 0.208
-      }
+      },
+      "screenshots": [
+        "screens/schleimmerge-wide.webp"
+      ]
     },
     {
       "id": "zahlenwerk",
@@ -276,7 +306,10 @@
         "fuell": "#17766f",
         "rand": "#ffffff",
         "randbreite": 0.175
-      }
+      },
+      "screenshots": [
+        "screens/zahlenwerk-wide.webp"
+      ]
     },
     {
       "id": "wasserschlacht",
@@ -301,7 +334,10 @@
         "fuell": "#ffffff",
         "rand": "#0a4f93",
         "randbreite": 0.208
-      }
+      },
+      "screenshots": [
+        "screens/wasserschlacht-wide.webp"
+      ]
     },
     {
       "id": "tippspiel",
@@ -326,7 +362,10 @@
         "fuell": "#ffffff",
         "rand": "#0a3d1c",
         "randbreite": 0.135
-      }
+      },
+      "screenshots": [
+        "screens/tippspiel-wide.webp"
+      ]
     },
     {
       "id": "erntezeit",
@@ -351,7 +390,10 @@
         "fuell": "#fff6dc",
         "rand": "#6b3a14",
         "randbreite": 0.169
-      }
+      },
+      "screenshots": [
+        "screens/erntezeit-wide.webp"
+      ]
     },
     {
       "id": "tierspiel",
@@ -376,7 +418,10 @@
         "fuell": "#ffffff",
         "rand": "#3b2a7a",
         "randbreite": 0.169
-      }
+      },
+      "screenshots": [
+        "screens/tierspiel-wide.webp"
+      ]
     },
     {
       "id": "cookierng2",
@@ -401,7 +446,10 @@
         "fuell": "linear-gradient(180deg,#fff6c9 0%,#ffd75e 45%,#d9941a 100%)",
         "rand": "#2b1405",
         "randbreite": 0.194
-      }
+      },
+      "screenshots": [
+        "screens/cookierng2-wide.webp"
+      ]
     },
     {
       "id": "cookierng",
@@ -427,7 +475,10 @@
         "fuell": "linear-gradient(180deg,#fff0cf,#f0a85a)",
         "rand": "#2b1405",
         "randbreite": 0.152
-      }
+      },
+      "screenshots": [
+        "screens/cookierng-wide.webp"
+      ]
     },
     {
       "id": "chessrng",
@@ -452,7 +503,10 @@
         "fuell": "linear-gradient(180deg,#fff6c9 0%,#ffd75e 45%,#d9941a 100%)",
         "rand": "#031a10",
         "randbreite": 0.184
-      }
+      },
+      "screenshots": [
+        "screens/chessrng-wide.webp"
+      ]
     }
   ]
 }

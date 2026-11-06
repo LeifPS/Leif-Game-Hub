@@ -303,6 +303,15 @@ def main():
                              "datum": latest["datum"] if latest else None, "anzahl": len(data["eintraege"])}
         print(f"{g['id']:16} {data['version']:>12}  {len(data['eintraege']):4} Einträge")
 
+    # Erscheinungsdatum = Datum des ältesten Eintrags (für die Detailseite)
+    for gid, v in versions.items():
+        f = OUT_DIR / f"{gid}.json"
+        try:
+            ein = json.loads(f.read_text(encoding="utf-8")).get("eintraege") or []
+            if ein:
+                v["erste"] = ein[-1]["datum"]
+        except (OSError, ValueError, KeyError):
+            pass
     vtext = json.dumps(versions, ensure_ascii=False, indent=1, sort_keys=True) + "\n"
     changed += write_if_changed(VERSIONS, vtext)
     changed += write_if_changed(HEADS, json.dumps(heads, indent=1, sort_keys=True) + "\n")

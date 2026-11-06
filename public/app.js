@@ -87,13 +87,14 @@
   function playIcon() { return '<svg aria-hidden="true"><use href="#i-play"/></svg>'; }
 
   function tile(sp) {
-    var offen = !!sp.url, id = encodeURIComponent(sp.id);
+    var offen = !!sp.url, id = encodeURIComponent(sp.id), v = ver(sp);
     var s = '<article class="tile' + (offen ? '' : ' off') + '">';
     s += offen ? '<a class="tile-link" href="#spiel/' + id + '" aria-label="' + esc(sp.name) + '">' : '<div class="tile-link">';
-    s += art(sp, 300, 400) + '<div class="scrim"></div>';
-    s += '<div class="tile-title"><strong>' + esc(sp.name) + '</strong><span>' + esc(kategorien(sp).join(' · ')) + '</span></div>';
+    s += '<div class="tile-art">' + art(sp, 400, 400);
     if (!offen) s += '<span class="badge">Bald</span>';
-    else if (ver(sp)) s += '<span class="ver-tag">' + (ver(sp).offiziell ? '' : 'Beta ') + 'v' + esc(ver(sp).version) + '</span>';
+    else if (v) s += '<span class="ver-tag">' + (v.offiziell ? '' : 'Beta ') + esc(v.version) + '</span>';
+    s += '</div>';
+    s += '<div class="tile-text"><strong>' + esc(sp.name) + '</strong><span>' + esc(kategorien(sp).join(', ')) + '</span></div>';
     s += offen ? '</a>' : '</div>';
     if (offen) s += '<a class="play" href="#spiel/' + id + '/play" aria-label="' + esc(sp.name) + ' spielen">' + playIcon() + '</a>';
     return s + '</article>';
@@ -129,12 +130,12 @@
     if (hero && hero.wallpaper) {
       h += '<section class="hero hero-titel" aria-label="Empfohlen"><h1 class="sr-only">' + esc(hero.name) + '</h1>';
       h += '<a class="hero-bild" href="#spiel/' + encodeURIComponent(hero.id) + '"><img src="' + esc(hero.wallpaper) + '" alt="' + esc(hero.name) + '" decoding="async"></a>';
-      h += '<div class="hero-leiste"><div class="hero-text"><span class="eyebrow">Empfohlen</span><p>' + esc(hero.text) + '</p></div>';
+      h += '<div class="hero-leiste"><div class="hero-text"><p>' + esc(hero.text) + '</p></div>';
       h += '<div class="btn-row"><a class="btn btn-primary" href="#spiel/' + encodeURIComponent(hero.id) + '/play">' + playIcon() + 'Jetzt spielen</a>';
       h += '<a class="btn btn-ghost" href="#spiel/' + encodeURIComponent(hero.id) + '">Mehr erfahren</a></div></div></section>';
     } else if (hero) {
       h += '<section class="hero" aria-label="Empfohlen">' + art(hero, 1200, 480) + '<div class="hero-body">';
-      h += '<span class="eyebrow">Empfohlen</span><h1>' + esc(hero.name) + '</h1><p>' + esc(hero.text) + '</p>';
+      h += '<h1>' + esc(hero.name) + '</h1><p>' + esc(hero.text) + '</p>';
       h += '<div class="btn-row"><a class="btn btn-primary" href="#spiel/' + encodeURIComponent(hero.id) + '/play">' + playIcon() + 'Jetzt spielen</a>';
       h += '<a class="btn btn-ghost" href="#spiel/' + encodeURIComponent(hero.id) + '">Mehr erfahren</a></div></div></section>';
     }
@@ -164,21 +165,127 @@
     return '<h1 class="titelschrift" style="' + st + '"><span class="tt"><span class="tt-b" aria-hidden="true">' + n + '</span><span class="tt-f">' + n + '</span></span></h1>';
   }
 
+  /* ---------- Detailseite im Stil einer Shop-Seite ---------- */
+  var galerie = { liste: [], i: 0, name: '' };
+  function bilderVon(sp) {
+    if (sp.screenshots && sp.screenshots.length) return sp.screenshots;
+    return sp.banner ? [sp.banner] : [];
+  }
+  function galerieHtml(sp) {
+    var b = bilderVon(sp);
+    if (!b.length) return '';
+    var h = '<div class="gal" aria-label="Screenshots"><div class="gal-haupt"><button type="button" class="gal-bild" id="gal-bild" aria-label="Screenshot vergrößern"><img id="gal-img" src="' + esc(b[0]) + '" alt="Screenshot 1 von ' + esc(sp.name) + '" decoding="async"></button>';
+    if (b.length > 1) h += '<button type="button" class="gal-pfeil links" id="gal-zu" aria-label="Voriger Screenshot"><svg aria-hidden="true"><use href="#i-back"/></svg></button><button type="button" class="gal-pfeil rechts" id="gal-vor" aria-label="Nächster Screenshot"><svg aria-hidden="true"><use href="#i-back"/></svg></button>';
+    h += '</div>';
+    if (b.length > 1) {
+      h += '<div class="gal-reihe" id="gal-reihe" role="tablist">' + b.map(function (u, k) {
+        return '<button type="button" class="gal-mini' + (k === 0 ? ' aktiv' : '') + '" data-k="' + k + '" role="tab" aria-label="Screenshot ' + (k + 1) + '"><img src="' + esc(u) + '" alt="" loading="lazy" decoding="async"></button>';
+      }).join('') + '</div>';
+    }
+    return h + '</div>';
+  }
+  function galerieZeige(k) {
+    var n = galerie.liste.length;
+    if (!n) return;
+    galerie.i = (k + n) % n;
+    var img = document.getElementById('gal-img');
+    if (img) { img.src = galerie.liste[galerie.i]; img.alt = 'Screenshot ' + (galerie.i + 1) + ' von ' + galerie.name; }
+    var minis = document.querySelectorAll('.gal-mini');
+    for (var j = 0; j < minis.length; j++) {
+      var an = j === galerie.i;
+      minis[j].classList.toggle('aktiv', an);
+      if (an && minis[j].scrollIntoView) { var r = document.getElementById('gal-reihe'); if (r) r.scrollTo({ left: minis[j].offsetLeft - r.clientWidth / 2 + minis[j].clientWidth / 2, behavior: 'smooth' }); }
+    }
+    var lb = document.getElementById('lightbox');
+    if (lb && lb.classList.contains('offen')) document.getElementById('lb-img').src = galerie.liste[galerie.i];
+  }
+  function galerieBinden(sp) {
+    galerie = { liste: bilderVon(sp), i: 0, name: sp.name };
+    if (!galerie.liste.length) return;
+    var reihe = document.getElementById('gal-reihe');
+    if (reihe) reihe.addEventListener('click', function (e) { var m = e.target.closest('.gal-mini'); if (m) galerieZeige(+m.getAttribute('data-k')); });
+    var vor = document.getElementById('gal-vor'), zu = document.getElementById('gal-zu');
+    if (vor) vor.addEventListener('click', function () { galerieZeige(galerie.i + 1); });
+    if (zu) zu.addEventListener('click', function () { galerieZeige(galerie.i - 1); });
+    document.getElementById('gal-bild').addEventListener('click', lightboxAuf);
+    var x0 = null, bild = document.getElementById('gal-bild');
+    bild.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
+    bild.addEventListener('touchend', function (e) {
+      if (x0 == null) return;
+      var dx = e.changedTouches[0].clientX - x0; x0 = null;
+      if (Math.abs(dx) > 50) { galerieZeige(galerie.i + (dx < 0 ? 1 : -1)); bild.setAttribute('data-wisch', '1'); setTimeout(function () { bild.removeAttribute('data-wisch'); }, 300); }
+    });
+    bild.addEventListener('click', function (e) { if (bild.getAttribute('data-wisch')) e.stopImmediatePropagation(); }, true);
+  }
+  function lightboxAuf() {
+    var lb = document.getElementById('lightbox');
+    if (!lb) {
+      lb = document.createElement('div'); lb.id = 'lightbox'; lb.setAttribute('role', 'dialog'); lb.setAttribute('aria-modal', 'true'); lb.setAttribute('aria-label', 'Screenshot');
+      lb.innerHTML = '<button type="button" class="lb-zu" aria-label="Schließen">&times;</button><button type="button" class="gal-pfeil links" id="lb-zurueck" aria-label="Voriger Screenshot"><svg aria-hidden="true"><use href="#i-back"/></svg></button><img id="lb-img" alt=""><button type="button" class="gal-pfeil rechts" id="lb-weiter" aria-label="Nächster Screenshot"><svg aria-hidden="true"><use href="#i-back"/></svg></button>';
+      document.body.appendChild(lb);
+      lb.addEventListener('click', function (e) {
+        if (e.target.id === 'lb-zurueck') galerieZeige(galerie.i - 1);
+        else if (e.target.closest && e.target.closest('#lb-zurueck')) galerieZeige(galerie.i - 1);
+        else if (e.target.closest && e.target.closest('#lb-weiter')) galerieZeige(galerie.i + 1);
+        else if (e.target.id !== 'lb-img') lightboxZu();
+      });
+    }
+    lb.querySelector('#lb-img').src = galerie.liste[galerie.i];
+    var mehrere = galerie.liste.length > 1;
+    lb.querySelector('#lb-zurueck').style.display = lb.querySelector('#lb-weiter').style.display = mehrere ? '' : 'none';
+    lb.classList.add('offen');
+  }
+  function lightboxZu() { var lb = document.getElementById('lightbox'); if (lb) lb.classList.remove('offen'); }
+  document.addEventListener('keydown', function (e) {
+    var lb = document.getElementById('lightbox');
+    var offen = lb && lb.classList.contains('offen');
+    if (e.key === 'Escape' && offen) lightboxZu();
+    else if (e.key === 'ArrowRight' && (offen || document.getElementById('gal-img'))) galerieZeige(galerie.i + 1);
+    else if (e.key === 'ArrowLeft' && (offen || document.getElementById('gal-img'))) galerieZeige(galerie.i - 1);
+  });
+
+  function faktZeile(k, v) { return v ? '<div class="fakt"><dt>' + esc(k) + '</dt><dd>' + v + '</dd></div>' : ''; }
+  function aehnliche(sp) {
+    var meine = kategorien(sp);
+    return spielbar().filter(function (s) { return s.id !== sp.id; }).map(function (s) {
+      var gem = kategorien(s).filter(function (k) { return meine.indexOf(k) >= 0; }).length;
+      return { s: s, gem: gem };
+    }).sort(function (a, b) { return b.gem - a.gem; }).slice(0, 6).map(function (x) { return x.s; });
+  }
+
   function renderDetail(sp) {
     var id = encodeURIComponent(sp.id);
     var titel = !!sp.wallpaper;
-    var h = '<div class="detail-banner' + (titel ? ' titel' : '') + '">' + (titel ? '<img class="titelbild" src="' + esc(sp.wallpaper) + '" alt="' + esc(sp.name) + '" decoding="async">' : art(sp, 1400, 420)) + '<a class="zurueck-link" href="#"><svg aria-hidden="true"><use href="#i-back"/></svg>Alle Spiele</a></div>';
-    h += '<div class="detail-wrap' + (titel ? ' titel' : '') + '"><div class="detail-kopf"><div class="detail-cover">' + (titel ? art(sp, 300, 300) : art(sp, 300, 400)) + '</div><div class="detail-info">';
     var v = ver(sp);
-    h += titelHtml(sp) + pills(sp);
-    if (v) h += '<div class="ver-zeile"><span class="ver-pill' + (v.offiziell ? ' offiziell' : '') + '">' + (v.offiziell ? 'Offiziell' : 'Beta') + '</span><span class="ver-nr">Version ' + esc(v.version) + '</span><span class="ver-datum">zuletzt aktualisiert am ' + esc(datumText(v.datum)) + '</span></div>';
+    var online = kategorien(sp).indexOf('Online') >= 0;
+    var h = '<div class="detail-banner' + (titel ? ' titel' : '') + '">' + (titel ? '<img class="titelbild" src="' + esc(sp.wallpaper) + '" alt="' + esc(sp.name) + '" decoding="async">' : art(sp, 1400, 420)) + '<a class="zurueck-link" href="#"><svg aria-hidden="true"><use href="#i-back"/></svg>Alle Spiele</a></div>';
+    h += '<div class="shop' + (titel ? ' titel' : '') + '">';
+    h += titelHtml(sp);
+    var gal = galerieHtml(sp);
+    h += '<div class="shop-oben' + (gal ? '' : ' ohne-galerie') + '">' + gal;
+    h += '<aside class="shop-info"><div class="shop-kopf"><div class="shop-icon">' + art(sp, 300, 300) + '</div><p class="kurz">' + esc(sp.text) + '</p></div><dl class="fakten">';
+    if (v && v.erste) h += faktZeile('Erschienen', esc(datumText(v.erste)));
+    if (sp.offiziell_ab) {
+      var vorbei = sp.offiziell_ab <= new Date().toISOString().slice(0, 10);
+      h += faktZeile(vorbei ? 'Offiziell seit' : 'Offiziell ab', esc(datumText(sp.offiziell_ab + 'T12:00:00+02:00')));
+    }
+    if (v) h += faktZeile('Status', '<span class="ver-pill' + (v.offiziell ? ' offiziell' : '') + '">' + (v.offiziell ? 'Offiziell' : 'Beta') + '</span> Version ' + esc(v.version));
+    if (v && v.datum) h += faktZeile('Zuletzt aktualisiert', esc(datumText(v.datum)));
+    h += faktZeile('Entwickler', 'Leif (LeifPS)');
+    h += faktZeile('Plattform', 'Browser (PC, Handy, Tablet)');
+    h += faktZeile('Spielmodus', online ? 'Mehrspieler (online)' : 'Einzelspieler');
+    h += faktZeile('Sprache', 'Deutsch');
+    h += '</dl>';
+    if (kategorien(sp).length) h += '<div class="tags-titel">Beliebte Tags</div>' + pills(sp);
     h += '<div class="btn-row"><a class="btn btn-primary" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a>';
-    h += '<a class="btn btn-ghost" href="' + esc(sp.url) + '" target="_blank" rel="noopener">In neuem Tab öffnen</a></div></div></div>';
-    h += '<div class="detail-text"><h2>Über das Spiel</h2><p>' + esc(sp.beschreibung || sp.text) + '</p></div>';
-    h += '<section class="log" id="log"><h2>Update-Log</h2><div class="log-liste" id="log-liste"><div class="log-leer">Lädt …</div></div></section>';
-    var mehr = spielbar().filter(function (s) { return s.id !== sp.id; }).slice(0, 6);
-    if (mehr.length) h += '<section class="mehr"><h2>Weitere Spiele</h2><div class="grid">' + mehr.map(tile).join('') + '</div></section>';
+    h += '<a class="btn btn-ghost" href="' + esc(sp.url) + '" target="_blank" rel="noopener">In neuem Tab öffnen</a></div></aside></div>';
+    if (sp.beschreibung && sp.beschreibung !== sp.text) h += '<section class="shop-text"><h2>Über dieses Spiel</h2><p>' + esc(sp.beschreibung) + '</p></section>';
+    h += '<section class="sysreq"><h2>Systemanforderungen</h2><ul><li>Läuft direkt im Browser, ohne Download und ohne Installation.</li><li>Aktueller Browser (Chrome, Safari, Edge oder Firefox) auf PC, Handy oder Tablet.</li><li>Bedienung mit Maus oder Touch.</li>' + (online ? '<li>Internetverbindung erforderlich.</li>' : '') + '</ul></section>';
+    h += '<section class="log" id="log"><h2>Neuigkeiten und Updates</h2><div class="log-liste" id="log-liste"><div class="log-leer">Lädt …</div></div></section>';
+    var mehr = aehnliche(sp);
+    if (mehr.length) h += '<section class="mehr"><h2>Ähnliche Spiele</h2><div class="grid">' + mehr.map(tile).join('') + '</div></section>';
     inhalt.innerHTML = h + '</div>';
+    galerieBinden(sp);
     ladeLog(sp);
   }
 
