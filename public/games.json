@@ -13,7 +13,10 @@
       ],
       "featured": true,
       "bild": "screens/tonlinge.webp",
-      "banner": "screens/tonlinge-wide.webp"
+      "banner": "screens/tonlinge-wide.webp",
+      "icon": "screens/tonlinge-icon.webp",
+      "wallpaper": "screens/tonlinge-wallpaper.webp",
+      "fokus": "72% 50%"
     },
     {
       "id": "foilxi",
@@ -127,7 +130,10 @@
         "Online"
       ],
       "bild": "screens/spells.webp",
-      "banner": "screens/spells-wide.webp"
+      "banner": "screens/spells-wide.webp",
+      "icon": "screens/spells-icon.webp",
+      "wallpaper": "screens/spells-wallpaper.webp",
+      "fokus": "50% 50%"
     },
     {
       "id": "schleimmerge",
@@ -225,7 +231,10 @@
         "Sammeln"
       ],
       "bild": "screens/cookierng2.webp",
-      "banner": "screens/cookierng2-wide.webp"
+      "banner": "screens/cookierng2-wide.webp",
+      "icon": "screens/cookierng2-icon.webp",
+      "wallpaper": "screens/cookierng2-wallpaper.webp",
+      "fokus": "62% 50%"
     },
     {
       "id": "cookierng",

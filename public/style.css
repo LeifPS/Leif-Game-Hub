@@ -258,3 +258,8 @@ body[data-view="play"] .spiel { display: flex; }
   .log-text{grid-column:1 / -1}
   .log-sha{justify-self:end}
 }
+
+/* Icon-Kachel (Spiele mit eigenem 1:1-Icon): Icon groß vor unscharfem Hintergrund */
+.icon-art { overflow: hidden; background: var(--panel-2); }
+.icon-art .bg { position: absolute; inset: -12%; width: 124%; height: 124%; object-fit: cover; filter: blur(22px) brightness(.5) saturate(1.2); }
+.icon-art .fg { position: absolute; left: 9%; top: 7%; width: 82%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 20%; box-shadow: 0 14px 34px rgba(0, 0, 0, .5), 0 0 0 1px rgba(255, 255, 255, .1); }
