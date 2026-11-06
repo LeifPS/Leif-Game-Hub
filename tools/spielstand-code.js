@@ -1,6 +1,8 @@
-/* Spielstand-Code (Teil der Leif-Spiele)
+/* Einstellungen + Spielstand-Code (Teil der Leif-Spiele)
    Der Spielstand liegt im Browser (localStorage) und ist pro Adresse getrennt. Im Spiele-Hub läuft das Spiel eingebettet,
    dort sehen Browser einen eigenen, leeren Speicher. Mit dem Code lässt sich der Spielstand von einem Fenster ins andere kopieren.
+   Die Einstellungen öffnen mit LGH.oeffnen(). Ohne eigenen Knopf des Spiels (window.LGH_EIGENER_KNOPF = true) erscheint ein Zahnrad unten in der Mitte.
+   Das Spiel kann eigene Schalter ergänzen: window.LGH_ZEILEN = function () { return [{ text: 'Ton', an: true, setze: function (v) { } }]; }
    Format: LGH1.<spiel>.<z|p>.<prüfsumme>.<daten>   (z = komprimiert, p = unkomprimiert, Daten = Base64url von {Schlüssel: Wert}) */
 (function () {
   var SPIEL = 'schleimmerge';
@@ -76,8 +78,8 @@
 
   var css = document.createElement('style');
   css.textContent =
-    '#lgh-sc-knopf{position:fixed;z-index:2147483000;left:50%;transform:translateX(-50%);bottom:calc(3px + env(safe-area-inset-bottom,0px));padding:4px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(20,26,45,.72);color:#fff;font:600 11px/1 system-ui,-apple-system,sans-serif;opacity:.6;cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:manipulation}' +
-    '#lgh-sc-knopf:hover,#lgh-sc-knopf:focus-visible{opacity:1}' +
+    '#lgh-sc-knopf{position:fixed;z-index:2147483000;left:50%;transform:translateX(-50%);bottom:calc(6px + env(safe-area-inset-bottom,0px));width:34px;height:34px;padding:0;display:grid;place-items:center;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(20,26,45,.72);color:#fff;opacity:.6;cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:manipulation}' +
+    '#lgh-sc-knopf:hover,#lgh-sc-knopf:focus-visible{opacity:1}#lgh-sc-knopf svg{width:18px;height:18px}' +
     '#lgh-sc{position:fixed;inset:0;z-index:2147483001;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(5,8,18,.72);font:15px/1.45 system-ui,-apple-system,sans-serif;color:#e9eefb;-webkit-user-select:text;user-select:text;touch-action:auto}' +
     '#lgh-sc.offen{display:flex}' +
     '#lgh-sc .box{width:min(460px,100%);max-height:100%;overflow:auto;padding:18px;border-radius:16px;background:#151b2e;border:1px solid rgba(255,255,255,.14);box-shadow:0 20px 60px rgba(0,0,0,.6)}' +
@@ -87,16 +89,20 @@
     '#lgh-sc .zeile{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center}' +
     '#lgh-sc button{padding:9px 14px;border-radius:10px;border:0;background:#3b6df0;color:#fff;font:600 14px system-ui,sans-serif;cursor:pointer}' +
     '#lgh-sc button.leise{background:#2a3350}' +
+    '#lgh-sc .opt{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.1);font-size:14.5px}' +
+    '#lgh-sc .opt button{min-width:64px;background:#2a3350}#lgh-sc .opt button[aria-pressed=true]{background:#3b6df0}' +
     '#lgh-sc .meldung{min-height:18px;font-size:13px;color:#8fe3a3}#lgh-sc .meldung.fehler{color:#ff9d9d}';
   document.head.appendChild(css);
 
   var knopf = document.createElement('button');
-  knopf.id = 'lgh-sc-knopf'; knopf.type = 'button'; knopf.textContent = 'Spielstand-Code';
+  knopf.id = 'lgh-sc-knopf'; knopf.type = 'button'; knopf.setAttribute('aria-label', 'Einstellungen');
+  knopf.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zM19.4 13.5a7.7 7.7 0 0 0 .06-1.5 7.7 7.7 0 0 0-.06-1.5l2-1.5-2-3.4-2.3.9a7.6 7.6 0 0 0-2.6-1.5L14.1 2h-4l-.4 2.5a7.6 7.6 0 0 0-2.6 1.5l-2.3-.9-2 3.4 2 1.5a7.7 7.7 0 0 0 0 3l-2 1.5 2 3.4 2.3-.9a7.6 7.6 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 2.6-1.5l2.3.9 2-3.4z"/></svg>';
   var dlg = document.createElement('div');
-  dlg.id = 'lgh-sc'; dlg.setAttribute('role', 'dialog'); dlg.setAttribute('aria-modal', 'true'); dlg.setAttribute('aria-label', 'Spielstand-Code');
+  dlg.id = 'lgh-sc'; dlg.setAttribute('role', 'dialog'); dlg.setAttribute('aria-modal', 'true'); dlg.setAttribute('aria-label', 'Einstellungen');
   dlg.innerHTML =
-    '<div class="box"><h2>Spielstand-Code</h2>' +
-    '<p>Hier kannst du deinen Spielstand in ein anderes Fenster übertragen, zum Beispiel vom normalen Spiel-Link in den Spiele-Hub.</p>' +
+    '<div class="box"><h2>Einstellungen</h2><div id="lgh-sc-zeilen"></div>' +
+    '<h3>Spielstand-Code</h3>' +
+    '<p>Übertrage deinen Spielstand in ein anderes Fenster, zum Beispiel vom normalen Spiel-Link in den Spiele-Hub.</p>' +
     '<h3>1. Code aus diesem Fenster</h3><textarea id="lgh-sc-aus" readonly></textarea>' +
     '<div class="zeile"><button type="button" id="lgh-sc-kopieren">Code kopieren</button></div>' +
     '<h3>2. Code hier einfügen</h3><textarea id="lgh-sc-ein" placeholder="Code einfügen"></textarea>' +
@@ -104,12 +110,26 @@
     '<p style="margin-top:8px">Beim Laden wird der Spielstand in diesem Fenster ersetzt.</p>' +
     '<div class="meldung" id="lgh-sc-meldung" aria-live="polite"></div>' +
     '<div class="zeile"><button type="button" class="leise" id="lgh-sc-zu">Schließen</button></div></div>';
-  document.body.appendChild(knopf);
+  if (!window.LGH_EIGENER_KNOPF) document.body.appendChild(knopf);
   document.body.appendChild(dlg);
 
   function el(id) { return document.getElementById(id); }
   function meldung(t, fehler) { var m = el('lgh-sc-meldung'); m.textContent = t || ''; m.className = 'meldung' + (fehler ? ' fehler' : ''); }
+  function zeilen() {
+    var box = el('lgh-sc-zeilen'); box.innerHTML = '';
+    var liste = []; try { liste = typeof window.LGH_ZEILEN === 'function' ? window.LGH_ZEILEN() || [] : []; } catch (e) { }
+    liste.forEach(function (z) {
+      var d = document.createElement('div'); d.className = 'opt';
+      var t = document.createElement('span'); t.textContent = z.text;
+      var b = document.createElement('button'); b.type = 'button';
+      function zeige(an) { b.setAttribute('aria-pressed', an ? 'true' : 'false'); b.textContent = an ? 'An' : 'Aus'; }
+      zeige(z.an);
+      b.addEventListener('click', function () { var neu = b.getAttribute('aria-pressed') !== 'true'; z.setze(neu); zeige(neu); });
+      d.appendChild(t); d.appendChild(b); box.appendChild(d);
+    });
+  }
   function auf() {
+    zeilen();
     meldung('');
     el('lgh-sc-ein').value = '';
     el('lgh-sc-aus').value = 'Wird erzeugt …';
@@ -118,6 +138,7 @@
   }
   function zu() { dlg.classList.remove('offen'); }
   knopf.addEventListener('click', auf);
+  window.LGH = { oeffnen: auf };
   el('lgh-sc-zu').addEventListener('click', zu);
   dlg.addEventListener('click', function (e) { if (e.target === dlg) zu(); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && dlg.classList.contains('offen')) zu(); });
