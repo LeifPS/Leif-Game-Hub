@@ -5,91 +5,105 @@
       "name": "Tonlinge",
       "text": "Fange Tonlinge mit Instrumenten und erkunde Klanghain und die Glimmerhöhlen.",
       "url": "https://tonlinge.leifps.workers.dev",
-      "farbe": "#6fa86a"
+      "farbe": "#6fa86a",
+      "kategorien": ["Abenteuer", "Sammeln"],
+      "featured": true
     },
     {
       "id": "papierhelden",
       "name": "Papierhelden",
       "text": "Ein Action-Dungeon-Crawler im Papierstil, nur mit Touch-Steuerung.",
       "url": "https://papierhelden.leifps.workers.dev",
-      "farbe": "#d99a4e"
+      "farbe": "#d99a4e",
+      "kategorien": ["Action", "Abenteuer"]
     },
     {
       "id": "spells",
       "name": "Spells",
       "text": "Zeichne Zauber und duelliere dich online gegen andere.",
       "url": "https://spells.leifps.workers.dev",
-      "farbe": "#8a6bc4"
+      "farbe": "#8a6bc4",
+      "kategorien": ["Duell", "Online"]
     },
     {
       "id": "schleimmerge",
       "name": "Schleimmerge",
       "text": "Verschmelze gleiche Schleime, rüste Waffen aus und besiege Monster.",
       "url": "https://schleimmerge.leifps.workers.dev",
-      "farbe": "#5fb59a"
+      "farbe": "#5fb59a",
+      "kategorien": ["Merge", "Idle"]
     },
     {
       "id": "pizzafabrik",
       "name": "Pizzafabrik",
       "text": "Baue eine Fabrik, automatisiere die Pizzaherstellung und liefere Aufträge aus.",
       "url": "https://pizzafabrik.pages.dev",
-      "farbe": "#d9654e"
+      "farbe": "#d9654e",
+      "kategorien": ["Fabrik", "Strategie"]
     },
     {
       "id": "zahlenwerk",
       "name": "Zahlenwerk",
       "text": "Fabrik-Automatisierung mit Zahlen statt Pizza.",
       "url": "https://zahlenwerk.leifps.workers.dev",
-      "farbe": "#5b8fc9"
+      "farbe": "#5b8fc9",
+      "kategorien": ["Fabrik", "Strategie"]
     },
     {
       "id": "wasserschlacht",
       "name": "Wasserschlacht",
       "text": "Prügle dich als Wassertropfen durch die Arena.",
       "url": "https://wasserschlacht.leifps.workers.dev",
-      "farbe": "#4fa3d1"
+      "farbe": "#4fa3d1",
+      "kategorien": ["Action", "Online"]
     },
     {
       "id": "ballgegenball",
       "name": "Ball gegen Ball",
       "text": "Sammle Bälle aus Ballboxen und lass sie in der Box gegeneinander kämpfen.",
       "url": "https://ballvsball.leifps.workers.dev",
-      "farbe": "#e0b94a"
+      "farbe": "#e0b94a",
+      "kategorien": ["Sammeln", "Online"]
     },
     {
       "id": "businessempire",
       "name": "Business Empire",
       "text": "Idle-Tycoon mit Aktien, Firmen, Immobilien, Autos und Krypto.",
       "url": "https://businessempire.leifps.workers.dev",
-      "farbe": "#7a9a54"
+      "farbe": "#7a9a54",
+      "kategorien": ["Idle", "Tycoon"]
     },
     {
       "id": "tippspiel",
       "name": "Tippspiel",
       "text": "Tippe auf Fußballspiele und sammle Punkte gegen die Familie.",
       "url": "https://tippspiel.leifps.workers.dev",
-      "farbe": "#4aa66b"
+      "farbe": "#4aa66b",
+      "kategorien": ["Sport", "Online"]
     },
     {
       "id": "schnickschnackschnuck",
       "name": "Schnick Schnack Schnuck Karten",
       "text": "Sammelkarten zu Schere, Stein und Papier zum Ausdrucken.",
       "url": "https://scheresteinpapier.pages.dev",
-      "farbe": "#c96b8f"
+      "farbe": "#c96b8f",
+      "kategorien": ["Karten", "Sammeln"]
     },
     {
       "id": "supermarkttycoon",
       "name": "Supermarkt Tycoon",
       "text": "Baue deinen Supermarkt aus, Abteilung für Abteilung.",
       "url": null,
-      "farbe": "#e08a4a"
+      "farbe": "#e08a4a",
+      "kategorien": ["Idle", "Tycoon"]
     },
     {
       "id": "idletraintycoon",
       "name": "Idle Train Tycoon",
       "text": "Verwalte deinen Bahnhof und lass das Geschäft laufen.",
       "url": null,
-      "farbe": "#8a7a6a"
+      "farbe": "#8a7a6a",
+      "kategorien": ["Idle", "Tycoon"]
     }
   ]
 }
