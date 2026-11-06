@@ -260,7 +260,7 @@
     var online = kategorien(sp).indexOf('Online') >= 0;
     var h = '<div class="detail-banner' + (titel ? ' titel' : '') + '">' + (titel ? '<img class="titelbild" src="' + esc(sp.wallpaper) + '" alt="' + esc(sp.name) + '" decoding="async">' : art(sp, 1400, 420)) + '<a class="zurueck-link" href="#"><svg aria-hidden="true"><use href="#i-back"/></svg>Alle Spiele</a></div>';
     h += '<div class="shop' + (titel ? ' titel' : '') + '">';
-    h += titelHtml(sp);
+    h += '<div class="shop-titelzeile">' + titelHtml(sp) + '<a class="btn btn-primary btn-spielen" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a></div>';
     var gal = galerieHtml(sp);
     h += '<div class="shop-oben' + (gal ? '' : ' ohne-galerie') + '">' + gal;
     h += '<aside class="shop-info"><div class="shop-kopf"><div class="shop-icon">' + art(sp, 300, 300) + '</div><p class="kurz">' + esc(sp.text) + '</p></div><dl class="fakten">';
@@ -277,8 +277,7 @@
     h += faktZeile('Sprache', 'Deutsch');
     h += '</dl>';
     if (kategorien(sp).length) h += '<div class="tags-titel">Beliebte Tags</div>' + pills(sp);
-    h += '<div class="btn-row"><a class="btn btn-primary" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a>';
-    h += '<a class="btn btn-ghost" href="' + esc(sp.url) + '" target="_blank" rel="noopener">In neuem Tab öffnen</a></div></aside></div>';
+    h += '</aside></div>';
     if (sp.beschreibung && sp.beschreibung !== sp.text) h += '<section class="shop-text"><h2>Über dieses Spiel</h2><p>' + esc(sp.beschreibung) + '</p></section>';
     h += '<section class="sysreq"><h2>Systemanforderungen</h2><ul><li>Läuft direkt im Browser, ohne Download und ohne Installation.</li><li>Aktueller Browser (Chrome, Safari, Edge oder Firefox) auf PC, Handy oder Tablet.</li><li>Bedienung mit Maus oder Touch.</li>' + (online ? '<li>Internetverbindung erforderlich.</li>' : '') + '</ul></section>';
     h += '<section class="log" id="log"><h2>Neuigkeiten und Updates</h2><div class="log-liste" id="log-liste"><div class="log-leer">Lädt …</div></div></section>';
@@ -329,7 +328,6 @@
   function starteSpiel(sp) {
     aktuell = sp;
     document.getElementById('spieltitel').textContent = sp.name;
-    document.getElementById('extern').href = sp.url;
     document.getElementById('hinweis-link').href = sp.url;
     document.getElementById('vollbild').hidden = !(buehne.requestFullscreen || buehne.webkitRequestFullscreen);
     hinweis.classList.remove('sichtbar');

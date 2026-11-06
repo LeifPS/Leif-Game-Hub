@@ -487,3 +487,8 @@ h1, h2, h3 { letter-spacing: -.022em; }
 @media (hover: none) { .tile:hover .tile-art { transform: none; box-shadow: 0 0 0 1px var(--line), 0 8px 22px rgba(0, 0, 0, .35); } }
 
 @media (min-width: 640px) and (max-width: 900px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .mehr .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+.shop-titelzeile { display: flex; align-items: center; justify-content: space-between; gap: 8px 20px; flex-wrap: wrap; margin-bottom: 16px; }
+.shop-titelzeile h1, .shop-titelzeile h1.titelschrift { margin: 0; min-width: 0; }
+.shop-titelzeile .btn-spielen { flex: none; min-width: 168px; height: 46px; font-size: 15px; }
+@media (max-width: 900px) { .shop-titelzeile .btn-spielen { width: 100%; } }
