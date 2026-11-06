@@ -108,7 +108,18 @@
   }
 
   /* ---------- Ansichten ---------- */
+  var seiteFertig = false;
   function renderSide(aktivId) {
+    if (seiteFertig) {
+      var as = bibliothek.querySelectorAll('.lib-item');
+      for (var i = 0; i < as.length; i++) {
+        var hr = as[i].getAttribute('href');
+        var ist = hr === '#' ? !aktivId : (aktivId && hr === '#spiel/' + encodeURIComponent(aktivId));
+        as[i].classList.toggle('aktiv', !!ist);
+      }
+      return;
+    }
+    seiteFertig = true;
     var s = '<a class="lib-item' + (aktivId ? '' : ' aktiv') + '" href="#"><span class="lib-home-icon"><svg width="20" height="20" aria-hidden="true"><use href="#i-home"/></svg></span><span class="name">Startseite</span></a>';
     s += '<div class="nav-label">Bibliothek</div>';
     alphabetisch().forEach(function (sp) {
@@ -367,6 +378,18 @@
   }
 
   /* ---------- Navigation ---------- */
+  /* Ansichten bleiben als fertige Knoten erhalten: beim Zurück- oder Weiterklicken werden sie nur wieder eingehängt,
+     so laden Bilder nicht jedes Mal neu und Galerie, Scrollstand und Update-Log bleiben, wie sie sind. */
+  var ansichtSpeicher = {}, ansichtKey = null;
+  function homeKey() { return 'home|' + filter + '|' + suche; }
+  function zeigeAnsicht(key, rendern) {
+    if (ansichtKey === key && inhalt.firstChild) return;
+    if (ansichtKey !== null) { var alt = document.createElement('div'); while (inhalt.firstChild) alt.appendChild(inhalt.firstChild); ansichtSpeicher[ansichtKey] = alt; }
+    var neu = ansichtSpeicher[key];
+    if (neu) { delete ansichtSpeicher[key]; while (neu.firstChild) inhalt.appendChild(neu.firstChild); }
+    else rendern();
+    ansichtKey = key;
+  }
   function route() {
     var m = /^#spiel\/([^\/]+)(\/play)?$/.exec(location.hash);
     var sp = null;
@@ -384,13 +407,13 @@
     }
     if (sp) {
       body.setAttribute('data-view', 'detail');
-      renderDetail(sp); renderSide(sp.id);
+      zeigeAnsicht('detail|' + sp.id, function () { renderDetail(sp); }); renderSide(sp.id);
       document.title = sp.name + ' – Leifs Spiele';
       window.scrollTo(0, 0);
       return;
     }
     body.setAttribute('data-view', 'home');
-    renderHome(); renderSide(null);
+    zeigeAnsicht(homeKey(), renderHome); renderSide(null);
     document.title = 'Leifs Spiele';
     window.scrollTo(0, vorher === 'home' ? window.scrollY : homeScroll);
   }
@@ -401,13 +424,13 @@
 
   document.getElementById('suche').addEventListener('input', function (e) {
     suche = e.target.value.trim().toLowerCase();
-    if (body.getAttribute('data-view') !== 'home') location.hash = ''; else renderHome();
+    if (body.getAttribute('data-view') !== 'home') location.hash = ''; else { renderHome(); ansichtKey = homeKey(); }
   });
   inhalt.addEventListener('click', function (e) {
     var c = e.target.closest ? e.target.closest('.chip') : null;
     if (!c) return;
     filter = c.getAttribute('data-k');
-    renderHome();
+    renderHome(); ansichtKey = homeKey();
   });
 
   document.getElementById('zurueck').addEventListener('click', function () {
