@@ -152,9 +152,16 @@
   var SCHRIFTEN = { fredoka: 700, cinzel: 900, lilita: 400, anton: 400, bangers: 400, marker: 400, silkscreen: 700 };
   function schriftAttr(sp) {
     var t = sp.schrift;
-    if (!t || !SCHRIFTEN[t.familie]) return '';
+    if (!t || !SCHRIFTEN[t.familie]) return null;
     var st = "font-family:'T-" + t.familie + "',system-ui,sans-serif;font-weight:" + SCHRIFTEN[t.familie] + ';letter-spacing:' + (t.abstand || 0) + 'em' + (t.versalien ? ';text-transform:uppercase' : '');
-    return ' class="titelschrift" style="' + st + '"';
+    if (t.fuell) st += ';--fuell:' + t.fuell;
+    if (t.rand) st += ';--rand:' + t.rand + ';--randbreite:' + (t.randbreite || 0.1) + 'em';
+    return st;
+  }
+  function titelHtml(sp) {
+    var st = schriftAttr(sp), n = esc(sp.name);
+    if (!st) return '<h1>' + n + '</h1>';
+    return '<h1 class="titelschrift" style="' + st + '"><span class="tt"><span class="tt-b" aria-hidden="true">' + n + '</span><span class="tt-f">' + n + '</span></span></h1>';
   }
 
   function renderDetail(sp) {
@@ -163,7 +170,7 @@
     var h = '<div class="detail-banner' + (titel ? ' titel' : '') + '">' + (titel ? '<img class="titelbild" src="' + esc(sp.wallpaper) + '" alt="' + esc(sp.name) + '" decoding="async">' : art(sp, 1400, 420)) + '<a class="zurueck-link" href="#"><svg aria-hidden="true"><use href="#i-back"/></svg>Alle Spiele</a></div>';
     h += '<div class="detail-wrap' + (titel ? ' titel' : '') + '"><div class="detail-kopf"><div class="detail-cover">' + (titel ? art(sp, 300, 300) : art(sp, 300, 400)) + '</div><div class="detail-info">';
     var v = ver(sp);
-    h += '<h1' + schriftAttr(sp) + '>' + esc(sp.name) + '</h1>' + pills(sp);
+    h += titelHtml(sp) + pills(sp);
     if (v) h += '<div class="ver-zeile"><span class="ver-pill' + (v.offiziell ? ' offiziell' : '') + '">' + (v.offiziell ? 'Offiziell' : 'Beta') + '</span><span class="ver-nr">Version ' + esc(v.version) + '</span><span class="ver-datum">zuletzt aktualisiert am ' + esc(datumText(v.datum)) + '</span></div>';
     h += '<div class="btn-row"><a class="btn btn-primary" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a>';
     h += '<a class="btn btn-ghost" href="' + esc(sp.url) + '" target="_blank" rel="noopener">In neuem Tab öffnen</a></div></div></div>';

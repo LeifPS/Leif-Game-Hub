@@ -297,4 +297,8 @@ body[data-view="play"] .spiel { display: flex; }
 @font-face { font-family: 'T-bangers'; font-weight: 400; font-display: swap; src: url('fonts/bangers-400.woff2') format('woff2'); }
 @font-face { font-family: 'T-marker'; font-weight: 400; font-display: swap; src: url('fonts/permanent-marker-400.woff2') format('woff2'); }
 @font-face { font-family: 'T-silkscreen'; font-weight: 700; font-display: swap; src: url('fonts/silkscreen-700.woff2') format('woff2'); }
-.detail-info h1.titelschrift { font-weight: 400; letter-spacing: 0; line-height: 1.05; overflow-wrap: anywhere; }
+/* Zwei Ebenen wie im Wallpaper: hinten Umriss + Schatten, vorn die Füllung (Verlauf möglich). Zeilenhöhe/Padding, damit g, j, p, y nicht abgeschnitten werden. */
+.detail-info h1.titelschrift { line-height: 1.1; margin: 0 0 8px; overflow-wrap: anywhere; }
+.titelschrift .tt { position: relative; display: inline-block; padding: .1em .1em .3em 0; }
+.titelschrift .tt-b { position: absolute; left: 0; top: .1em; white-space: nowrap; color: var(--rand, #000); -webkit-text-stroke: var(--randbreite, .1em) var(--rand, #000); text-shadow: 0 .07em .15em rgba(0, 0, 0, .45); filter: drop-shadow(0 .05em .09em rgba(0, 0, 0, .35)); }
+.titelschrift .tt-f { position: relative; display: inline-block; padding-bottom: .3em; margin-bottom: -.3em; background: var(--fuell, #fff); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }

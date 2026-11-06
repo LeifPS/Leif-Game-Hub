@@ -20,7 +20,10 @@
       "schrift": {
         "familie": "fredoka",
         "versalien": false,
-        "abstand": 0
+        "abstand": 0.0,
+        "fuell": "#fff3d0",
+        "rand": "#2c3a14",
+        "randbreite": 0.15
       }
     },
     {
@@ -43,7 +46,10 @@
       "schrift": {
         "familie": "anton",
         "versalien": true,
-        "abstand": 0.02
+        "abstand": 0.018,
+        "fuell": "linear-gradient(180deg,#fff6c9 0%,#ffd75e 45%,#d9941a 100%)",
+        "rand": "#0b1c10",
+        "randbreite": 0.14
       }
     },
     {
@@ -65,7 +71,10 @@
       "schrift": {
         "familie": "lilita",
         "versalien": false,
-        "abstand": 0.01
+        "abstand": 0.008,
+        "fuell": "#ffffff",
+        "rand": "#4b2a8c",
+        "randbreite": 0.169
       }
     },
     {
@@ -87,7 +96,10 @@
       "schrift": {
         "familie": "silkscreen",
         "versalien": false,
-        "abstand": 0
+        "abstand": 0.0,
+        "fuell": "#fff2d6",
+        "rand": "#7a3b0c",
+        "randbreite": 0.226
       }
     },
     {
@@ -109,7 +121,10 @@
       "schrift": {
         "familie": "bangers",
         "versalien": false,
-        "abstand": 0.02
+        "abstand": 0.022,
+        "fuell": "#fff7e0",
+        "rand": "#1d1d1d",
+        "randbreite": 0.197
       }
     },
     {
@@ -131,7 +146,10 @@
       "schrift": {
         "familie": "marker",
         "versalien": false,
-        "abstand": 0
+        "abstand": 0.0,
+        "fuell": "#f5ecd2",
+        "rand": "#0e1428",
+        "randbreite": 0.142
       }
     },
     {
@@ -154,7 +172,10 @@
       "schrift": {
         "familie": "lilita",
         "versalien": false,
-        "abstand": 0.01
+        "abstand": 0.008,
+        "fuell": "#fff4dc",
+        "rand": "#a8281a",
+        "randbreite": 0.169
       }
     },
     {
@@ -176,7 +197,10 @@
       "schrift": {
         "familie": "cinzel",
         "versalien": true,
-        "abstand": 0.02
+        "abstand": 0.027,
+        "fuell": "linear-gradient(180deg,#fff6c9 0%,#ffd75e 45%,#d9941a 100%)",
+        "rand": "#050a1c",
+        "randbreite": 0.215
       }
     },
     {
@@ -198,7 +222,10 @@
       "schrift": {
         "familie": "cinzel",
         "versalien": true,
-        "abstand": 0.035
+        "abstand": 0.033,
+        "fuell": "linear-gradient(180deg,#ffffff,#d6b8ff 60%,#9a6bff)",
+        "rand": "#12062e",
+        "randbreite": 0.133
       }
     },
     {
@@ -220,7 +247,10 @@
       "schrift": {
         "familie": "lilita",
         "versalien": false,
-        "abstand": 0.01
+        "abstand": 0.01,
+        "fuell": "linear-gradient(180deg,#fff7b0,#ffc83a)",
+        "rand": "#3a1670",
+        "randbreite": 0.208
       }
     },
     {
@@ -242,7 +272,10 @@
       "schrift": {
         "familie": "fredoka",
         "versalien": false,
-        "abstand": 0
+        "abstand": 0.0,
+        "fuell": "#17766f",
+        "rand": "#ffffff",
+        "randbreite": 0.175
       }
     },
     {
@@ -264,7 +297,10 @@
       "schrift": {
         "familie": "lilita",
         "versalien": false,
-        "abstand": 0.01
+        "abstand": 0.01,
+        "fuell": "#ffffff",
+        "rand": "#0a4f93",
+        "randbreite": 0.208
       }
     },
     {
@@ -286,7 +322,10 @@
       "schrift": {
         "familie": "anton",
         "versalien": true,
-        "abstand": 0.025
+        "abstand": 0.025,
+        "fuell": "#ffffff",
+        "rand": "#0a3d1c",
+        "randbreite": 0.135
       }
     },
     {
@@ -308,7 +347,10 @@
       "schrift": {
         "familie": "lilita",
         "versalien": false,
-        "abstand": 0.01
+        "abstand": 0.008,
+        "fuell": "#fff6dc",
+        "rand": "#6b3a14",
+        "randbreite": 0.169
       }
     },
     {
@@ -330,7 +372,10 @@
       "schrift": {
         "familie": "fredoka",
         "versalien": false,
-        "abstand": 0
+        "abstand": 0.0,
+        "fuell": "#ffffff",
+        "rand": "#3b2a7a",
+        "randbreite": 0.169
       }
     },
     {
@@ -352,7 +397,10 @@
       "schrift": {
         "familie": "lilita",
         "versalien": false,
-        "abstand": 0.01
+        "abstand": 0.011,
+        "fuell": "linear-gradient(180deg,#fff6c9 0%,#ffd75e 45%,#d9941a 100%)",
+        "rand": "#2b1405",
+        "randbreite": 0.194
       }
     },
     {
@@ -375,7 +423,10 @@
       "schrift": {
         "familie": "lilita",
         "versalien": false,
-        "abstand": 0.01
+        "abstand": 0.008,
+        "fuell": "linear-gradient(180deg,#fff0cf,#f0a85a)",
+        "rand": "#2b1405",
+        "randbreite": 0.152
       }
     },
     {
@@ -397,7 +448,10 @@
       "schrift": {
         "familie": "cinzel",
         "versalien": true,
-        "abstand": 0.025
+        "abstand": 0.035,
+        "fuell": "linear-gradient(180deg,#fff6c9 0%,#ffd75e 45%,#d9941a 100%)",
+        "rand": "#031a10",
+        "randbreite": 0.184
       }
     }
   ]
