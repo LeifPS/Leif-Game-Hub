@@ -10,7 +10,7 @@
   var artZaehler = 0;
   var versionen = {};
   var logCache = {};
-  var LOG_SEITE = 30;
+  var LOG_SEITE = 8;
   var ARTEN = { start: 'Start', major: 'Major', minor: 'Minor', patch: 'Patch', build: 'Build' };
 
   var body = document.body;
@@ -263,7 +263,8 @@
     h += '<div class="shop' + (titel ? ' titel' : '') + '">';
     h += '<div class="shop-titelzeile">' + titelHtml(sp) + '<a class="btn btn-primary btn-spielen" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a></div>';
     var gal = galerieHtml(sp);
-    h += '<div class="shop-oben' + (gal ? '' : ' ohne-galerie') + '">' + gal;
+    var text = (sp.beschreibung && sp.beschreibung !== sp.text) ? '<section class="shop-text"><h2>Über dieses Spiel</h2><p>' + esc(sp.beschreibung) + '</p></section>' : '';
+    h += '<div class="shop-oben' + (gal ? '' : ' ohne-galerie') + '">' + (gal ? '<div class="shop-haupt">' + gal + text + '</div>' : '');
     h += '<aside class="shop-info"><div class="shop-kopf"><div class="shop-icon">' + art(sp, 300, 300) + '</div><p class="kurz">' + esc(sp.text) + '</p></div><dl class="fakten">';
     if (v && v.erste) h += faktZeile('Erschienen', esc(datumText(v.erste)));
     if (sp.offiziell_ab) {
@@ -273,15 +274,14 @@
     if (v) h += faktZeile('Status', '<span class="ver-pill' + (v.offiziell ? ' offiziell' : '') + '">' + (v.offiziell ? 'Offiziell' : 'Beta') + '</span> Version ' + esc(v.version));
     if (v && v.datum) h += faktZeile('Zuletzt aktualisiert', esc(datumText(v.datum)));
     h += faktZeile('Entwickler', 'Leif (LeifPS)');
-    h += faktZeile('Plattform', 'Browser (PC, Handy, Tablet)');
     h += faktZeile('Spielmodus', online ? 'Mehrspieler (online)' : 'Einzelspieler');
-    h += faktZeile('Sprache', 'Deutsch');
+    h += faktZeile('Plattform', 'Browser · Deutsch');
     h += '</dl>';
     if (kategorien(sp).length) h += '<div class="tags-titel">Beliebte Tags</div>' + pills(sp);
     h += '</aside></div>';
-    if (sp.beschreibung && sp.beschreibung !== sp.text) h += '<section class="shop-text"><h2>Über dieses Spiel</h2><p>' + esc(sp.beschreibung) + '</p></section>';
-    h += '<section class="sysreq"><h2>Systemanforderungen</h2><ul><li>Läuft direkt im Browser, ohne Download und ohne Installation.</li><li>Aktueller Browser (Chrome, Safari, Edge oder Firefox) auf PC, Handy oder Tablet.</li><li>Bedienung mit Maus oder Touch.</li>' + (online ? '<li>Internetverbindung erforderlich.</li>' : '') + '</ul></section>';
+    if (!gal) h += text;
     h += '<section class="log" id="log"><h2>Neuigkeiten und Updates</h2><div class="log-liste" id="log-liste"><div class="log-leer">Lädt …</div></div></section>';
+    h += '<details class="sysreq"><summary>Systemanforderungen</summary><ul><li>Läuft direkt im Browser, ohne Download und ohne Installation.</li><li>Aktueller Browser (Chrome, Safari, Edge oder Firefox) auf PC, Handy oder Tablet.</li><li>Bedienung mit Maus oder Touch.</li>' + (online ? '<li>Internetverbindung erforderlich.</li>' : '') + '</ul></details>';
     var mehr = aehnliche(sp);
     if (mehr.length) h += '<section class="mehr"><h2>Ähnliche Spiele</h2><div class="grid">' + mehr.map(tile).join('') + '</div></section>';
     inhalt.innerHTML = h + '</div>';

@@ -492,3 +492,17 @@ h1, h2, h3 { letter-spacing: -.022em; }
 .shop-titelzeile h1, .shop-titelzeile h1.titelschrift { margin: 0; min-width: 0; }
 .shop-titelzeile .btn-spielen { flex: none; min-width: 168px; height: 46px; font-size: 15px; }
 @media (max-width: 900px) { .shop-titelzeile .btn-spielen { width: 100%; } }
+
+/* Detailseite: Gliederung (links Galerie + Beschreibung, rechts Infos) */
+.shop-haupt { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.shop-haupt .shop-text { margin-top: 28px; max-width: none; }
+.shop-info { position: sticky; top: 16px; }
+.log { margin-top: 44px; }
+.log-mehr { width: calc(100% - 20px); margin: 10px; }
+.sysreq { margin-top: 36px; max-width: none; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.sysreq summary { list-style: none; cursor: pointer; padding: 14px 18px; font-size: 15px; font-weight: 600; color: var(--text); display: flex; align-items: center; justify-content: space-between; }
+.sysreq summary::-webkit-details-marker { display: none; }
+.sysreq summary::after { content: '+'; font-size: 20px; line-height: 1; color: var(--muted, #98a2b6); }
+.sysreq[open] summary::after { content: '–'; }
+.sysreq ul { margin: 0; border: 0; border-top: 1px solid var(--line); border-radius: 0 0 12px 12px; background: transparent; padding: 14px 18px 16px 36px; }
+@media (max-width: 900px) { .shop-info { position: static; } .shop-haupt .shop-text { margin-top: 22px; } }
