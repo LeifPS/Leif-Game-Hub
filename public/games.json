@@ -5,71 +5,71 @@
       "name": "Tonlinge",
       "text": "Fange Tonlinge mit Instrumenten und erkunde Klanghain und die Glimmerhöhlen.",
       "url": "https://tonlinge.leifps.workers.dev",
+      "repo": "LeifPS/Tonlinge",
       "farbe": "#6fa86a",
       "kategorien": ["Abenteuer", "Sammeln"],
       "featured": true
     },
     {
-      "id": "papierhelden",
-      "name": "Papierhelden",
-      "text": "Ein Action-Dungeon-Crawler im Papierstil, nur mit Touch-Steuerung.",
-      "url": "https://papierhelden.leifps.workers.dev",
-      "farbe": "#d99a4e",
-      "kategorien": ["Action", "Abenteuer"]
+      "id": "foilxi",
+      "name": "Foil XI",
+      "text": "Zieh Fußballkarten aus Packs, wechsle den Verein und sammle alle Karten.",
+      "url": "https://foil-xi.pages.dev",
+      "repo": "LeifPS/foil-xi",
+      "farbe": "#e0b94a",
+      "kategorien": ["Karten", "Sport"]
     },
     {
-      "id": "spells",
-      "name": "Spells",
-      "text": "Zeichne Zauber und duelliere dich online gegen andere.",
-      "url": "https://spells.leifps.workers.dev",
+      "id": "brutjagd",
+      "name": "Brutjagd",
+      "text": "3D-Abenteuer mit Haustieren und Eiern, zusammen mit bis zu 6 Spielern pro Raum.",
+      "url": "https://brutjagd.leifps.workers.dev",
+      "repo": "LeifPS/brutjagd",
       "farbe": "#8a6bc4",
-      "kategorien": ["Duell", "Online"]
+      "kategorien": ["Abenteuer", "Online"]
     },
     {
-      "id": "schleimmerge",
-      "name": "Schleimmerge",
-      "text": "Verschmelze gleiche Schleime, rüste Waffen aus und besiege Monster.",
-      "url": "https://schleimmerge.leifps.workers.dev",
-      "farbe": "#5fb59a",
-      "kategorien": ["Merge", "Idle"]
-    },
-    {
-      "id": "pizzafabrik",
-      "name": "Pizzafabrik",
-      "text": "Baue eine Fabrik, automatisiere die Pizzaherstellung und liefere Aufträge aus.",
-      "url": "https://pizzafabrik.pages.dev",
-      "farbe": "#d9654e",
-      "kategorien": ["Fabrik", "Strategie"]
-    },
-    {
-      "id": "zahlenwerk",
-      "name": "Zahlenwerk",
-      "text": "Fabrik-Automatisierung mit Zahlen statt Pizza.",
-      "url": "https://zahlenwerk.leifps.workers.dev",
-      "farbe": "#5b8fc9",
-      "kategorien": ["Fabrik", "Strategie"]
-    },
-    {
-      "id": "wasserschlacht",
-      "name": "Wasserschlacht",
-      "text": "Prügle dich als Wassertropfen durch die Arena.",
-      "url": "https://wasserschlacht.leifps.workers.dev",
+      "id": "fischerdock",
+      "name": "Fischerdock",
+      "text": "Fische auf den Inseln, fahre mit Booten und finde versteckte Geheimnisse, auch zu zweit.",
+      "url": "https://fisch.leifps.workers.dev",
+      "repo": "LeifPS/fisch",
       "farbe": "#4fa3d1",
-      "kategorien": ["Action", "Online"]
+      "kategorien": ["Simulation", "Online"]
     },
     {
       "id": "ballgegenball",
       "name": "Ball gegen Ball",
       "text": "Sammle Bälle aus Ballboxen und lass sie in der Box gegeneinander kämpfen.",
       "url": "https://ballvsball.leifps.workers.dev",
-      "farbe": "#e0b94a",
+      "repo": "LeifPS/ballvsball",
+      "farbe": "#d98a3d",
       "kategorien": ["Sammeln", "Online"]
+    },
+    {
+      "id": "papierhelden",
+      "name": "Papierhelden",
+      "text": "Ein Action-Dungeon-Crawler im Papierstil, nur mit Touch-Steuerung.",
+      "url": "https://papierhelden.leifps.workers.dev",
+      "repo": "LeifPS/papierhelden",
+      "farbe": "#c9a15a",
+      "kategorien": ["Action", "Abenteuer"]
+    },
+    {
+      "id": "pizzafabrik",
+      "name": "Pizzafabrik",
+      "text": "Baue eine Fabrik, automatisiere die Pizzaherstellung und liefere Aufträge aus.",
+      "url": "https://pizzafabrik.pages.dev",
+      "repo": "LeifPS/pizzafabrik",
+      "farbe": "#d9654e",
+      "kategorien": ["Fabrik", "Strategie"]
     },
     {
       "id": "businessempire",
       "name": "Business Empire",
       "text": "Idle-Tycoon mit Aktien, Firmen, Immobilien, Autos und Krypto.",
       "url": "https://businessempire.leifps.workers.dev",
+      "repo": "LeifPS/businessempire",
       "farbe": "#7a9a54",
       "kategorien": ["Idle", "Tycoon"]
     },
@@ -78,32 +78,54 @@
       "name": "Tippspiel",
       "text": "Tippe auf Fußballspiele und sammle Punkte gegen die Familie.",
       "url": "https://tippspiel.leifps.workers.dev",
+      "repo": "LeifPS/tippspiel",
       "farbe": "#4aa66b",
       "kategorien": ["Sport", "Online"]
     },
     {
-      "id": "schnickschnackschnuck",
-      "name": "Schnick Schnack Schnuck Karten",
-      "text": "Sammelkarten zu Schere, Stein und Papier zum Ausdrucken.",
-      "url": "https://scheresteinpapier.pages.dev",
-      "farbe": "#c96b8f",
-      "kategorien": ["Karten", "Sammeln"]
+      "id": "erntezeit",
+      "name": "Ernte-Zeit",
+      "text": "Baue deinen Hof aus, ernte Pflanzen, handle auf dem Samen-Markt und sammle Mutationen.",
+      "url": "https://rangspiel.leifps.workers.dev",
+      "repo": "LeifPS/rangspiel",
+      "farbe": "#a3b84a",
+      "kategorien": ["Simulation", "Idle"]
     },
     {
-      "id": "supermarkttycoon",
-      "name": "Supermarkt Tycoon",
-      "text": "Baue deinen Supermarkt aus, Abteilung für Abteilung.",
-      "url": null,
-      "farbe": "#e08a4a",
-      "kategorien": ["Idle", "Tycoon"]
+      "id": "tierspiel",
+      "name": "Tierspiel",
+      "text": "Kaufe Eier, brüte sie aus, sammle Tiere und verdiene damit Münzen, auch offline.",
+      "url": "https://tierspiel.pages.dev",
+      "repo": "LeifPS/tierspiel",
+      "farbe": "#e08aa0",
+      "kategorien": ["Idle", "Sammeln"]
     },
     {
-      "id": "idletraintycoon",
-      "name": "Idle Train Tycoon",
-      "text": "Verwalte deinen Bahnhof und lass das Geschäft laufen.",
-      "url": null,
-      "farbe": "#8a7a6a",
-      "kategorien": ["Idle", "Tycoon"]
+      "id": "cookierng2",
+      "name": "Cookie RNG 2",
+      "text": "Rolle seltene Kekse, sammle alle 520 Einträge, backe Ausrüstung und klettere in der Rangliste.",
+      "url": "https://cookie-rng.web.app",
+      "repo": "LeifPS/cookierng2",
+      "farbe": "#b86a3a",
+      "kategorien": ["Glück", "Sammeln"]
+    },
+    {
+      "id": "cookierng",
+      "name": "Cookie RNG",
+      "text": "Rolle Kekse, fülle das Sammelbuch mit 224 Einträgen und steige mit Rebirths auf.",
+      "url": "https://cookierng.pages.dev",
+      "repo": "LeifPS/cookierng1",
+      "farbe": "#c98a5a",
+      "kategorien": ["Glück", "Sammeln"]
+    },
+    {
+      "id": "chessrng",
+      "name": "Chess RNG",
+      "text": "Würfle Schachfiguren, baue deine Sammlung und dein Loadout aus und spiele um die Rangliste.",
+      "url": "https://chessrng.web.app",
+      "repo": "LeifPS/chessrng",
+      "farbe": "#5b8fc9",
+      "kategorien": ["Glück", "Sammeln"]
     }
   ]
 }
