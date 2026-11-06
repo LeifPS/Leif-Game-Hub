@@ -26,8 +26,8 @@
  "cookierng": {
   "anzahl": 2,
   "datum": "2026-09-27T12:17:51+02:00",
-  "offiziell": false,
-  "version": "0.1.0.1"
+  "offiziell": true,
+  "version": "1.0.0.1"
  },
  "cookierng2": {
   "anzahl": 2,
@@ -50,8 +50,8 @@
  "foilxi": {
   "anzahl": 875,
   "datum": "2026-10-22T17:54:30+02:00",
-  "offiziell": false,
-  "version": "0.95.1.0"
+  "offiziell": true,
+  "version": "1.87.1.0"
  },
  "papierhelden": {
   "anzahl": 9,

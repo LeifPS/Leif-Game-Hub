@@ -114,7 +114,7 @@
     });
     bibliothek.innerHTML = s;
     var n = spielbar().length;
-    document.getElementById('side-fuss').textContent = n + (n === 1 ? ' Spiel' : ' Spiele') + ' spielbar';
+    document.getElementById('side-fuss').innerHTML = n + (n === 1 ? ' Spiel' : ' Spiele') + ' spielbar · <a href="kontakt.html">Kontakt</a>';
   }
 
   function renderHome() {

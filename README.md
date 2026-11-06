@@ -73,7 +73,7 @@ Lokal: `python3 tools/changelog.py --freeze` (optional `--force`, `--only <id>`)
 
 ## Logo
 
-`public/logo/` enthält das handgeschriebene "lgh" als Vektor in mehreren Farbvarianten und App-Icons. Der Hub nutzt `favicon.svg`, `logo/apple-touch-icon.png` und `manifest.webmanifest`.
+`public/logo/` enthält das handgeschriebene "lgh" als Vektor in mehreren Farbvarianten und App-Icons. Aktuell ist die goldene App-Icon-Variante in Gebrauch (`favicon.svg`, `logo/apple-touch-icon.png`, `manifest.webmanifest`, Seitenleiste in `index.html`).
 
 ## Lokal ansehen
 
@@ -89,6 +89,7 @@ oder den Ordner `public/` mit einem beliebigen statischen Server öffnen.
 - `public/style.css`: Design
 - `public/app.js`: Startseite, Spielseite, Update-Log, Spieleansicht
 - `public/games.json`: die Spieleliste
+- `public/kontakt.html`: Kontakt-Seite
 - `public/changelog/`, `public/versions.json`: erzeugte Update-Logs
 - `tools/changelog.py`, `data/`: Generator und eingefrorene Einstufungen
 - `.github/workflows/changelog.yml`: stündliche Aktualisierung

@@ -23,7 +23,8 @@
       "kategorien": [
         "Karten",
         "Sport"
-      ]
+      ],
+      "offiziell_ab": "2026-08-01"
     },
     {
       "id": "brutjagd",
@@ -204,7 +205,8 @@
       "kategorien": [
         "Glück",
         "Sammeln"
-      ]
+      ],
+      "offiziell_ab": "2026-09-27"
     },
     {
       "id": "chessrng",

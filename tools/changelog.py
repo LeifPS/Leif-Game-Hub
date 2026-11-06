@@ -20,6 +20,7 @@ Einstufung eines Commits (erste passende Regel gewinnt):
   3. Regeln nach Schlüsselwörtern und Länge der Nachricht (Upload-Commits nach Zeilenumfang)
 """
 import argparse
+from datetime import datetime
 import json
 import os
 import re
@@ -143,6 +144,8 @@ def read_commits(path: Path):
         parts = line.split("\x1f")
         if len(parts) == 3:
             commits.append({"sha": parts[0], "datum": parts[1], "subject": parts[2].strip()})
+    # Zeitlich sortieren (stabil): manche Repos haben mehrere Wurzeln, dann stimmt die reine Graph-Reihenfolge nicht.
+    commits.sort(key=lambda c: datetime.fromisoformat(c["datum"]).timestamp())
     return commits
 
 
