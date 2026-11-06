@@ -115,3 +115,6 @@ Der Spielname steht auf der Detailseite zusätzlich als Überschrift neben dem I
 
 ### Spielstand bleibt im Hub erhalten
 Browser (vor allem die installierte App auf dem iPhone) behalten den Speicher eingebetteter Seiten nicht zuverlässig. Deshalb bewahrt der Hub den Stand selbst auf: Das Spiel meldet jede Änderung seines `localStorage` per `postMessage` (`{lgh:'stand', spiel, t, d}`) an den Hub (`app.js`, Speicher `lgh.stand.<id>`). Beim Start hängt der Hub den Stand als `#lgh=<Base64url(JSON)>` an die Spieladresse. Das Vorlade-Skript `tools/lgh-vorlade.js` muss ganz vorn im Spiel stehen, es schreibt den Stand in den Speicher und entfernt den Hash, bevor der Spielcode liest. Das Melden steckt in `tools/spielstand-code.js`. Beides gehört in jedes Spiel mit lokalem Spielstand.
+
+## Screenshots hinzufügen
+Screenshots eines Spiels kommen nach `public/screens/shots/<id>/N.webp` (1600 px breit, WebP) und werden in `games.json` beim Spiel im Feld `screenshots` (Liste, erste Datei ist das Hauptbild) eingetragen. Bei Screenshots vom iPad werden Statusleiste und Browser-Leiste oben abgeschnitten (ohne Tab-Leiste 105 px, mit Tab-Leiste 265 px bei 2388 px Breite) und unten 56 px (Ecken-Markierung).
