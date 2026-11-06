@@ -134,7 +134,10 @@
         "Tycoon"
       ],
       "bild": "screens/businessempire.webp",
-      "banner": "screens/businessempire-wide.webp"
+      "banner": "screens/businessempire-wide.webp",
+      "icon": "screens/businessempire-icon.webp",
+      "wallpaper": "screens/businessempire-wallpaper.webp",
+      "fokus": "72% 50%"
     },
     {
       "id": "spells",
@@ -165,7 +168,10 @@
         "Idle"
       ],
       "bild": "screens/schleimmerge.webp",
-      "banner": "screens/schleimmerge-wide.webp"
+      "banner": "screens/schleimmerge-wide.webp",
+      "icon": "screens/schleimmerge-icon.webp",
+      "wallpaper": "screens/schleimmerge-wallpaper.webp",
+      "fokus": "62% 50%"
     },
     {
       "id": "zahlenwerk",
@@ -179,7 +185,10 @@
         "Strategie"
       ],
       "bild": "screens/zahlenwerk.webp",
-      "banner": "screens/zahlenwerk-wide.webp"
+      "banner": "screens/zahlenwerk-wide.webp",
+      "icon": "screens/zahlenwerk-icon.webp",
+      "wallpaper": "screens/zahlenwerk-wallpaper.webp",
+      "fokus": "62% 50%"
     },
     {
       "id": "wasserschlacht",
@@ -193,7 +202,10 @@
         "Online"
       ],
       "bild": "screens/wasserschlacht.webp",
-      "banner": "screens/wasserschlacht-wide.webp"
+      "banner": "screens/wasserschlacht-wide.webp",
+      "icon": "screens/wasserschlacht-icon.webp",
+      "wallpaper": "screens/wasserschlacht-wallpaper.webp",
+      "fokus": "65% 50%"
     },
     {
       "id": "tippspiel",
@@ -207,7 +219,10 @@
         "Online"
       ],
       "bild": "screens/tippspiel.webp",
-      "banner": "screens/tippspiel-wide.webp"
+      "banner": "screens/tippspiel-wide.webp",
+      "icon": "screens/tippspiel-icon.webp",
+      "wallpaper": "screens/tippspiel-wallpaper.webp",
+      "fokus": "68% 50%"
     },
     {
       "id": "erntezeit",
@@ -221,7 +236,10 @@
         "Idle"
       ],
       "bild": "screens/erntezeit.webp",
-      "banner": "screens/erntezeit-wide.webp"
+      "banner": "screens/erntezeit-wide.webp",
+      "icon": "screens/erntezeit-icon.webp",
+      "wallpaper": "screens/erntezeit-wallpaper.webp",
+      "fokus": "55% 50%"
     },
     {
       "id": "tierspiel",
