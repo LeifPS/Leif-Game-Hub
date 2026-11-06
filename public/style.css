@@ -288,3 +288,13 @@ body[data-view="play"] .spiel { display: flex; }
   .detail-wrap.titel .detail-cover { width: 140px; }
   .detail-wrap.titel { margin-top: 20px; }
 }
+
+/* ---------- Titelschriften (dieselben wie in den Wallpapers) ---------- */
+@font-face { font-family: 'T-fredoka'; font-weight: 700; font-display: swap; src: url('fonts/fredoka-700.woff2') format('woff2'); }
+@font-face { font-family: 'T-cinzel'; font-weight: 900; font-display: swap; src: url('fonts/cinzel-900.woff2') format('woff2'); }
+@font-face { font-family: 'T-lilita'; font-weight: 400; font-display: swap; src: url('fonts/lilita-one-400.woff2') format('woff2'); }
+@font-face { font-family: 'T-anton'; font-weight: 400; font-display: swap; src: url('fonts/anton-400.woff2') format('woff2'); }
+@font-face { font-family: 'T-bangers'; font-weight: 400; font-display: swap; src: url('fonts/bangers-400.woff2') format('woff2'); }
+@font-face { font-family: 'T-marker'; font-weight: 400; font-display: swap; src: url('fonts/permanent-marker-400.woff2') format('woff2'); }
+@font-face { font-family: 'T-silkscreen'; font-weight: 700; font-display: swap; src: url('fonts/silkscreen-700.woff2') format('woff2'); }
+.detail-info h1.titelschrift { font-weight: 400; letter-spacing: 0; line-height: 1.05; overflow-wrap: anywhere; }

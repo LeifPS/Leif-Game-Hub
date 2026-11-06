@@ -106,3 +106,5 @@ Jedes Spiel hat in `games.json` ein `icon` (1:1, 512 px, für Kacheln und Biblio
 Die Wallpapers ohne Titel liegen in `grafik/wallpaper-ohne-titel/`, die Varianten mit Titel in `grafik/wallpaper-mit-titel/` (diese sind dieselben Dateien, die im Hub liegen). Fehlt `wallpaper`, zeigt der Hub die alte Ansicht mit Screenshot (`banner`) bzw. gezeichnetem Platzhalter.
 
 Die Icons der Spiele mit eigenem Favicon stammen aus den Spielen selbst (Vektor bzw. Apple-Touch-Icon, auf 512 px gebracht, Rundungen entfernt). Das sind: Tonlinge, Ball gegen Ball, Pizzafabrik, Business Empire, Spells, Zahlenwerk, Wasserschlacht, Tippspiel, Tierspiel und Cookie RNG 2. Die KI-Icons, die dadurch ersetzt wurden, liegen in `grafik/icons-ki/`. Alle anderen Spiele nutzen weiter das KI-Icon.
+
+Der Spielname steht auf der Detailseite zusätzlich als Überschrift neben dem Icon, in derselben Schrift wie im Wallpaper. Die Schrift kommt aus dem Feld `schrift` in `games.json` (`familie`: fredoka, cinzel, lilita, anton, bangers, marker oder silkscreen; `versalien`; `abstand` in em). Die Schriftdateien liegen selbst gehostet in `public/fonts/`.

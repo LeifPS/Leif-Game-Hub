@@ -16,7 +16,12 @@
       "banner": "screens/tonlinge-wide.webp",
       "icon": "screens/tonlinge-icon.webp",
       "wallpaper": "screens/tonlinge-wallpaper.webp",
-      "fokus": "72% 50%"
+      "fokus": "72% 50%",
+      "schrift": {
+        "familie": "fredoka",
+        "versalien": false,
+        "abstand": 0
+      }
     },
     {
       "id": "foilxi",
@@ -34,7 +39,12 @@
       "banner": "screens/foilxi-wide.webp",
       "icon": "screens/foilxi-icon.webp",
       "wallpaper": "screens/foilxi-wallpaper.webp",
-      "fokus": "68% 50%"
+      "fokus": "68% 50%",
+      "schrift": {
+        "familie": "anton",
+        "versalien": true,
+        "abstand": 0.02
+      }
     },
     {
       "id": "brutjagd",
@@ -51,7 +61,12 @@
       "banner": "screens/brutjagd-wide.webp",
       "icon": "screens/brutjagd-icon.webp",
       "wallpaper": "screens/brutjagd-wallpaper.webp",
-      "fokus": "60% 50%"
+      "fokus": "60% 50%",
+      "schrift": {
+        "familie": "lilita",
+        "versalien": false,
+        "abstand": 0.01
+      }
     },
     {
       "id": "fischerdock",
@@ -68,7 +83,12 @@
       "banner": "screens/fischerdock-wide.webp",
       "icon": "screens/fischerdock-icon.webp",
       "wallpaper": "screens/fischerdock-wallpaper.webp",
-      "fokus": "70% 50%"
+      "fokus": "70% 50%",
+      "schrift": {
+        "familie": "silkscreen",
+        "versalien": false,
+        "abstand": 0
+      }
     },
     {
       "id": "ballgegenball",
@@ -85,7 +105,12 @@
       "banner": "screens/ballgegenball-wide.webp",
       "icon": "screens/ballgegenball-icon.webp",
       "wallpaper": "screens/ballgegenball-wallpaper.webp",
-      "fokus": "68% 50%"
+      "fokus": "68% 50%",
+      "schrift": {
+        "familie": "bangers",
+        "versalien": false,
+        "abstand": 0.02
+      }
     },
     {
       "id": "papierhelden",
@@ -102,7 +127,12 @@
       "banner": "screens/papierhelden-wide.webp",
       "icon": "screens/papierhelden-icon.webp",
       "wallpaper": "screens/papierhelden-wallpaper.webp",
-      "fokus": "72% 50%"
+      "fokus": "72% 50%",
+      "schrift": {
+        "familie": "marker",
+        "versalien": false,
+        "abstand": 0
+      }
     },
     {
       "id": "pizzafabrik",
@@ -120,7 +150,12 @@
       "banner": "screens/pizzafabrik-wide.webp",
       "icon": "screens/pizzafabrik-icon.webp",
       "wallpaper": "screens/pizzafabrik-wallpaper.webp",
-      "fokus": "55% 50%"
+      "fokus": "55% 50%",
+      "schrift": {
+        "familie": "lilita",
+        "versalien": false,
+        "abstand": 0.01
+      }
     },
     {
       "id": "businessempire",
@@ -137,7 +172,12 @@
       "banner": "screens/businessempire-wide.webp",
       "icon": "screens/businessempire-icon.webp",
       "wallpaper": "screens/businessempire-wallpaper.webp",
-      "fokus": "72% 50%"
+      "fokus": "72% 50%",
+      "schrift": {
+        "familie": "cinzel",
+        "versalien": true,
+        "abstand": 0.02
+      }
     },
     {
       "id": "spells",
@@ -154,7 +194,12 @@
       "banner": "screens/spells-wide.webp",
       "icon": "screens/spells-icon.webp",
       "wallpaper": "screens/spells-wallpaper.webp",
-      "fokus": "50% 50%"
+      "fokus": "50% 50%",
+      "schrift": {
+        "familie": "cinzel",
+        "versalien": true,
+        "abstand": 0.035
+      }
     },
     {
       "id": "schleimmerge",
@@ -171,7 +216,12 @@
       "banner": "screens/schleimmerge-wide.webp",
       "icon": "screens/schleimmerge-icon.webp",
       "wallpaper": "screens/schleimmerge-wallpaper.webp",
-      "fokus": "62% 50%"
+      "fokus": "62% 50%",
+      "schrift": {
+        "familie": "lilita",
+        "versalien": false,
+        "abstand": 0.01
+      }
     },
     {
       "id": "zahlenwerk",
@@ -188,7 +238,12 @@
       "banner": "screens/zahlenwerk-wide.webp",
       "icon": "screens/zahlenwerk-icon.webp",
       "wallpaper": "screens/zahlenwerk-wallpaper.webp",
-      "fokus": "62% 50%"
+      "fokus": "62% 50%",
+      "schrift": {
+        "familie": "fredoka",
+        "versalien": false,
+        "abstand": 0
+      }
     },
     {
       "id": "wasserschlacht",
@@ -205,7 +260,12 @@
       "banner": "screens/wasserschlacht-wide.webp",
       "icon": "screens/wasserschlacht-icon.webp",
       "wallpaper": "screens/wasserschlacht-wallpaper.webp",
-      "fokus": "65% 50%"
+      "fokus": "65% 50%",
+      "schrift": {
+        "familie": "lilita",
+        "versalien": false,
+        "abstand": 0.01
+      }
     },
     {
       "id": "tippspiel",
@@ -222,7 +282,12 @@
       "banner": "screens/tippspiel-wide.webp",
       "icon": "screens/tippspiel-icon.webp",
       "wallpaper": "screens/tippspiel-wallpaper.webp",
-      "fokus": "68% 50%"
+      "fokus": "68% 50%",
+      "schrift": {
+        "familie": "anton",
+        "versalien": true,
+        "abstand": 0.025
+      }
     },
     {
       "id": "erntezeit",
@@ -239,7 +304,12 @@
       "banner": "screens/erntezeit-wide.webp",
       "icon": "screens/erntezeit-icon.webp",
       "wallpaper": "screens/erntezeit-wallpaper.webp",
-      "fokus": "55% 50%"
+      "fokus": "55% 50%",
+      "schrift": {
+        "familie": "lilita",
+        "versalien": false,
+        "abstand": 0.01
+      }
     },
     {
       "id": "tierspiel",
@@ -256,7 +326,12 @@
       "banner": "screens/tierspiel-wide.webp",
       "icon": "screens/tierspiel-icon.webp",
       "wallpaper": "screens/tierspiel-wallpaper.webp",
-      "fokus": "68% 50%"
+      "fokus": "68% 50%",
+      "schrift": {
+        "familie": "fredoka",
+        "versalien": false,
+        "abstand": 0
+      }
     },
     {
       "id": "cookierng2",
@@ -273,7 +348,12 @@
       "banner": "screens/cookierng2-wide.webp",
       "icon": "screens/cookierng2-icon.webp",
       "wallpaper": "screens/cookierng2-wallpaper.webp",
-      "fokus": "62% 50%"
+      "fokus": "62% 50%",
+      "schrift": {
+        "familie": "lilita",
+        "versalien": false,
+        "abstand": 0.01
+      }
     },
     {
       "id": "cookierng",
@@ -291,7 +371,12 @@
       "banner": "screens/cookierng-wide.webp",
       "icon": "screens/cookierng-icon.webp",
       "wallpaper": "screens/cookierng-wallpaper.webp",
-      "fokus": "66% 50%"
+      "fokus": "66% 50%",
+      "schrift": {
+        "familie": "lilita",
+        "versalien": false,
+        "abstand": 0.01
+      }
     },
     {
       "id": "chessrng",
@@ -308,7 +393,12 @@
       "banner": "screens/chessrng-wide.webp",
       "icon": "screens/chessrng-icon.webp",
       "wallpaper": "screens/chessrng-wallpaper.webp",
-      "fokus": "68% 50%"
+      "fokus": "68% 50%",
+      "schrift": {
+        "familie": "cinzel",
+        "versalien": true,
+        "abstand": 0.025
+      }
     }
   ]
 }
