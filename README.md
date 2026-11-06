@@ -108,3 +108,7 @@ Die Wallpapers ohne Titel liegen in `grafik/wallpaper-ohne-titel/`, die Variante
 Die Icons der Spiele mit eigenem Favicon stammen aus den Spielen selbst (Vektor bzw. Apple-Touch-Icon, auf 512 px gebracht, Rundungen entfernt). Das sind: Tonlinge, Foil XI, Ball gegen Ball, Pizzafabrik, Business Empire, Spells, Zahlenwerk, Wasserschlacht, Tippspiel, Tierspiel und Cookie RNG 2. Die KI-Icons, die dadurch ersetzt wurden, liegen in `grafik/icons-ki/`. Foil XI setzt sein Favicon per JavaScript (PNG-Daten im Code). Alle anderen Spiele nutzen weiter das KI-Icon.
 
 Der Spielname steht auf der Detailseite zusätzlich als Überschrift neben dem Icon, in derselben Schrift wie im Wallpaper. Die Schrift kommt aus dem Feld `schrift` in `games.json` (`familie`: fredoka, cinzel, lilita, anton, bangers, marker oder silkscreen; `versalien`; `abstand` in em). Die Schriftdateien liegen selbst gehostet in `public/fonts/`.
+
+## Spielstand-Code
+
+`tools/spielstand-code.js` ist die Vorlage für den Button "Spielstand-Code", der in Spielen mit lokalem Spielstand (localStorage) eingebaut wird. Im Hub läuft ein Spiel eingebettet, und Browser speichern dort getrennt vom direkten Spiel-Link. Mit dem Code kopiert man den Spielstand von einem Fenster ins andere. Die Vorlage gehört pro Spiel angepasst (Variable `SPIEL`). Cloud-Spiele und Spiele, die Export/Import schon haben, bekommen sie nicht.
