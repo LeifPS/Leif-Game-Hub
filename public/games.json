@@ -31,7 +31,10 @@
       ],
       "offiziell_ab": "2026-08-01",
       "bild": "screens/foilxi.webp",
-      "banner": "screens/foilxi-wide.webp"
+      "banner": "screens/foilxi-wide.webp",
+      "icon": "screens/foilxi-icon.webp",
+      "wallpaper": "screens/foilxi-wallpaper.webp",
+      "fokus": "68% 50%"
     },
     {
       "id": "brutjagd",
@@ -45,7 +48,10 @@
         "Online"
       ],
       "bild": "screens/brutjagd.webp",
-      "banner": "screens/brutjagd-wide.webp"
+      "banner": "screens/brutjagd-wide.webp",
+      "icon": "screens/brutjagd-icon.webp",
+      "wallpaper": "screens/brutjagd-wallpaper.webp",
+      "fokus": "60% 50%"
     },
     {
       "id": "fischerdock",
@@ -59,7 +65,10 @@
         "Online"
       ],
       "bild": "screens/fischerdock.webp",
-      "banner": "screens/fischerdock-wide.webp"
+      "banner": "screens/fischerdock-wide.webp",
+      "icon": "screens/fischerdock-icon.webp",
+      "wallpaper": "screens/fischerdock-wallpaper.webp",
+      "fokus": "70% 50%"
     },
     {
       "id": "ballgegenball",
@@ -73,7 +82,10 @@
         "Online"
       ],
       "bild": "screens/ballgegenball.webp",
-      "banner": "screens/ballgegenball-wide.webp"
+      "banner": "screens/ballgegenball-wide.webp",
+      "icon": "screens/ballgegenball-icon.webp",
+      "wallpaper": "screens/ballgegenball-wallpaper.webp",
+      "fokus": "68% 50%"
     },
     {
       "id": "papierhelden",
@@ -87,7 +99,10 @@
         "Abenteuer"
       ],
       "bild": "screens/papierhelden.webp",
-      "banner": "screens/papierhelden-wide.webp"
+      "banner": "screens/papierhelden-wide.webp",
+      "icon": "screens/papierhelden-icon.webp",
+      "wallpaper": "screens/papierhelden-wallpaper.webp",
+      "fokus": "72% 50%"
     },
     {
       "id": "pizzafabrik",
@@ -102,7 +117,10 @@
       ],
       "privat": true,
       "bild": "screens/pizzafabrik.webp",
-      "banner": "screens/pizzafabrik-wide.webp"
+      "banner": "screens/pizzafabrik-wide.webp",
+      "icon": "screens/pizzafabrik-icon.webp",
+      "wallpaper": "screens/pizzafabrik-wallpaper.webp",
+      "fokus": "55% 50%"
     },
     {
       "id": "businessempire",
