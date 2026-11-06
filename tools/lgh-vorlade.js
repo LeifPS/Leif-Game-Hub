@@ -1,5 +1,22 @@
-/* Spielstand aus dem Spiele-Hub einspielen (muss vor dem Spielcode laufen). Der Hub hängt den gespeicherten Stand als #lgh=<Base64url(JSON)> an die Adresse. */
+/* Muss ganz vorn im Spiel stehen, vor dem Spielcode.
+   1. Ist der Browser-Speicher (localStorage) hier gesperrt, etwa weil das Spiel eingebettet im Spiele-Hub läuft, gibt es einen Ersatz im Arbeitsspeicher.
+      Der Spiele-Hub bewahrt den Stand dann auf (siehe Spielstand-Code-Modul).
+   2. Der Hub hängt seinen gespeicherten Stand als #lgh=<Base64url(JSON)> an die Adresse. Er wird hier in den Speicher geschrieben und der Hash entfernt. */
 (function () {
+  var ok = true;
+  try { var t0 = window.localStorage; t0.setItem('__lgh_t', '1'); t0.removeItem('__lgh_t'); } catch (e) { ok = false; }
+  if (!ok) {
+    var m = {}, melde = function () { if (window.__lghAenderung) window.__lghAenderung(); };
+    var shim = {
+      getItem: function (k) { return Object.prototype.hasOwnProperty.call(m, k) ? m[k] : null; },
+      setItem: function (k, v) { if (window.__lghSperre) return; m[k] = String(v); melde(); },
+      removeItem: function (k) { if (window.__lghSperre) return; delete m[k]; melde(); },
+      clear: function () { if (window.__lghSperre) return; m = {}; melde(); },
+      key: function (i) { var k = Object.keys(m); return i < k.length ? k[i] : null; }
+    };
+    Object.defineProperty(shim, 'length', { get: function () { return Object.keys(m).length; } });
+    try { Object.defineProperty(window, 'localStorage', { get: function () { return shim; }, configurable: true }); window.__lghSpeicherErsatz = true; } catch (e) { }
+  }
   try {
     var h = location.hash;
     if (h.indexOf('#lgh=') !== 0) return;

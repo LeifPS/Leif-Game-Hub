@@ -43,6 +43,7 @@
   function ver(sp) { return versionen[sp.id] || null; }
   function kategorien(sp) { return sp.kategorien || []; }
   function spielbar() { return spiele.filter(function (s) { return s.url; }); }
+  function alphabetisch() { return sortiert().slice().sort(function (x, y) { return x.name.localeCompare(y.name, 'de', { numeric: true, sensitivity: 'base' }); }); }
   function sortiert() { return spielbar().concat(spiele.filter(function (s) { return !s.url; })); }
 
   /* ---------- Automatisch gezeichnete Titelbilder (Platzhalter, bis es echte Bilder gibt: Feld "bild" in games.json) ---------- */
@@ -110,7 +111,7 @@
   function renderSide(aktivId) {
     var s = '<a class="lib-item' + (aktivId ? '' : ' aktiv') + '" href="#"><span class="lib-home-icon"><svg width="20" height="20" aria-hidden="true"><use href="#i-home"/></svg></span><span class="name">Startseite</span></a>';
     s += '<div class="nav-label">Bibliothek</div>';
-    sortiert().forEach(function (sp) {
+    alphabetisch().forEach(function (sp) {
       var offen = !!sp.url;
       var inner = '<span class="lib-icon">' + art(sp, 100, 100) + '</span><span class="name">' + esc(sp.name) + '</span>' + (offen ? '' : '<small>Bald</small>');
       s += offen
@@ -344,7 +345,8 @@
     try { if (e.origin !== new URL(aktuell.url).origin) return; } catch (x) { return; }
     if (!rahmen.contentWindow || e.source !== rahmen.contentWindow) return;
     if (!Object.keys(d.d).length) return;
-    try { localStorage.setItem(STAND + aktuell.id, JSON.stringify({ t: d.t || Date.now(), d: d.d })); } catch (x) { }
+    try { localStorage.setItem(STAND + aktuell.id, JSON.stringify({ t: d.t || Date.now(), d: d.d })); } catch (x) { return; }
+    try { e.source.postMessage({ lgh: 'ok', t: Date.now() }, e.origin); } catch (x) { }
   });
   function starteSpiel(sp) {
     aktuell = sp;
