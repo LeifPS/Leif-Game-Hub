@@ -695,13 +695,23 @@
   }
   /* Detailseite: "Zuletzt gespielt" und "Spielzeit" neben dem Spielen-Knopf (aus den Profildaten des Kontos; nur sichtbar, wenn schon gespielt) */
   var eigenSpiele = { t: 0, liste: null, lauf: false }, spielInfoLauscher = false;
+  /* Nur aufs Datum genau: Heute, Gestern, "5. Sep" (dieses Jahr), "2. Juli 2024" (früher) */
+  function spielTag(ts) {
+    var d = new Date(ts * 1000), n = new Date();
+    var tage = Math.round((new Date(n.getFullYear(), n.getMonth(), n.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+    if (tage <= 0) return 'Heute';
+    if (tage === 1) return 'Gestern';
+    var lang = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+    var kurz = ['Jan', 'Feb', 'März', 'Apr', 'Mai', 'Juni', 'Juli', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+    return d.getFullYear() === n.getFullYear() ? d.getDate() + '. ' + kurz[d.getMonth()] : d.getDate() + '. ' + lang[d.getMonth()] + ' ' + d.getFullYear();
+  }
   function spielInfoZeigen(id) {
     var el = inhalt.querySelector('.spielinfo');
     if (!el) return;
     var x = null;
     if (eigenSpiele.liste) x = eigenSpiele.liste.filter(function (g) { return g.spiel === id; })[0] || null;
     if (!x || !x.zuletzt) { el.hidden = true; el.innerHTML = ''; return; }
-    el.innerHTML = '<div><small>Zuletzt gespielt</small><b>' + esc(relZeit(Math.max(0, Math.floor(Date.now() / 1000) - x.zuletzt))) + '</b></div>' +
+    el.innerHTML = '<div><small>Zuletzt gespielt</small><b>' + esc(spielTag(x.zuletzt)) + '</b></div>' +
       '<div><small>Spielzeit</small><b>' + esc(dauer(x.sekunden)) + '</b></div>';
     el.hidden = false;
   }
