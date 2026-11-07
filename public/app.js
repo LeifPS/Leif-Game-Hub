@@ -338,9 +338,9 @@
     if (!v && sp.phase) h += faktZeile('Status', '<span class="ver-pill' + (sp.phase === 'alpha' ? ' alpha' : '') + '">' + phaseName(sp, null) + '</span>');
     if (v) h += faktZeile('Status', '<span class="ver-pill' + (v.offiziell ? ' offiziell' : sp.phase === 'alpha' ? ' alpha' : '') + '">' + phaseName(sp, v) + '</span> Version ' + esc(vz(v.version)));
     if (v && v.datum) h += faktZeile('Zuletzt aktualisiert', esc(datumText(v.datum)));
-    h += faktZeile('Entwickler', 'Leif (LeifPS)');
+    h += faktZeile('Entwickler', esc(sp.entwickler || 'Leif (LeifPS)'));   // games.json: "entwickler" für Spiele von anderen
     h += faktZeile('Spielmodus', online ? 'Mehrspieler (online)' : 'Einzelspieler');
-    h += faktZeile('Plattform', 'Browser · Deutsch');
+    h += faktZeile('Plattform', 'Browser · ' + esc(sp.sprache || 'Deutsch'));   // games.json: "sprache" falls nicht Deutsch
     h += '</dl>';
     if (kategorien(sp).length) h += '<div class="tags-titel">Beliebte Tags</div>' + pills(sp);
     h += '</aside></div>';
