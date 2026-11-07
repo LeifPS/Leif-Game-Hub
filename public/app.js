@@ -486,11 +486,55 @@
       var z = document.getElementById('fr-liste');
       if (body.getAttribute('data-view') !== 'freunde' || !z) return;
       if (!res.ok) { if (!freundeDaten) z.innerHTML = '<div class="fr-leer">Die Freunde konnten gerade nicht geladen werden.</div>'; return; }
-      freundeDaten = res.j;
+      freundeDaten = leisteDaten = res.j;
       LghKonto.setzeOffene(res.j.eingehend.length);
       zeichneFreunde(z, res.j);
     });
   }
+  /* ---------- Freunde-Leiste ganz oben auf der Startseite (wie bei Roblox) ---------- */
+  var leisteDaten = null, leisteTimer = null;
+  function zeichneLeiste() {
+    var z = document.getElementById('fr-leiste');
+    if (!z) return;
+    var sichtbar = body.getAttribute('data-view') === 'home' && !suche && !!leisteDaten;
+    z.hidden = !sichtbar;
+    if (!sichtbar) return;
+    var d = leisteDaten, n = esc;
+    var rang = function (f) { return f.spiel ? 0 : f.online ? 1 : 2; };
+    var liste = d.freunde.slice().sort(function (a, b) { return rang(a) - rang(b) || a.name.toLowerCase().localeCompare(b.name.toLowerCase()); });
+    var h = '<a class="fr-kopf" href="#freunde">Freunde (' + d.freunde.length + ')<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      (d.eingehend.length ? '<span class="fr-neu">' + d.eingehend.length + (d.eingehend.length === 1 ? ' Anfrage' : ' Anfragen') + '</span>' : '') + '</a>';
+    h += '<div class="fr-reihe">';
+    h += '<a class="fr-karte" href="#freunde"><span class="fr-kreis fr-plus"><svg aria-hidden="true" width="34" height="34"><use href="#i-people"/></svg></span><span class="fr-n">Hinzufügen</span><span class="fr-s">&nbsp;</span></a>';
+    liste.forEach(function (f) {
+      var ziel = '#freunde', status = '&nbsp;';
+      if (f.spiel) {
+        if (spielbar().some(function (s) { return s.id === f.spiel; })) ziel = '#spiel/' + encodeURIComponent(f.spiel);
+        status = esc(spielName(f.spiel));
+      } else if (f.online) status = 'Im Hub';
+      h += '<a class="fr-karte' + (f.spiel || f.online ? '' : ' aus') + '" href="' + ziel + '" title="' + n(f.name) + (f.spiel ? ' spielt ' + n(spielName(f.spiel)) : f.online ? ' ist im Hub' : '') + '">' +
+        '<span class="fr-kreis" style="' + LghKonto.avatarStil(f.name) + '">' + n(f.name.charAt(0).toUpperCase()) + (f.spiel || f.online ? '<span class="fr-punkt"></span>' : '') + '</span>' +
+        '<span class="fr-n">' + n(f.name) + '</span><span class="fr-s">' + status + '</span></a>';
+    });
+    z.innerHTML = h + '</div>';
+  }
+  function ladeLeiste() {
+    if (document.hidden || !window.LghKonto || !LghKonto.angemeldet()) return;
+    if (body.getAttribute('data-view') !== 'home') return;
+    LghKonto.freunde.liste().then(function (res) {
+      if (!res.ok) return;
+      leisteDaten = res.j;
+      LghKonto.setzeOffene(res.j.eingehend.length);
+      zeichneLeiste();
+    });
+  }
+  function leisteStart() {
+    zeichneLeiste();
+    ladeLeiste();
+    if (!leisteTimer) leisteTimer = setInterval(ladeLeiste, 20000);
+  }
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) ladeLeiste(); });
+
   var FR_FEHLER = {
     unbekannter_name: 'Es gibt kein Konto mit diesem Namen.', selbst: 'Das bist du selbst.', schon_freunde: 'Ihr seid schon Freunde.',
     schon_angefragt: 'Du hast dieser Person schon eine Anfrage geschickt.', zu_viele_freunde: 'Du hast schon die höchste Zahl an Freunden.',
@@ -581,6 +625,7 @@
     }
     body.setAttribute('data-view', 'home');
     zeigeAnsicht(homeKey(), renderHome); renderSide(null);
+    leisteStart();
     document.title = 'Leifs Spiele';
     window.scrollTo(0, vorher === 'home' ? window.scrollY : homeScroll);
   }
@@ -591,6 +636,7 @@
 
   document.getElementById('suche').addEventListener('input', function (e) {
     suche = e.target.value.trim().toLowerCase();
+    zeichneLeiste();
     if (body.getAttribute('data-view') !== 'home') location.hash = ''; else { renderHome(); ansichtKey = homeKey(); }
   });
   inhalt.addEventListener('click', function (e) {

@@ -600,3 +600,30 @@ body.konto-offen { overflow: hidden; }
   .search { min-width: 0; }
   .search input { min-width: 0; width: 100%; }
 }
+
+/* Freunde-Leiste oben auf der Startseite */
+.fr-leiste { padding: 22px 32px 0; }
+.fr-leiste[hidden], body:not([data-view="home"]) .fr-leiste { display: none; }
+.fr-kopf { display: inline-flex; align-items: center; gap: 6px; font-size: 22px; font-weight: 700; letter-spacing: -.02em; color: var(--text); text-decoration: none; }
+.fr-kopf svg { margin-top: 2px; color: var(--muted); }
+.fr-kopf:hover svg { color: var(--text); }
+.fr-neu { margin-left: 10px; padding: 3px 10px; border-radius: 999px; background: #ff5a5f; color: #fff; font-size: 12.5px; font-weight: 650; letter-spacing: 0; }
+.fr-reihe { display: flex; gap: 18px; margin-top: 14px; padding-bottom: 6px; overflow-x: auto; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+.fr-karte { flex: none; width: 88px; display: flex; flex-direction: column; align-items: center; text-align: center; text-decoration: none; color: var(--text); }
+.fr-kreis { position: relative; width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center; font-size: 34px; font-weight: 700; transition: transform .15s; }
+.fr-karte:hover .fr-kreis { transform: scale(1.05); }
+.fr-plus { background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }
+.fr-karte:hover .fr-plus { color: var(--text); }
+.fr-karte.aus .fr-kreis { opacity: .55; }
+.fr-punkt { position: absolute; right: 1px; bottom: 1px; width: 20px; height: 20px; border-radius: 50%; background: #3ddc84; border: 3px solid var(--bg); box-sizing: border-box; }
+.fr-n { max-width: 100%; margin-top: 8px; font-size: 14px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fr-s { max-width: 100%; font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 900px) {
+  .fr-leiste { padding: 18px 16px 0; }
+  .fr-kopf { font-size: 19px; }
+  .fr-reihe { gap: 14px; }
+  .fr-karte { width: 78px; }
+  .fr-n { font-size: 13px; }
+  .fr-kreis { width: 68px; height: 68px; font-size: 28px; }
+  .fr-punkt { width: 17px; height: 17px; }
+}
