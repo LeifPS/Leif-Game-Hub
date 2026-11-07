@@ -755,3 +755,6 @@ body.konto-offen { overflow: hidden; }
 .bi-quelle { font-size: 12px; color: var(--muted); margin: 4px 0 10px; }
 .bi-quelle a { color: #7fb0ff; }
 @media (max-width: 520px) { .bi-kopf { flex-direction: column; align-items: stretch; } .bi-vorschau { align-self: center; } }
+
+/* Kopfleiste: Die Suche nimmt den ganzen freien Platz, Freunde und Profilbild sitzen ganz rechts */
+.topbar .search { flex: 1 1 0; min-width: 0; }
