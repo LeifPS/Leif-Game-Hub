@@ -51,6 +51,7 @@
       "farbe": "#e0b94a",
       "kategorien": [
         "Karten",
+        "Sammeln",
         "Sport"
       ],
       "offiziell_ab": "2026-08-01",
@@ -92,12 +93,13 @@
     {
       "id": "brutjagd",
       "name": "Brutjagd",
-      "text": "3D-Abenteuer mit Haustieren und Eiern, zusammen mit bis zu 6 Spielern pro Raum.",
+      "text": "Trage Eier durch gefährliche Gebiete, brüte Haustiere aus und entkomme den Bossen, zusammen mit bis zu 6 Spielern pro Raum.",
       "url": "https://brutjagd.leifps.workers.dev",
       "repo": "LeifPS/brutjagd",
       "farbe": "#7a6bd6",
       "kategorien": [
-        "Abenteuer",
+        "Sammeln",
+        "Action",
         "Online"
       ],
       "bild": "screens/brutjagd.webp",
@@ -125,6 +127,7 @@
       "repo": "LeifPS/fisch",
       "farbe": "#36a3b8",
       "kategorien": [
+        "Angeln",
         "Simulation",
         "Online"
       ],
@@ -154,6 +157,7 @@
       "farbe": "#d98a3d",
       "kategorien": [
         "Sammeln",
+        "Kampf",
         "Online"
       ],
       "bild": "screens/ballgegenball.webp",
@@ -195,7 +199,7 @@
       "farbe": "#c9a15a",
       "kategorien": [
         "Action",
-        "Abenteuer"
+        "Dungeon"
       ],
       "bild": "screens/papierhelden.webp",
       "banner": "screens/papierhelden-wide.webp",
@@ -279,7 +283,8 @@
       "repo": "LeifPS/spells",
       "farbe": "#a65bd6",
       "kategorien": [
-        "Duell",
+        "Kampf",
+        "Zeichnen",
         "Online"
       ],
       "bild": "screens/spells.webp",
@@ -308,6 +313,7 @@
       "farbe": "#86c45f",
       "kategorien": [
         "Merge",
+        "Kampf",
         "Idle"
       ],
       "bild": "screens/schleimmerge.webp",
@@ -433,7 +439,7 @@
       "farbe": "#a3b84a",
       "kategorien": [
         "Simulation",
-        "Idle"
+        "Sammeln"
       ],
       "bild": "screens/erntezeit.webp",
       "banner": "screens/erntezeit-wide.webp",
