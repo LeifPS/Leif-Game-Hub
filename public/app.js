@@ -109,18 +109,19 @@
 
   /* ---------- Ansichten ---------- */
   var seiteFertig = false;
-  function renderSide(aktivId) {
+  function renderSide(aktivId, freundeAktiv) {
     if (seiteFertig) {
       var as = bibliothek.querySelectorAll('.lib-item');
       for (var i = 0; i < as.length; i++) {
         var hr = as[i].getAttribute('href');
-        var ist = hr === '#' ? !aktivId : (aktivId && hr === '#spiel/' + encodeURIComponent(aktivId));
+        var ist = hr === '#freunde' ? !!freundeAktiv : hr === '#' ? (!aktivId && !freundeAktiv) : (aktivId && hr === '#spiel/' + encodeURIComponent(aktivId));
         as[i].classList.toggle('aktiv', !!ist);
       }
       return;
     }
     seiteFertig = true;
     var s = '<a class="lib-item' + (aktivId ? '' : ' aktiv') + '" href="#"><span class="lib-home-icon"><svg width="20" height="20" aria-hidden="true"><use href="#i-home"/></svg></span><span class="name">Startseite</span></a>';
+    s += '<a class="lib-item' + (freundeAktiv ? ' aktiv' : '') + '" href="#freunde"><span class="lib-home-icon"><svg width="20" height="20" aria-hidden="true"><use href="#i-people"/></svg></span><span class="name">Freunde</span><span class="freunde-abz" hidden></span></a>';
     s += '<div class="nav-label">Bibliothek</div>';
     alphabetisch().forEach(function (sp) {
       var offen = !!sp.url;
@@ -130,6 +131,7 @@
         : '<div class="lib-item off">' + inner + '</div>';
     });
     bibliothek.innerHTML = s;
+    if (window.LghKonto) LghKonto.abzeichen();
     var n = spielbar().length;
     document.getElementById('side-fuss').innerHTML = n + (n === 1 ? ' Spiel' : ' Spiele') + ' spielbar · <a href="kontakt.html">Kontakt</a>';
   }
@@ -352,13 +354,17 @@
   }
   window.addEventListener('message', function (e) {
     var d = e.data;
-    if (!aktuell || !d || d.lgh !== 'stand' || d.spiel !== aktuell.id || !d.d || typeof d.d !== 'object') return;
+    if (!aktuell || !d || d.spiel !== aktuell.id || (d.lgh !== 'stand' && d.lgh !== 'status')) return;
     try { if (e.origin !== new URL(aktuell.url).origin) return; } catch (x) { return; }
     if (!rahmen.contentWindow || e.source !== rahmen.contentWindow) return;
-    if (!Object.keys(d.d).length) return;
+    // Optional: ein Spiel kann einen Raumcode melden ({lgh:'status', spiel, raum:'ABC123'}), den Freunde dann sehen
+    if (d.lgh === 'status') { if (window.LghKonto) LghKonto.raum(d.raum); return; }
+    if (!d.d || typeof d.d !== 'object' || !Object.keys(d.d).length) return;
     try { localStorage.setItem(STAND + aktuell.id, JSON.stringify({ t: d.t || Date.now(), d: d.d })); } catch (x) { return; }
+    if (window.LghKonto) LghKonto.stand(aktuell.id, d.d);   // nur still mitschreiben, das Spiel hängt nicht davon ab
     try { e.source.postMessage({ lgh: 'ok', t: Date.now() }, e.origin); } catch (x) { }
   });
+  var startZaehler = 0;
   function starteSpiel(sp) {
     aktuell = sp;
     document.getElementById('spieltitel').textContent = sp.name;
@@ -366,16 +372,132 @@
     document.getElementById('vollbild').hidden = !(buehne.requestFullscreen || buehne.webkitRequestFullscreen);
     hinweis.classList.remove('sichtbar');
     clearTimeout(hinweisTimer);
-    hinweisTimer = setTimeout(function () { hinweis.classList.add('sichtbar'); }, 7000);
-    neuerRahmen(sp.url + standHash(sp.id), function () { clearTimeout(hinweisTimer); hinweis.classList.remove('sichtbar'); });
+    var zaehler = ++startZaehler;
+    // Ohne Anmeldung startet nichts (auch nicht über einen direkten Link)
+    (window.LghKonto ? LghKonto.bereit() : Promise.resolve()).then(function () {
+      if (aktuell !== sp || zaehler !== startZaehler) return;
+      if (window.LghKonto) LghKonto.spiel(sp.id);
+      hinweisTimer = setTimeout(function () { hinweis.classList.add('sichtbar'); }, 7000);
+      neuerRahmen(sp.url + standHash(sp.id), function () { clearTimeout(hinweisTimer); hinweis.classList.remove('sichtbar'); });
+    });
   }
   function stoppeSpiel() {
     clearTimeout(hinweisTimer);
     hinweis.classList.remove('sichtbar');
     neuerRahmen(null);
+    if (window.LghKonto && aktuell) { LghKonto.beimVerlassen(aktuell.id); LghKonto.spiel(null); }
     aktuell = null;
+    startZaehler++;
     if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
   }
+
+  /* ---------- Freunde ---------- */
+  var freundeTimer = null, freundeDaten = null, entfernenFrage = null;
+  function relZeit(sek) {
+    if (sek < 90) return 'gerade eben';
+    var m = Math.round(sek / 60); if (m < 60) return 'vor ' + m + ' Min.';
+    var h = Math.round(sek / 3600); if (h < 24) return 'vor ' + h + ' Std.';
+    var t = Math.round(sek / 86400); return t === 1 ? 'gestern' : 'vor ' + t + ' Tagen';
+  }
+  function spielName(id) { var sp = spiele.filter(function (x) { return x.id === id; })[0]; return sp ? sp.name : id; }
+  function frItem(av, name, status, akt) {
+    return '<div class="fr-item"><span class="avatar" style="' + LghKonto.avatarStil(name) + '">' + esc(name.charAt(0).toUpperCase()) + '</span>' +
+      '<div class="fr-text"><div class="fr-name">' + esc(name) + '</div><div class="fr-status">' + status + '</div></div><div class="fr-akt">' + akt + '</div></div>';
+  }
+  function zeichneFreunde(z, d) {
+    var h = '', n = esc;
+    if (d.eingehend.length) {
+      h += '<h2 class="fr-abschnitt">Anfragen <span class="fr-zahl">' + d.eingehend.length + '</span></h2><div class="fr-liste">';
+      d.eingehend.forEach(function (x) {
+        h += frItem(0, x.name, 'möchte dein Freund sein',
+          '<button type="button" class="btn btn-primary fr-btn" data-a="annehmen" data-n="' + n(x.name) + '">Annehmen</button>' +
+          '<button type="button" class="btn btn-ghost fr-btn" data-a="ablehnen" data-n="' + n(x.name) + '">Ablehnen</button>');
+      });
+      h += '</div>';
+    }
+    h += '<h2 class="fr-abschnitt">Freunde <span class="fr-zahl">' + d.freunde.length + '</span></h2>';
+    if (!d.freunde.length) h += '<div class="fr-leer">Noch keine Freunde. Gib oben den Namen deines Freundes ein und schick ihm eine Anfrage.</div>';
+    else {
+      var rang = function (f) { return f.spiel ? 0 : f.online ? 1 : 2; };
+      h += '<div class="fr-liste">';
+      d.freunde.slice().sort(function (a, b) { return rang(a) - rang(b) || a.name.toLowerCase().localeCompare(b.name.toLowerCase()); }).forEach(function (f) {
+        var status, akt = '';
+        if (f.spiel) {
+          var offen = spielbar().some(function (s) { return s.id === f.spiel; });
+          status = '<span class="punkt an"></span>Spielt <b>' + n(spielName(f.spiel)) + '</b>' + (f.raum ? ' · Raum <code>' + n(f.raum) + '</code>' : '');
+          if (offen) akt += '<a class="btn btn-primary fr-btn" href="#spiel/' + encodeURIComponent(f.spiel) + '/play">Mitspielen</a>';
+          if (f.raum) akt += '<button type="button" class="btn btn-ghost fr-btn" data-a="kopie" data-n="' + n(f.raum) + '">Code kopieren</button>';
+        } else if (f.online) status = '<span class="punkt an"></span>Im Hub';
+        else status = '<span class="punkt"></span>' + (f.zuletzt ? 'Zuletzt online ' + relZeit(Math.max(0, d.jetzt - f.zuletzt)) : 'Noch nie online');
+        akt += entfernenFrage === f.name
+          ? '<button type="button" class="btn btn-ghost fr-btn gefahr" data-a="entfernen" data-n="' + n(f.name) + '">Wirklich entfernen?</button>'
+          : '<button type="button" class="btn btn-ghost fr-btn leise" data-a="frage" data-n="' + n(f.name) + '" aria-label="' + n(f.name) + ' entfernen">Entfernen</button>';
+        h += frItem(0, f.name, status, akt);
+      });
+      h += '</div>';
+    }
+    if (d.ausgehend.length) {
+      h += '<h2 class="fr-abschnitt">Gesendet <span class="fr-zahl">' + d.ausgehend.length + '</span></h2><div class="fr-liste">';
+      d.ausgehend.forEach(function (x) {
+        h += frItem(0, x.name, 'wartet auf Antwort', '<button type="button" class="btn btn-ghost fr-btn leise" data-a="ablehnen" data-n="' + n(x.name) + '">Zurückziehen</button>');
+      });
+      h += '</div>';
+    }
+    z.innerHTML = h;
+  }
+  function ladeFreunde() {
+    if (document.hidden || !window.LghKonto || !LghKonto.angemeldet()) return;
+    LghKonto.freunde.liste().then(function (res) {
+      var z = document.getElementById('fr-liste');
+      if (body.getAttribute('data-view') !== 'freunde' || !z) return;
+      if (!res.ok) { if (!freundeDaten) z.innerHTML = '<div class="fr-leer">Die Freunde konnten gerade nicht geladen werden.</div>'; return; }
+      freundeDaten = res.j;
+      LghKonto.setzeOffene(res.j.eingehend.length);
+      zeichneFreunde(z, res.j);
+    });
+  }
+  var FR_FEHLER = {
+    unbekannter_name: 'Es gibt kein Konto mit diesem Namen.', selbst: 'Das bist du selbst.', schon_freunde: 'Ihr seid schon Freunde.',
+    schon_angefragt: 'Du hast dieser Person schon eine Anfrage geschickt.', zu_viele_freunde: 'Du hast schon die höchste Zahl an Freunden.',
+    zu_viele_offen: 'Du hast schon sehr viele offene Anfragen. Warte, bis einige beantwortet sind.', netz: 'Keine Verbindung zum Server.',
+  };
+  function frMeldung(t, fehler) { var m = document.getElementById('fr-meldung'); if (m) { m.textContent = t || ''; m.className = 'fr-meldung' + (fehler ? ' fehler' : ''); } }
+  function renderFreunde() {
+    freundeDaten = null; entfernenFrage = null;
+    inhalt.innerHTML = '<div class="fr-wrap"><h1 class="fr-titel">Freunde</h1>' +
+      '<p class="fr-sub">Sieh, wer gerade spielt, und spring direkt mit ins Spiel.</p>' +
+      '<form class="fr-form" id="fr-form" novalidate><input id="fr-name" type="text" placeholder="Name deines Freundes" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="20" aria-label="Name deines Freundes">' +
+      '<button class="btn btn-primary" type="submit">Anfrage senden</button></form>' +
+      '<div class="fr-meldung" id="fr-meldung" role="status"></div><div id="fr-liste"><div class="fr-leer">Lädt …</div></div></div>';
+    ladeFreunde();
+    clearInterval(freundeTimer); freundeTimer = setInterval(ladeFreunde, 15000);
+  }
+  inhalt.addEventListener('submit', function (e) {
+    if (!e.target || e.target.id !== 'fr-form') return;
+    e.preventDefault();
+    var feld = document.getElementById('fr-name'), name = feld.value.trim();
+    if (!name) return;
+    frMeldung('');
+    LghKonto.freunde.anfrage(name).then(function (res) {
+      if (res.ok) { feld.value = ''; frMeldung(res.j.freunde ? 'Du und ' + res.j.name + ' seid jetzt Freunde.' : 'Anfrage an ' + res.j.name + ' gesendet.'); ladeFreunde(); }
+      else frMeldung(res.j.fehler === 'zu_viele' ? 'Zu viele Anfragen in kurzer Zeit. Bitte später noch einmal.' : (FR_FEHLER[res.j.fehler] || 'Das hat nicht geklappt.'), true);
+    });
+  });
+  inhalt.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('.fr-btn[data-a]') : null;
+    if (!b || !window.LghKonto) return;
+    var a = b.getAttribute('data-a'), nm = b.getAttribute('data-n');
+    if (a === 'kopie') { try { navigator.clipboard.writeText(nm); frMeldung('Code kopiert.'); } catch (x) { frMeldung('Code: ' + nm); } return; }
+    if (a === 'frage') { entfernenFrage = nm; zeichneFreunde(document.getElementById('fr-liste'), freundeDaten); setTimeout(function () { if (entfernenFrage === nm) { entfernenFrage = null; if (freundeDaten && document.getElementById('fr-liste')) zeichneFreunde(document.getElementById('fr-liste'), freundeDaten); } }, 5000); return; }
+    var f = { annehmen: 'annehmen', ablehnen: 'ablehnen', entfernen: 'entfernen' }[a];
+    if (!f) return;
+    b.disabled = true; frMeldung('');
+    LghKonto.freunde[f](nm).then(function (res) {
+      entfernenFrage = null;
+      if (!res.ok) frMeldung('Das hat nicht geklappt.', true);
+      ladeFreunde();
+    });
+  });
 
   /* ---------- Navigation ---------- */
   /* Ansichten bleiben als fertige Knoten erhalten: beim Zurück- oder Weiterklicken werden sie nur wieder eingehängt,
@@ -384,7 +506,8 @@
   function homeKey() { return 'home|' + filter + '|' + suche; }
   function zeigeAnsicht(key, rendern) {
     if (ansichtKey === key && inhalt.firstChild) return;
-    if (ansichtKey !== null) { var alt = document.createElement('div'); while (inhalt.firstChild) alt.appendChild(inhalt.firstChild); ansichtSpeicher[ansichtKey] = alt; }
+    if (ansichtKey === 'freunde') inhalt.innerHTML = '';
+    else if (ansichtKey !== null) { var alt = document.createElement('div'); while (inhalt.firstChild) alt.appendChild(inhalt.firstChild); ansichtSpeicher[ansichtKey] = alt; }
     var neu = ansichtSpeicher[key];
     if (neu) { delete ansichtSpeicher[key]; while (neu.firstChild) inhalt.appendChild(neu.firstChild); }
     else rendern();
@@ -398,6 +521,15 @@
 
     var vorher = body.getAttribute('data-view');
     if (vorher === 'play') stoppeSpiel();
+    if (vorher === 'freunde' && location.hash !== '#freunde') { clearInterval(freundeTimer); freundeTimer = null; }
+    if (location.hash === '#freunde') {
+      body.setAttribute('data-view', 'freunde');
+      if (ansichtKey === 'freunde') ansichtKey = null;   // immer frisch laden (Spiel dazwischen: sonst fehlt der Aktualisierungstakt)
+      zeigeAnsicht('freunde', renderFreunde); renderSide(null, true);
+      document.title = 'Freunde – Leifs Spiele';
+      window.scrollTo(0, 0);
+      return;
+    }
 
     if (sp && m[2]) {
       body.setAttribute('data-view', 'play');
@@ -436,7 +568,7 @@
   document.getElementById('zurueck').addEventListener('click', function () {
     if (aktuell) location.replace('#spiel/' + encodeURIComponent(aktuell.id)); else location.replace('#');
   });
-  document.getElementById('neuladen').addEventListener('click', function () { if (aktuell) neuerRahmen(aktuell.url); });
+  document.getElementById('neuladen').addEventListener('click', function () { if (aktuell) neuerRahmen(aktuell.url + standHash(aktuell.id)); });
   document.getElementById('vollbild').addEventListener('click', function () {
     var voll = document.fullscreenElement || document.webkitFullscreenElement;
     if (voll) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
