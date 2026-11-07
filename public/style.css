@@ -627,3 +627,12 @@ body.konto-offen { overflow: hidden; }
   .fr-kreis { width: 68px; height: 68px; font-size: 28px; }
   .fr-punkt { width: 17px; height: 17px; }
 }
+
+/* Spielen-Knöpfe in Grün */
+.btn-primary[href$="/play"], .btn-spielen {
+  background: linear-gradient(180deg, #3ed884 0%, #1fa85a 100%); color: #fff;
+  box-shadow: 0 8px 24px rgba(31, 168, 90, .38), inset 0 1px 0 rgba(255, 255, 255, .28);
+}
+.btn-primary[href$="/play"]:hover, .btn-spielen:hover { background: linear-gradient(180deg, #52e395 0%, #28b867 100%); filter: none; }
+.tile .play { background: #1fa85a; color: #fff; }
+.tile .play:hover { background: #28b867; }
