@@ -89,13 +89,15 @@
   function pills(sp) { return '<div class="pills">' + kategorien(sp).map(function (k) { return '<span class="pill">' + esc(k) + '</span>'; }).join('') + '</div>'; }
   function playIcon() { return '<svg aria-hidden="true"><use href="#i-play"/></svg>'; }
 
+  // Entwicklungsstand: Alpha (games.json: "phase": "alpha"), sonst Beta, ab 1.0 Offiziell
+  function phaseName(sp, v) { return v && v.offiziell ? 'Offiziell' : sp.phase === 'alpha' ? 'Alpha' : 'Beta'; }
   function tile(sp) {
     var offen = !!sp.url, detail = offen || !!sp.wartung, id = encodeURIComponent(sp.id), v = ver(sp);   // Spiele in Wartung haben weiter ihre Detailseite, nur Spielen geht nicht
     var s = '<article class="tile' + (offen ? '' : ' off') + '">';
     s += detail ? '<a class="tile-link" href="#spiel/' + id + '" aria-label="' + esc(sp.name) + '">' : '<div class="tile-link">';
     s += '<div class="tile-art">' + art(sp, 400, 400);
     if (!offen) s += '<span class="badge">' + (sp.wartung ? 'Wartung' : 'Bald') + '</span>';
-    else if (v) s += '<span class="ver-tag">' + (v.offiziell ? '' : 'Beta ') + esc(vz(v.version)) + '</span>';
+    else if (v) s += '<span class="ver-tag">' + (v.offiziell ? '' : phaseName(sp, v) + ' ') + esc(vz(v.version)) + '</span>';
     s += '</div>';
     s += '<div class="tile-text"><strong>' + esc(sp.name) + '</strong><span>' + esc(kategorien(sp).join(', ')) + '</span></div>';
     s += detail ? '</a>' : '</div>';
@@ -331,7 +333,7 @@
       var vorbei = sp.offiziell_ab <= new Date().toISOString().slice(0, 10);
       h += faktZeile(vorbei ? 'Offiziell seit' : 'Offiziell ab', esc(datumText(sp.offiziell_ab + 'T12:00:00+02:00')));
     }
-    if (v) h += faktZeile('Status', '<span class="ver-pill' + (v.offiziell ? ' offiziell' : '') + '">' + (v.offiziell ? 'Offiziell' : 'Beta') + '</span> Version ' + esc(vz(v.version)));
+    if (v) h += faktZeile('Status', '<span class="ver-pill' + (v.offiziell ? ' offiziell' : sp.phase === 'alpha' ? ' alpha' : '') + '">' + phaseName(sp, v) + '</span> Version ' + esc(vz(v.version)));
     if (v && v.datum) h += faktZeile('Zuletzt aktualisiert', esc(datumText(v.datum)));
     h += faktZeile('Entwickler', 'Leif (LeifPS)');
     h += faktZeile('Spielmodus', online ? 'Mehrspieler (online)' : 'Einzelspieler');

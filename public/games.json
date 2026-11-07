@@ -196,6 +196,7 @@
       "text": "Ein Action-Dungeon-Crawler im Papierstil, nur mit Touch-Steuerung.",
       "url": "https://papierhelden.leifps.workers.dev",
       "repo": "LeifPS/papierhelden",
+      "phase": "alpha",
       "farbe": "#c9a15a",
       "kategorien": [
         "Action",
@@ -352,6 +353,7 @@
       "text": "Ein ruhiges Fabrik-Spiel mit Zahlen: abbauen, mit Maschinen rechnen, Aufträge erfüllen und erforschen.",
       "url": "https://zahlenwerk.leifps.workers.dev",
       "repo": "LeifPS/zahlenwerk",
+      "phase": "alpha",
       "farbe": "#3fb6b0",
       "kategorien": [
         "Fabrik",
@@ -380,6 +382,7 @@
       "text": "Gestalte deinen eigenen Wassertropfen und kämpfe im Querformat online gegen andere.",
       "url": "https://wasserschlacht.leifps.workers.dev",
       "repo": "LeifPS/wasserschlacht",
+      "phase": "alpha",
       "farbe": "#4a8fe8",
       "kategorien": [
         "Action",
