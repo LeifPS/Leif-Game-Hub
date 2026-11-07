@@ -1,0 +1,6 @@
+{
+  "name": "leif-game-hub",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test --no-warnings test/*.test.js" }
+}
