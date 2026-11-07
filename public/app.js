@@ -22,6 +22,8 @@
 
   /* ---------- Hilfsfunktionen ---------- */
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  // Version ohne überflüssige Nullen am Ende (mindestens Major.Minor): 0.1.0.0 → 0.1, 1.2.4.0 → 1.2.4, 0.1.0.1 bleibt 0.1.0.1
+  function vz(v) { var t = String(v || '').split('.'); while (t.length > 2 && t[t.length - 1] === '0') t.pop(); return t.join('.'); }
   function hash(s) { var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
   function rng(seed) { var a = seed; return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
   function hexToHue(hex) {
@@ -93,7 +95,7 @@
     s += offen ? '<a class="tile-link" href="#spiel/' + id + '" aria-label="' + esc(sp.name) + '">' : '<div class="tile-link">';
     s += '<div class="tile-art">' + art(sp, 400, 400);
     if (!offen) s += '<span class="badge">' + (sp.wartung ? 'Wartung' : 'Bald') + '</span>';
-    else if (v) s += '<span class="ver-tag">' + (v.offiziell ? '' : 'Beta ') + esc(v.version) + '</span>';
+    else if (v) s += '<span class="ver-tag">' + (v.offiziell ? '' : 'Beta ') + esc(vz(v.version)) + '</span>';
     s += '</div>';
     s += '<div class="tile-text"><strong>' + esc(sp.name) + '</strong><span>' + esc(kategorien(sp).join(', ')) + '</span></div>';
     s += offen ? '</a>' : '</div>';
@@ -328,7 +330,7 @@
       var vorbei = sp.offiziell_ab <= new Date().toISOString().slice(0, 10);
       h += faktZeile(vorbei ? 'Offiziell seit' : 'Offiziell ab', esc(datumText(sp.offiziell_ab + 'T12:00:00+02:00')));
     }
-    if (v) h += faktZeile('Status', '<span class="ver-pill' + (v.offiziell ? ' offiziell' : '') + '">' + (v.offiziell ? 'Offiziell' : 'Beta') + '</span> Version ' + esc(v.version));
+    if (v) h += faktZeile('Status', '<span class="ver-pill' + (v.offiziell ? ' offiziell' : '') + '">' + (v.offiziell ? 'Offiziell' : 'Beta') + '</span> Version ' + esc(vz(v.version)));
     if (v && v.datum) h += faktZeile('Zuletzt aktualisiert', esc(datumText(v.datum)));
     h += faktZeile('Entwickler', 'Leif (LeifPS)');
     h += faktZeile('Spielmodus', online ? 'Mehrspieler (online)' : 'Einzelspieler');
@@ -363,7 +365,7 @@
       var k = tagKey(e.datum);
       if (k !== tag) { tag = k; h += '<div class="log-tag">' + esc(datumText(e.datum)) + '</div>'; }
       var art = ARTEN[e.art] ? e.art : 'build';
-      h += '<div class="log-eintrag"><span class="log-v">' + esc(e.v) + '</span><span class="log-art ' + art + '">' + ARTEN[art] + '</span><span class="log-text">' + esc(e.text) + '</span>';
+      h += '<div class="log-eintrag"><span class="log-v">' + esc(vz(e.v)) + '</span><span class="log-art ' + art + '">' + ARTEN[art] + '</span><span class="log-text">' + esc(e.text) + '</span>';
       if (!sp.privat && sp.repo && e.sha) h += '<a class="log-sha" href="https://github.com/' + esc(sp.repo) + '/commit/' + esc(e.sha) + '" target="_blank" rel="noopener" aria-label="Commit ansehen">' + esc(e.sha.slice(0, 7)) + '</a>';
       h += '</div>';
     });

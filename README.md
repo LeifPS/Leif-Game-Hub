@@ -43,7 +43,7 @@ Jedes Spiel hat eine Version **Major.Minor.Patch.Build**, jeder Commit des Spiel
 | Patch | Bugfixes, Balancing, kleine Verbesserungen |
 | Build | interne Builds, schnelle Hotfixes |
 
-Alle Spiele starten bei `0.1.0.0` (Beta).
+Alle Spiele starten bei `0.1.0.0` (Beta). Mit `"offiziell_seit": "0.1.0.0"` in `games.json` gilt ein Spiel von Anfang an als offiziell, dann beginnt die Zählung bei `1.1.0.0` (nur mit `python3 tools/changelog.py --force --only <id>` neu berechnen). Angezeigt werden Versionen ohne Nullen am Ende (mindestens zwei Stellen): `0.1.0.0` als `0.1`, `1.2.4.0` als `1.2.4`, `0.1.0.1` bleibt `0.1.0.1`.
 
 ### Commit-Nachrichten in den Spiel-Repos
 

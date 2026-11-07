@@ -183,6 +183,12 @@ def process_game(game, base: Path, freeze: bool):
     new_frozen = dict(frozen)
 
     offiziell_ab = game.get("offiziell_ab")  # ISO-Datum, ab dem 1.0.0.0 gilt
+    # "offiziell_seit": "0.1.0.0" = das Spiel gilt von Anfang an als offiziell: die Zählung beginnt bei 1.1.0.0 statt 0.1.0.0
+    seit = game.get("offiziell_seit")
+    start_version = (0, 1, 0, 0)
+    if seit:
+        t = tuple(int(x) for x in seit.split("."))
+        start_version = (t[0] + 1,) + t[1:]
     version = None
     entries = []
     official_done = False
@@ -220,7 +226,7 @@ def process_game(game, base: Path, freeze: bool):
             text = "Update hochgeladen"
 
         if version is None:
-            version = (0, 1, 0, 0)
+            version = start_version
             art = "start"
         elif explicit:
             version, art = explicit, "nummer"

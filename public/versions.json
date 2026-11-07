@@ -38,8 +38,8 @@
   "anzahl": 6,
   "datum": "2026-11-07T14:10:35+01:00",
   "erste": "2026-09-27T10:04:54+02:00",
-  "offiziell": false,
-  "version": "0.1.4.0"
+  "offiziell": true,
+  "version": "1.1.4.0"
  },
  "erntezeit": {
   "anzahl": 74,
