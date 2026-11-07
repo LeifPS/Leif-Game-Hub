@@ -591,6 +591,26 @@
       ]
     },
     {
+      "id": "numberfactory",
+      "name": "Number Factory",
+      "text": "Zahlen-Kacheln stapeln sich in der Fabrik: Schick sie schnell über Fließbänder und Weichen zum Briefkasten, dessen Station sie in die gewünschte Zahl verwandelt, bevor die Bestellung abläuft.",
+      "url": "https://numberfactory.leifps.workers.dev",
+      "repo": "LeifPS/numberfactory",
+      "entwickler": "Alexander (TeleTeddy)",
+      "sprache": "Englisch",
+      "farbe": "#2f8f89",
+      "kategorien": [
+        "Fabrik",
+        "Strategie"
+      ],
+      "icon": "screens/numberfactory-icon.webp",
+      "screenshots": [
+        "screens/shots/numberfactory/1.webp",
+        "screens/shots/numberfactory/2.webp",
+        "screens/shots/numberfactory/3.webp"
+      ]
+    },
+    {
       "id": "nebelmeer",
       "name": "Nebelmeer",
       "text": "Kein Ziel, keine Karte: Jemand hat dir ein Boot und eine Laterne dagelassen. Fahr durch den Nebel, finde Inseln, Siegel und Geheimnisse, manches zeigt sich nur bei Nacht.",

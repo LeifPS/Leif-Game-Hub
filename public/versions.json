@@ -74,6 +74,13 @@
   "offiziell": false,
   "version": "0.1.0.0"
  },
+ "numberfactory": {
+  "anzahl": 2,
+  "datum": "2026-11-07T21:20:53+01:00",
+  "erste": "2026-11-07T20:55:15+01:00",
+  "offiziell": false,
+  "version": "0.1.0.1"
+ },
  "papierhelden": {
   "anzahl": 12,
   "datum": "2026-11-07T18:16:39+01:00",
