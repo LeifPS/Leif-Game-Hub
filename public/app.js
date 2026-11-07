@@ -716,12 +716,30 @@
     if (!el) return;
     var x = null;
     if (eigenSpiele.liste) x = eigenSpiele.liste.filter(function (g) { return g.spiel === id; })[0] || null;
-    if (!x || !x.zuletzt) { el.hidden = true; el.innerHTML = ''; return; }
+    if (!x || !x.zuletzt) { el.hidden = true; el.innerHTML = ''; aktionPassen(); return; }
     var ico = function (pfad) { return '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + pfad + '</svg>'; };
     var uhr = ico('<circle cx="12" cy="12" r="9.2"/><path d="M12 6.8V12l3.4 2"/>'), kal = ico('<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>');
     el.innerHTML = '<div class="si">' + kal + '<span><small>Zuletzt gespielt</small><b>' + esc(spielTag(x.zuletzt)) + '</b></span></div>' +
-      '<div class="si">' + uhr + '<span><small>Spielzeit</small><b>' + esc(spielzeitText(x.sekunden)) + '</b></span></div>';
+      '<div class="si si-zeit">' + uhr + '<span><small>Spielzeit</small><b>' + esc(spielzeitText(x.sekunden)) + '</b></span></div>';
     el.hidden = false;
+    aktionPassen();
+  }
+  /* Reicht die Breite nicht für Titel, Zuletzt gespielt, Spielzeit und Spielen-Knopf in einer Zeile, fällt zuerst die Spielzeit weg;
+     reicht es dann immer noch nicht, rutscht die Aktion (Knopf) in die zweite Zeile. Auf dem Handy (unter 900 px) gilt das eigene Layout. */
+  function aktionPassen() {
+    var zeile = inhalt.querySelector('.shop-titelzeile');
+    if (!zeile) return;
+    if (!zeile._beobachter) {
+      zeile._beobachter = true;
+      if (window.ResizeObserver) { var ro = new ResizeObserver(function () { aktionPassen(); }); ro.observe(zeile); var t = zeile.querySelector('h1'); if (t) ro.observe(t); }
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { aktionPassen(); });
+    }
+    var h1 = zeile.querySelector('h1'), ak = zeile.querySelector('.spiel-aktion');
+    if (!h1 || !ak || !zeile.offsetWidth) return;
+    zeile.classList.remove('ohne-zeit');
+    if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) return;
+    if (ak.getBoundingClientRect().top < h1.getBoundingClientRect().bottom - 1) return;   // passt in eine Zeile
+    zeile.classList.add('ohne-zeit');
   }
   function spielInfoLaden(id, nochmal) {
     if (!window.LghKonto || !LghKonto.angemeldet || !LghKonto.angemeldet()) {
@@ -755,7 +773,7 @@
       var seit = p.seit ? new Date(p.seit * 1000).toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
       var sicher = {}; (p.staende || []).forEach(function (x) { sicher[x.spiel] = x; });
       var zeilen = '';
-      p.spiele.forEach(function (x) {
+      (p.eigen ? p.spiele || [] : []).forEach(function (x) {
         var sp = spiele.filter(function (g) { return g.id === x.spiel; })[0];
         if (!sp) return;
         gesamt += x.sekunden; if (x.sekunden > 0) gespielt++;
@@ -766,10 +784,10 @@
       var status = p.online ? '<span class="pf-punkt"></span>Online' + (p.spiel ? ' · spielt ' + esc(spielName(p.spiel)) : '') : (p.zuletzt ? 'Zuletzt online ' + relZeit(Math.max(0, jetzt - p.zuletzt)) : 'Noch nie online');
       w.innerHTML = '<div class="pf-kopf"><span class="avatar gross" style="' + LghKonto.avatarStil(p.name) + '">' + esc(p.anzeige.charAt(0).toUpperCase()) + '</span>' +
         '<div class="pf-kopftext"><h1 class="pf-name">' + esc(p.anzeige) + '</h1><div class="pf-at">@' + esc(p.name) + (seit ? ' · dabei seit ' + esc(seit) : '') + '</div><div class="pf-status">' + status + '</div></div></div>' +
-        '<div class="pf-zahlen"><div><b>' + esc(dauer(gesamt)) + '</b><small>Spielzeit gesamt</small></div><div><b>' + gespielt + '</b><small>' + (gespielt === 1 ? 'Spiel gespielt' : 'Spiele gespielt') + '</small></div><div><b>' + p.freunde + '</b><small>' + (p.freunde === 1 ? 'Freund' : 'Freunde') + '</small></div></div>' +
+        '<div class="pf-zahlen">' + (p.eigen ? '<div><b>' + esc(dauer(gesamt)) + '</b><small>Spielzeit gesamt</small></div><div><b>' + gespielt + '</b><small>' + (gespielt === 1 ? 'Spiel gespielt' : 'Spiele gespielt') + '</small></div>' : '') + '<div><b>' + p.freunde + '</b><small>' + (p.freunde === 1 ? 'Freund' : 'Freunde') + '</small></div></div>' +
         (p.eigen ? '<div class="pf-aktionen"><button type="button" class="btn btn-ghost" data-pf="anz">Anzeigename ändern</button><button type="button" class="btn btn-ghost" data-pf="stand">Spielstände sichern und zurückholen</button><button type="button" class="btn btn-ghost" data-pf="konto">Konto</button></div>' : '') +
-        '<h2 class="fr-abschnitt">Zuletzt gespielt</h2>' +
-        (zeilen ? '<div class="pf-liste">' + zeilen + '</div>' : '<div class="fr-leer">Noch nichts gespielt. Die Spielzeit wird ab jetzt gezählt.</div>');
+        (p.eigen ? '<h2 class="fr-abschnitt">Zuletzt gespielt</h2>' +
+        (zeilen ? '<div class="pf-liste">' + zeilen + '</div>' : '<div class="fr-leer">Noch nichts gespielt. Die Spielzeit wird ab jetzt gezählt.</div>') : '');
     });
   }
   inhalt.addEventListener('click', function (e) {

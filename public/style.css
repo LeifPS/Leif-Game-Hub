@@ -494,6 +494,7 @@ h1, h2, h3 { letter-spacing: -.022em; }
 .spiel-aktion { display: flex; align-items: center; gap: 12px 22px; flex: none; }
 .spielinfo { display: flex; align-items: center; gap: 26px; }
 .spielinfo[hidden] { display: none; }
+.shop-titelzeile.ohne-zeit .si-zeit { display: none; }
 .spielinfo .si { display: flex; align-items: center; gap: 10px; text-align: left; }
 .spielinfo .si svg { width: 28px; height: 28px; flex: none; color: var(--muted); }
 .spielinfo .si span { display: flex; flex-direction: column; gap: 1px; }

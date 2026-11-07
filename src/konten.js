@@ -438,9 +438,10 @@ async function profil(db, s, name, jetzt) {
   const out = {
     name: u.name, anzeige: u.display || u.name, seit: row ? row.created : null, eigen,
     freunde: fr ? fr.n : 0, online, spiel: online ? p.game || null : null, zuletzt: p ? p.seen : null,
-    spiele: zeit.map((t) => ({ spiel: t.game, sekunden: t.seconds, zuletzt: t.last })),
   };
+  // Spielzeit und "zuletzt gespielt" sind privat: nur das eigene Profil bekommt sie, auch Freunde sehen sie nicht
   if (eigen) {
+    out.spiele = zeit.map((t) => ({ spiel: t.game, sekunden: t.seconds, zuletzt: t.last }));
     const st = await db.prepare('SELECT game, COUNT(*) AS n, MAX(updated) AS neu FROM saves WHERE user_id = ? GROUP BY game').bind(u.id).all();
     out.staende = st.results.map((t) => ({ spiel: t.game, versionen: t.n, aktualisiert: t.neu }));
   }
