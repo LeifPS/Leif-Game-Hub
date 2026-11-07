@@ -758,3 +758,26 @@ body.konto-offen { overflow: hidden; }
 
 /* Kopfleiste: Die Suche nimmt den ganzen freien Platz, Freunde und Profilbild sitzen ganz rechts */
 .topbar .search { flex: 1 1 0; min-width: 0; }
+
+/* Kontomenü: Zeilen in Gruppen statt acht gleicher Knöpfe */
+.dlg-kopf { position: relative; }
+.dlg-kopftext { min-width: 0; flex: 1; }
+.dlg-titel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dlg-x { all: unset; box-sizing: border-box; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; color: var(--muted); flex: none; align-self: flex-start; }
+.dlg-x:hover { background: rgba(255, 255, 255, .08); color: var(--text); }
+.dlg-x:focus-visible, .dlg-zeile:focus-visible { outline: 2px solid var(--accent-hi); outline-offset: -2px; }
+.dlg-x svg { width: 18px; height: 18px; }
+#dlg-menue { gap: 0; }
+.dlg-ueber { margin: 14px 4px 6px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.dlg-gruppe { display: flex; flex-direction: column; background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.dlg-gruppe.dlg-ende { margin-top: 16px; }
+.dlg-zeile { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-height: 48px; cursor: pointer; font-size: 15px; color: var(--text); }
+.dlg-zeile + .dlg-zeile { border-top: 1px solid var(--line); }
+.dlg-zeile:hover { background: rgba(255, 255, 255, .05); }
+.dlg-zeile .ico { width: 20px; height: 20px; flex: none; color: var(--muted); }
+.dlg-zeile .pfeil { width: 16px; height: 16px; flex: none; color: var(--muted); opacity: .7; }
+.dlg-ztext { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; text-align: left; }
+.dlg-ztext b { font-weight: 500; }
+.dlg-ztext small { font-size: 12px; color: var(--muted); }
+.dlg-zeile.gefahr, .dlg-zeile.gefahr .ico { color: #ff8a8a; }
+.dlg-zeile.gefahr .pfeil { display: none; }

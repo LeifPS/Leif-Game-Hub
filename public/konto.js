@@ -459,22 +459,36 @@
     else fetch('icons/index.json').then(function (r) { if (!r.ok) throw new Error(); return r.json(); }).then(function (j) { symbolIndex = j; neuListe(); }, function () { raster.innerHTML = '<div class="st-leer">Die Symbole konnten nicht geladen werden.</div>'; });
   }
 
+  // Symbole der Kontomenü-Zeilen (Linien-Stil)
+  var MENUE_ICONS = {
+    profil: '<circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.6 3.6-5.4 7-5.4s6.2 1.8 7 5.4"/>',
+    bild: '<rect x="3.5" y="4.5" width="17" height="15" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 3.5 3 3-2.5 4.5 4"/>',
+    anz: '<path d="M5 19l1-4 9.5-9.5a2.1 2.1 0 013 3L9 18z"/><path d="M14 7l3 3"/>',
+    bn: '<circle cx="12" cy="12" r="3.5"/><path d="M15.5 12v1.3a2.4 2.4 0 004.8 0V12a8.3 8.3 0 10-3.3 6.6"/>',
+    pw: '<circle cx="8" cy="15" r="3.6"/><path d="M10.6 12.4L19 4M16 7l2.5 2.5"/>',
+    stand: '<rect x="3.5" y="4.5" width="17" height="5" rx="1.5"/><path d="M5 9.5V18a1.5 1.5 0 001.5 1.5h11A1.5 1.5 0 0019 18V9.5M10 13.5h4"/>',
+    aus: '<path d="M10 4.5H7A2.5 2.5 0 004.5 7v10A2.5 2.5 0 007 19.5h3M14 8l4 4-4 4M18 12H9.5"/>',
+    weg: '<path d="M5 7h14M10 7V5h4v2M7 7l.8 11.2a1.8 1.8 0 001.8 1.6h4.8a1.8 1.8 0 001.8-1.6L17 7M10.5 11v5M13.5 11v5"/>'
+  };
+  function menueZeile(a, text, hinweis, gefahr) {
+    var svg = function (pfad, kl) { return '<svg class="' + kl + '" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + pfad + '</svg>'; };
+    return '<button type="button" class="dlg-zeile' + (gefahr ? ' gefahr' : '') + '" data-a="' + a + '">' + svg(MENUE_ICONS[a], 'ico') +
+      '<span class="dlg-ztext"><b>' + text + '</b>' + (hinweis ? '<small>' + hinweis + '</small>' : '') + '</span>' + svg('<path d="M9.5 6.5L15 12l-5.5 5.5"/>', 'pfeil') + '</button>';
+  }
   function kontoDialog(start) {
     if (!konto) return;
     dialog(
       '<div class="dlg-kopf">' + avatarHtml('avatar gross', konto.name, anzeigeName(), konto.av, '', 'dlg-av') +
-      '<div><div class="dlg-titel" id="dlg-titel">' + esc(anzeigeName()) + '</div><div class="dlg-sub">@' + esc(konto.name) + ' · Angemeldet auf diesem Gerät</div></div></div>' +
+      '<div class="dlg-kopftext"><div class="dlg-titel" id="dlg-titel">' + esc(anzeigeName()) + '</div><div class="dlg-sub">@' + esc(konto.name) + '</div></div>' +
+      '<button type="button" class="dlg-x" data-zu aria-label="Schließen"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
       '<div class="dlg-teil" id="dlg-menue">' +
-      '<button type="button" class="btn btn-ghost" data-a="profil">Mein Profil</button>' +
-      '<button type="button" class="btn btn-ghost" data-a="stand">Spielstände sichern und zurückholen</button>' +
-      '<button type="button" class="btn btn-ghost" data-a="bild">Profilbild ändern</button>' +
-      '<button type="button" class="btn btn-ghost" data-a="anz">Anzeigename ändern</button>' +
-      '<button type="button" class="btn btn-ghost" data-a="bn">Benutzernamen ändern</button>' +
-      '<button type="button" class="btn btn-ghost" data-a="pw">Passwort ändern</button>' +
-      '<button type="button" class="btn btn-ghost" data-a="aus">Abmelden</button>' +
-      '<button type="button" class="btn btn-ghost gefahr" data-a="weg">Konto löschen</button>' +
-      '</div><form class="dlg-teil" id="dlg-form" hidden novalidate></form><div class="dlg-teil" id="dlg-stand" hidden></div><div class="dlg-teil" id="dlg-bild" hidden></div>' +
-      '<div class="dlg-fuss"><button type="button" class="btn btn-ghost" data-zu>Schließen</button></div>',
+      '<div class="dlg-ueber">Profil</div><div class="dlg-gruppe">' +
+      menueZeile('profil', 'Mein Profil') + menueZeile('bild', 'Profilbild ändern') + menueZeile('anz', 'Anzeigename ändern') +
+      '</div><div class="dlg-ueber">Konto</div><div class="dlg-gruppe">' +
+      menueZeile('bn', 'Benutzernamen ändern') + menueZeile('pw', 'Passwort ändern') + menueZeile('stand', 'Spielstände', 'Sichern und zurückholen') +
+      '</div><div class="dlg-gruppe dlg-ende">' +
+      menueZeile('aus', 'Abmelden', 'Nur auf diesem Gerät') + menueZeile('weg', 'Konto löschen', '', true) +
+      '</div></div><form class="dlg-teil" id="dlg-form" hidden novalidate></form><div class="dlg-teil" id="dlg-stand" hidden></div><div class="dlg-teil" id="dlg-bild" hidden></div>',
       function (el, zu) {
         var menue = el.querySelector('#dlg-menue'), form = el.querySelector('#dlg-form');
         function formular(html, los) {
@@ -485,7 +499,7 @@
           form.onsubmit = function (e) { e.preventDefault(); fe.textContent = ''; ok.disabled = true; los(fe, function () { ok.disabled = false; }); };
         }
         menue.addEventListener('click', function (e) {
-          var a = e.target.getAttribute && e.target.getAttribute('data-a');
+          var za = e.target.closest ? e.target.closest('[data-a]') : null, a = za && za.getAttribute('data-a');
           if (a === 'aus') { zu(); abmelden(); }
           if (a === 'profil') { zu(); location.hash = '#profil'; }
           if (a === 'stand') standAnsicht(el, menue);
