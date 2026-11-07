@@ -70,7 +70,11 @@
         "screens/shots/foilxi/13.webp",
         "screens/shots/foilxi/14.webp",
         "screens/shots/foilxi/15.webp"
-      ]
+      ],
+      "trailer": {
+        "video": "screens/shots/foilxi/trailer.mp4",
+        "poster": "screens/shots/foilxi/trailer-poster.webp"
+      }
     },
     {
       "id": "brutjagd",

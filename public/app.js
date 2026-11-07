@@ -184,37 +184,68 @@
      Detailseiten bleiben als fertige Knoten gespeichert und werden beim Zurückkehren wieder eingehängt, ohne neu gebunden zu werden. */
   var GALERIE_LEER = { liste: [], i: 0, name: '' };
   function G() { var r = document.querySelector('.gal'); return (r && r._g) || GALERIE_LEER; }
+  /* Einträge der Galerie: Text = Bild-Adresse, Objekt {video, poster} = Trailer (läuft stumm von allein, Klick schaltet den Ton ein) */
   function bilderVon(sp) {
-    if (sp.screenshots && sp.screenshots.length) return sp.screenshots;
-    return sp.banner ? [sp.banner] : [];
+    var l = (sp.screenshots && sp.screenshots.length) ? sp.screenshots.slice() : (sp.banner ? [sp.banner] : []);
+    if (sp.trailer && sp.trailer.video) l.unshift({ video: sp.trailer.video, poster: sp.trailer.poster || '' });
+    return l;
   }
+  function istVideo(it) { return !!it && typeof it === 'object'; }
+  function bildUrl(it) { return istVideo(it) ? it.poster : it; }
   function galerieHtml(sp) {
     var b = bilderVon(sp);
     if (!b.length) return '';
-    var h = '<div class="gal" aria-label="Screenshots"><div class="gal-haupt"><button type="button" class="gal-bild" id="gal-bild" aria-label="Screenshot vergrößern"><img id="gal-img" src="' + esc(b[0]) + '" alt="Screenshot 1 von ' + esc(sp.name) + '" decoding="async"></button>';
+    var v0 = istVideo(b[0]);
+    var h = '<div class="gal" aria-label="Screenshots"><div class="gal-haupt">';
+    h += '<button type="button" class="gal-bild" id="gal-bild" aria-label="Screenshot vergrößern"' + (v0 ? ' hidden' : '') + '><img id="gal-img" src="' + esc(bildUrl(b[0])) + '" alt="' + (v0 ? 'Trailer von ' : 'Screenshot 1 von ') + esc(sp.name) + '" decoding="async"></button>';
+    if (b.some(istVideo)) {
+      var vv = b.filter(istVideo)[0];
+      h += '<div class="gal-video" id="gal-video-box"' + (v0 ? '' : ' hidden') + '><video id="gal-video" muted loop playsinline preload="metadata" poster="' + esc(vv.poster) + '" src="' + esc(vv.video) + '"' + (v0 ? ' autoplay' : '') + ' aria-label="Trailer von ' + esc(sp.name) + '"></video>' +
+        '<button type="button" class="gal-ton" id="gal-ton" aria-label="Ton einschalten">Ton an</button>' +
+        '<button type="button" class="gal-voll" id="gal-voll" aria-label="Vollbild">&#x26F6;</button></div>';
+    }
     if (b.length > 1) h += '<button type="button" class="gal-pfeil links" id="gal-zu" aria-label="Voriger Screenshot"><svg aria-hidden="true"><use href="#i-back"/></svg></button><button type="button" class="gal-pfeil rechts" id="gal-vor" aria-label="Nächster Screenshot"><svg aria-hidden="true"><use href="#i-back"/></svg></button>';
     h += '</div>';
     if (b.length > 1) {
       h += '<div class="gal-reihe" id="gal-reihe" role="tablist">' + b.map(function (u, k) {
-        return '<button type="button" class="gal-mini' + (k === 0 ? ' aktiv' : '') + '" data-k="' + k + '" role="tab" aria-label="Screenshot ' + (k + 1) + '"><img src="' + esc(u) + '" alt="" loading="lazy" decoding="async"></button>';
+        return '<button type="button" class="gal-mini' + (k === 0 ? ' aktiv' : '') + (istVideo(u) ? ' video' : '') + '" data-k="' + k + '" role="tab" aria-label="' + (istVideo(u) ? 'Trailer' : 'Screenshot ' + k) + '"><img src="' + esc(bildUrl(u)) + '" alt="" loading="lazy" decoding="async">' + (istVideo(u) ? '<span class="gal-play" aria-hidden="true"></span>' : '') + '</button>';
       }).join('') + '</div>';
     }
     return h + '</div>';
   }
-  function galerieZeige(k) {
+  function tonAnzeige() {
+    var v = document.getElementById('gal-video'), t = document.getElementById('gal-ton');
+    if (v && t) { t.textContent = v.muted ? 'Ton an' : 'Ton aus'; t.setAttribute('aria-label', v.muted ? 'Ton einschalten' : 'Ton ausschalten'); }
+  }
+  /* Video nur laufen lassen, wenn die Detailseite mit Trailer gerade sichtbar ist (sonst würde der Ton im Hintergrund weiterlaufen) */
+  function videoSteuern() {
+    var v = document.getElementById('gal-video'), g = G();
+    var soll = !!v && body.getAttribute('data-view') === 'detail' && istVideo(g.liste[g.i]);
+    var alle = document.querySelectorAll('video');
+    for (var j = 0; j < alle.length; j++) if (!(soll && alle[j] === v)) alle[j].pause();
+    if (soll) { v.muted = true; tonAnzeige(); var pr = v.play(); if (pr && pr.catch) pr.catch(function () { }); }
+  }
+  function galerieZeige(k, richtung) {
     var n = G().liste.length;
     if (!n) return;
-    G().i = (k + n) % n;
-    var img = document.getElementById('gal-img');
-    if (img) { img.src = G().liste[G().i]; img.alt = 'Screenshot ' + (G().i + 1) + ' von ' + G().name; }
+    var lbAuf = document.getElementById('lightbox') && document.getElementById('lightbox').classList.contains('offen');
+    k = (k + n) % n;
+    if (lbAuf && istVideo(G().liste[k]) && n > 1) return galerieZeige(k + (richtung || 1), richtung || 1);   // in der Großansicht gibt es nur Bilder
+    G().i = k;
+    var it = G().liste[k];
+    var img = document.getElementById('gal-img'), bildBtn = document.getElementById('gal-bild'), box = document.getElementById('gal-video-box');
+    if (box) box.hidden = !istVideo(it);
+    if (bildBtn) bildBtn.hidden = istVideo(it);
+    if (!istVideo(it) && img) { img.src = it; img.alt = 'Screenshot ' + (G().i + 1) + ' von ' + G().name; }
     var minis = document.querySelectorAll('.gal-mini');
     for (var j = 0; j < minis.length; j++) {
       var an = j === G().i;
       minis[j].classList.toggle('aktiv', an);
       if (an && minis[j].scrollIntoView) { var r = document.getElementById('gal-reihe'); if (r) r.scrollTo({ left: minis[j].offsetLeft - r.clientWidth / 2 + minis[j].clientWidth / 2, behavior: 'smooth' }); }
     }
+    videoSteuern();
     var lb = document.getElementById('lightbox');
-    if (lb && lb.classList.contains('offen')) document.getElementById('lb-img').src = G().liste[G().i];
+    if (lb && lb.classList.contains('offen') && !istVideo(it)) document.getElementById('lb-img').src = it;
   }
   function galerieBinden(sp) {
     var wurzel = document.querySelector('.gal');
@@ -224,17 +255,25 @@
     var reihe = document.getElementById('gal-reihe');
     if (reihe) reihe.addEventListener('click', function (e) { var m = e.target.closest('.gal-mini'); if (m) galerieZeige(+m.getAttribute('data-k')); });
     var vor = document.getElementById('gal-vor'), zu = document.getElementById('gal-zu');
-    if (vor) vor.addEventListener('click', function () { galerieZeige(G().i + 1); });
-    if (zu) zu.addEventListener('click', function () { galerieZeige(G().i - 1); });
-    document.getElementById('gal-bild').addEventListener('click', lightboxAuf);
-    var x0 = null, bild = document.getElementById('gal-bild');
-    bild.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
-    bild.addEventListener('touchend', function (e) {
+    if (vor) vor.addEventListener('click', function () { galerieZeige(G().i + 1, 1); });
+    if (zu) zu.addEventListener('click', function () { galerieZeige(G().i - 1, -1); });
+    var bild = document.getElementById('gal-bild'), haupt = wurzel.querySelector('.gal-haupt');
+    bild.addEventListener('click', lightboxAuf);
+    var vid = document.getElementById('gal-video'), ton = document.getElementById('gal-ton'), voll = document.getElementById('gal-voll');
+    if (vid) {
+      var umschalten = function () { vid.muted = !vid.muted; if (!vid.muted) { vid.volume = 1; var pr = vid.play(); if (pr && pr.catch) pr.catch(function () { }); } tonAnzeige(); };
+      vid.addEventListener('click', umschalten);
+      ton.addEventListener('click', umschalten);
+      voll.addEventListener('click', function () { var f = vid.requestFullscreen || vid.webkitRequestFullscreen || vid.webkitEnterFullscreen; if (f) { try { f.call(vid); } catch (e) { } } });
+    }
+    var x0 = null;
+    haupt.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
+    haupt.addEventListener('touchend', function (e) {
       if (x0 == null) return;
       var dx = e.changedTouches[0].clientX - x0; x0 = null;
-      if (Math.abs(dx) > 50) { galerieZeige(G().i + (dx < 0 ? 1 : -1)); bild.setAttribute('data-wisch', '1'); setTimeout(function () { bild.removeAttribute('data-wisch'); }, 300); }
+      if (Math.abs(dx) > 50) { galerieZeige(G().i + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1); haupt.setAttribute('data-wisch', '1'); setTimeout(function () { haupt.removeAttribute('data-wisch'); }, 300); }
     });
-    bild.addEventListener('click', function (e) { if (bild.getAttribute('data-wisch')) e.stopImmediatePropagation(); }, true);
+    haupt.addEventListener('click', function (e) { if (haupt.getAttribute('data-wisch')) e.stopImmediatePropagation(); }, true);
   }
   function lightboxAuf() {
     var lb = document.getElementById('lightbox');
@@ -243,14 +282,14 @@
       lb.innerHTML = '<button type="button" class="lb-zu" aria-label="Schließen">&times;</button><button type="button" class="gal-pfeil links" id="lb-zurueck" aria-label="Voriger Screenshot"><svg aria-hidden="true"><use href="#i-back"/></svg></button><img id="lb-img" alt=""><button type="button" class="gal-pfeil rechts" id="lb-weiter" aria-label="Nächster Screenshot"><svg aria-hidden="true"><use href="#i-back"/></svg></button>';
       document.body.appendChild(lb);
       lb.addEventListener('click', function (e) {
-        if (e.target.id === 'lb-zurueck') galerieZeige(G().i - 1);
-        else if (e.target.closest && e.target.closest('#lb-zurueck')) galerieZeige(G().i - 1);
-        else if (e.target.closest && e.target.closest('#lb-weiter')) galerieZeige(G().i + 1);
+        if (e.target.id === 'lb-zurueck') galerieZeige(G().i - 1, -1);
+        else if (e.target.closest && e.target.closest('#lb-zurueck')) galerieZeige(G().i - 1, -1);
+        else if (e.target.closest && e.target.closest('#lb-weiter')) galerieZeige(G().i + 1, 1);
         else if (e.target.id !== 'lb-img') lightboxZu();
       });
     }
-    lb.querySelector('#lb-img').src = G().liste[G().i];
-    var mehrere = G().liste.length > 1;
+    lb.querySelector('#lb-img').src = bildUrl(G().liste[G().i]);
+    var mehrere = G().liste.filter(function (u) { return !istVideo(u); }).length > 1;
     lb.querySelector('#lb-zurueck').style.display = lb.querySelector('#lb-weiter').style.display = mehrere ? '' : 'none';
     lb.classList.add('offen');
   }
@@ -259,8 +298,8 @@
     var lb = document.getElementById('lightbox');
     var offen = lb && lb.classList.contains('offen');
     if (e.key === 'Escape' && offen) lightboxZu();
-    else if (e.key === 'ArrowRight' && (offen || document.getElementById('gal-img'))) galerieZeige(G().i + 1);
-    else if (e.key === 'ArrowLeft' && (offen || document.getElementById('gal-img'))) galerieZeige(G().i - 1);
+    else if (e.key === 'ArrowRight' && (offen || document.getElementById('gal-img'))) galerieZeige(G().i + 1, 1);
+    else if (e.key === 'ArrowLeft' && (offen || document.getElementById('gal-img'))) galerieZeige(G().i - 1, -1);
   });
 
   function faktZeile(k, v) { return v ? '<div class="fakt"><dt>' + esc(k) + '</dt><dd>' + v + '</dd></div>' : ''; }
@@ -597,7 +636,8 @@
     else rendern();
     ansichtKey = key;
   }
-  function route() {
+  function route() { routeEx(); videoSteuern(); }
+  function routeEx() {
     var m = /^#spiel\/([^\/]+)(\/play)?$/.exec(location.hash);
     var sp = null;
     if (m) { var id = decodeURIComponent(m[1]); sp = spielbar().filter(function (s) { return s.id === id; })[0] || null; }

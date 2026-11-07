@@ -636,3 +636,21 @@ body.konto-offen { overflow: hidden; }
 .btn-primary[href$="/play"]:hover, .btn-spielen:hover { background: linear-gradient(180deg, #52e395 0%, #28b867 100%); filter: none; }
 .tile .play { background: #1fa85a; color: #fff; }
 .tile .play:hover { background: #28b867; }
+
+/* Trailer als erstes Element der Galerie */
+.gal-haupt { aspect-ratio: 16 / 9; }
+.gal-bild { height: 100%; }
+.gal-bild[hidden], .gal-video[hidden] { display: none; }
+.gal-video { position: absolute; inset: 0; background: #000; }
+.gal-video video { width: 100%; height: 100%; object-fit: contain; display: block; cursor: pointer; }
+.gal-ton, .gal-voll {
+  position: absolute; bottom: 12px; height: 36px; padding: 0 14px; border: 0; border-radius: 999px; cursor: pointer; z-index: 2;
+  background: rgba(8, 11, 18, .72); color: #fff; font: 600 14px var(--font); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+.gal-ton { left: 12px; }
+.gal-voll { right: 12px; width: 40px; padding: 0; font-size: 18px; }
+.gal-ton:hover, .gal-voll:hover { background: rgba(8, 11, 18, .9); }
+.gal-pfeil { z-index: 3; }
+.gal-mini.video { position: relative; }
+.gal-play { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0, 0, 0, .28); }
+.gal-play::after { content: ''; width: 0; height: 0; margin-left: 4px; border-style: solid; border-width: 9px 0 9px 15px; border-color: transparent transparent transparent #fff; filter: drop-shadow(0 1px 3px rgba(0, 0, 0, .6)); }
