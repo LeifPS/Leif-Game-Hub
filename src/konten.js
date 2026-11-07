@@ -439,7 +439,9 @@ async function profil(db, s, name, jetzt) {
     name: u.name, anzeige: u.display || u.name, seit: row ? row.created : null, eigen,
     freunde: fr ? fr.n : 0, online, spiel: online ? p.game || null : null, zuletzt: p ? p.seen : null,
   };
-  // Spielzeit und "zuletzt gespielt" sind privat: nur das eigene Profil bekommt sie, auch Freunde sehen sie nicht
+  // Welche Spiele jemand schon gespielt hat, dürfen Freunde sehen; wann und wie lange ist privat (nur das eigene Profil bekommt Zeit und Datum).
+  // Bei Freunden steht die Liste alphabetisch, damit die Reihenfolge nichts darüber verrät, was zuletzt gespielt wurde.
+  if (!eigen) out.spiele = zeit.map((t) => ({ spiel: t.game })).sort((x, y) => (x.spiel < y.spiel ? -1 : 1));
   if (eigen) {
     out.spiele = zeit.map((t) => ({ spiel: t.game, sekunden: t.seconds, zuletzt: t.last }));
     const st = await db.prepare('SELECT game, COUNT(*) AS n, MAX(updated) AS neu FROM saves WHERE user_id = ? GROUP BY game').bind(u.id).all();

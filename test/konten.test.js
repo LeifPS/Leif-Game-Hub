@@ -400,7 +400,7 @@ test('Spielzeit und Profil: eigene Zeiten, Freunde sehen sie, Fremde nicht', asy
   assert.equal((await call(env, 'POST', '/api/freunde/annehmen', { name: 'Anna' }, b)).status, 200);
   assert.equal((await call(env, 'GET', '/api/profil/%40anna', undefined, b)).status, 200);   // "@anna" und "anna" meinen dasselbe
   const fb = (await call(env, 'GET', '/api/profil/anna', undefined, b)).j;
-  assert.equal(fb.eigen, false); assert.equal(fb.name, 'Anna'); assert.equal(fb.spiele, undefined); assert.equal(fb.staende, undefined);
+  assert.equal(fb.eigen, false); assert.equal(fb.name, 'Anna'); assert.equal(fb.spiele.length, 2); assert.ok(fb.spiele.every((x) => Object.keys(x).join() === 'spiel')); assert.equal(fb.staende, undefined);
   assert.equal((await call(env, 'GET', '/api/profil/Anna', undefined, c)).status, 404);
   assert.equal((await call(env, 'GET', '/api/profil/unbekannt', undefined, a)).status, 404);
   uhr = start;
