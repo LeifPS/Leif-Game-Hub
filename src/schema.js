@@ -9,7 +9,8 @@ export const SCHEMA = [
     hash TEXT NOT NULL,
     created INTEGER NOT NULL,
     display TEXT,
-    device_id TEXT
+    device_id TEXT,
+    name_changed INTEGER
   )`,
   `CREATE TABLE IF NOT EXISTS sessions (
     token_hash TEXT PRIMARY KEY,

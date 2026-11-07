@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { handle, VERSIONEN, MAX_BYTES, TAGE, MAX_ZEILEN } from '../src/konten.js';
+import { handle, VERSIONEN, MAX_BYTES, TAGE, MAX_ZEILEN, NAME_SPERRE } from '../src/konten.js';
 import { makeD1 } from './helpers/d1.js';
 
 // Schlüssel wie im Browser: PBKDF2(Passwort, "lgh1:" + kleingeschriebener Name), SHA-256, 256 Bit
@@ -442,4 +442,49 @@ test('Ältere Konten ohne Gerätekennung: erstes meldendes Gerät wird gebunden,
   assert.equal(env.DB.raw.prepare("SELECT device_id AS d FROM users WHERE name_lc='alt'").get().d, G1);
   // aber ein neues Anmelden auf dem zweiten Gerät geht nicht mehr
   assert.equal((await call(env, 'POST', '/api/anmelden', { name: 'Alt', key: await schluessel('Alt', 'geheim123'), gid: G2 })).j.fehler, 'anderes_geraet');
+});
+
+test('Benutzername ändern: nur mit Passwort, nur auf freie Namen, höchstens einmal pro Woche', async () => {
+  const env = umgebung();
+  const start = uhr;
+  const t = await neuesKonto(env, 'Mira');
+  await neuesKonto(env, 'Belegt');
+  const aend = async (neu, pw = 'geheim123', alt = 'Mira') => call(env, 'POST', '/api/benutzername', { name: neu, key: await schluessel(alt, pw), neu: await schluessel(neu, pw) }, t);
+  // falsches Passwort, ungültiger Name, derselbe Name, belegter Name (auch in anderer Schreibweise)
+  assert.equal((await aend('Mira2', 'falsch')).status, 401);
+  assert.equal((await aend('ab')).j.fehler, 'name');
+  assert.equal((await aend('Mira')).j.fehler, 'name_gleich');
+  assert.equal((await aend('belegt')).j.fehler, 'name_vergeben');
+  assert.equal(env.DB.raw.prepare("SELECT name_changed AS c FROM users WHERE name_lc='mira'").get().c, null, 'Fehlversuche lösen keine Sperre aus');
+  // Erfolg: neuer Name, Anmeldung bleibt bestehen, altes Passwort gilt unter dem neuen Namen
+  uhr = start + 5000;
+  const ok = await aend('Mira_neu');
+  assert.deepEqual([ok.status, ok.j.name, ok.j.anzeige], [200, 'Mira_neu', 'Mira_neu']);
+  assert.deepEqual((await call(env, 'GET', '/api/ich', undefined, t)).j, { name: 'Mira_neu', anzeige: 'Mira_neu' });
+  assert.equal((await call(env, 'POST', '/api/anmelden', { name: 'Mira_neu', key: await schluessel('Mira_neu', 'geheim123') })).status, 200);
+  assert.equal((await call(env, 'POST', '/api/anmelden', { name: 'Mira', key: await schluessel('Mira', 'geheim123') })).status, 401);
+  // zweite Änderung innerhalb einer Woche: gesperrt, mit Wartezeit
+  uhr = start + 5000 + (NAME_SPERRE - 10) * 1000;
+  const zu = await aend('Mira_3', 'geheim123', 'Mira_neu');
+  assert.deepEqual([zu.status, zu.j.fehler], [429, 'zu_frueh']);
+  assert.ok(zu.j.warte > 0 && zu.j.warte <= 10, String(zu.j.warte));
+  // nach einer Woche wieder erlaubt; der alte Name ist dann frei für andere
+  uhr = start + 5000 + (NAME_SPERRE + 1) * 1000;
+  assert.equal((await aend('Mira_3', 'geheim123', 'Mira_neu')).status, 200);
+  assert.equal((await call(env, 'POST', '/api/registrieren', { name: 'Mira', key: await schluessel('Mira', 'x12345') })).status, 200);
+  uhr = start;
+});
+
+test('Benutzername ändern: Freunde und Stände bleiben am Konto, nur Groß-/Kleinschreibung ändern geht', async () => {
+  const env = umgebung();
+  const start = uhr;
+  const ta = await neuesKonto(env, 'Anna'), tb = await neuesKonto(env, 'Ben');
+  await call(env, 'POST', '/api/freunde/anfrage', { name: 'Ben' }, ta);
+  await call(env, 'POST', '/api/freunde/annehmen', { name: 'Anna' }, tb);
+  uhr = start + 1000;
+  const r = await call(env, 'POST', '/api/benutzername', { name: 'ANNA', key: await schluessel('Anna', 'geheim123'), neu: await schluessel('ANNA', 'geheim123') }, ta);
+  assert.deepEqual([r.status, r.j.name], [200, 'ANNA']);
+  const fr = (await call(env, 'GET', '/api/freunde', undefined, tb)).j;
+  assert.deepEqual(fr.freunde.map((f) => f.name), ['ANNA']);
+  uhr = start;
 });

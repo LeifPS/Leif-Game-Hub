@@ -42,6 +42,7 @@ const GID_RE = /^[0-9a-f]{32}$/;
 const gidVon = (v) => (typeof v === 'string' && GID_RE.test(v) ? v : null);
 export const ABSTAND = 1800;           // ältere Stände werden höchstens alle 30 Minuten festgehalten, sonst gäbe es nach wenigen Minuten Spielzeit nur noch ganz junge
 const SITZUNG_TAGE = 400;
+export const NAME_SPERRE = 7 * 86400;  // der Benutzername (@name) lässt sich höchstens einmal pro Woche ändern
 
 const antwort = (obj, status = 200) => new Response(JSON.stringify(obj), {
   status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
@@ -60,6 +61,10 @@ function schemaSichern(db) {
     // Kennung des Geräts, auf dem das Konto erstellt wurde (solange EIN_GERAET gilt)
     if (!spalten.results.some((c) => c.name === 'device_id')) {
       try { await db.prepare('ALTER TABLE users ADD COLUMN device_id TEXT').run(); } catch (e) { /* parallel schon angelegt */ }
+    }
+    // Zeitpunkt der letzten Änderung des Benutzernamens (NULL = nie geändert)
+    if (!spalten.results.some((c) => c.name === 'name_changed')) {
+      try { await db.prepare('ALTER TABLE users ADD COLUMN name_changed INTEGER').run(); } catch (e) { /* parallel schon angelegt */ }
     }
   })().catch((e) => { schemaFertig.delete(db); throw e; }));
   return schemaFertig.get(db);
@@ -144,7 +149,7 @@ async function pruefeSchluessel(db, userName, key, jetzt, request) {
   const kn = 'l:' + lc, ki = 'i:' + ip(request);
   const warte = Math.max(await gesperrt(db, kn, jetzt), await gesperrt(db, ki, jetzt));
   if (warte) return { fehler: fehler(429, 'zu_viele', { warte }) };
-  const u = await db.prepare('SELECT id, name, display, salt, hash, device_id FROM users WHERE name_lc = ?').bind(lc).first();
+  const u = await db.prepare('SELECT id, name, display, salt, hash, device_id, name_changed FROM users WHERE name_lc = ?').bind(lc).first();
   // Auch bei unbekanntem Namen gleich viel rechnen, damit man nicht erkennt, welche Namen es gibt
   const h = await sha256((u ? u.salt : 'x'.repeat(32)) + ':' + key);
   if (!u || !gleich(h, u.hash)) {
@@ -182,6 +187,27 @@ async function passwortAendern(request, db, s, jetzt) {
     db.prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash != ?').bind(s.id, s.th), // andere Geräte müssen sich neu anmelden
   ]);
   return antwort({ ok: true });
+}
+
+// Benutzernamen (@name) ändern: höchstens einmal pro Woche und nur auf einen freien Namen.
+// Der Anmeldeschlüssel hängt vom Namen ab, darum schickt der Browser das Passwort doppelt (alt: bisheriger Name, neu: neuer Name).
+async function benutzernameAendern(request, db, s, jetzt) {
+  const { b } = await lies(request);
+  if (!b || typeof b.name !== 'string' || !NAME_RE.test(b.name.normalize('NFC'))) return fehler(400, 'name');
+  if (typeof b.key !== 'string' || typeof b.neu !== 'string' || !KEY_RE.test(b.key) || !KEY_RE.test(b.neu)) return fehler(400, 'eingabe');
+  const name = b.name.normalize('NFC'), lc = name.toLowerCase();
+  const r = await pruefeSchluessel(db, s.name, b.key, jetzt, request);
+  if (r.fehler) return r.fehler;
+  if (name === r.user.name) return fehler(400, 'name_gleich');
+  if (r.user.name_changed && jetzt - r.user.name_changed < NAME_SPERRE) return fehler(429, 'zu_frueh', { warte: r.user.name_changed + NAME_SPERRE - jetzt });
+  const belegt = await db.prepare('SELECT 1 AS x FROM users WHERE name_lc = ? AND id != ?').bind(lc, s.id).first();
+  if (belegt) return fehler(409, 'name_vergeben');
+  const salt = zufall(16);
+  try {
+    await db.prepare('UPDATE users SET name = ?, name_lc = ?, salt = ?, hash = ?, name_changed = ? WHERE id = ?').bind(name, lc, salt, await sha256(salt + ':' + b.neu), jetzt, s.id).run();
+  } catch (e) { return fehler(409, 'name_vergeben'); }
+  // Angemeldete Geräte bleiben angemeldet (die Sitzung hängt an der Konto-Nummer, nicht am Namen)
+  return antwort({ ok: true, name, anzeige: r.user.display || name });
 }
 
 async function anzeigeAendern(request, db, s) {
@@ -447,6 +473,7 @@ export async function handle(request, env, jetztMs = Date.now()) {
     if (pfad === '/api/ich' && m === 'GET') return antwort({ name: s.name, anzeige: s.anzeige });
     if (pfad === '/api/anzeige' && m === 'POST') return await anzeigeAendern(request, db, s);
     if (pfad === '/api/abmelden' && m === 'POST') { await db.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(s.th).run(); return antwort({ ok: true }); }
+    if (pfad === '/api/benutzername' && m === 'POST') return await benutzernameAendern(request, db, s, jetzt);
     if (pfad === '/api/passwort' && m === 'POST') return await passwortAendern(request, db, s, jetzt);
     if (pfad === '/api/loeschen' && m === 'POST') return await kontoLoeschen(request, db, s, jetzt);
     if (pfad === '/api/staende' && m === 'GET') return await liste(db, s);

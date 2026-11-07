@@ -80,6 +80,7 @@
     name_vergeben: 'Diesen Benutzernamen gibt es schon. Nimm einen anderen.',
     anzeige: 'Der Anzeigename darf höchstens 24 Zeichen haben und keine Sonderzeichen wie < oder > enthalten.',
     login: 'Benutzername oder Passwort stimmt nicht.',
+    name_gleich: 'Das ist schon dein Benutzername.',
     anderes_geraet: 'Dieses Konto wurde auf einem anderen Gerät erstellt. Anmelden auf mehreren Geräten geht noch nicht, weil die Spielstände noch nicht zwischen Geräten abgeglichen werden. Das kommt später. Erstelle hier ein neues Konto oder frag Leif, wenn du das Gerät wechseln musst.',
     netz: 'Keine Verbindung zum Server. Bitte später noch einmal versuchen.',
     eingabe: 'Bitte alle Felder ausfüllen.',
@@ -90,6 +91,10 @@
     if (res.j.fehler === 'zu_viele') {
       var w = res.j.warte || 30;
       return 'Zu viele Versuche. Bitte in ' + (w > 90 ? Math.ceil(w / 60) + ' Minuten' : w + ' Sekunden') + ' noch einmal versuchen.';
+    }
+    if (res.j.fehler === 'zu_frueh') {
+      var tg = Math.ceil((res.j.warte || 0) / 86400), st = Math.ceil((res.j.warte || 0) / 3600);
+      return 'Den Benutzernamen kannst du nur einmal pro Woche ändern. Das geht wieder in ' + (st > 36 ? tg + ' Tagen' : st > 1 ? st + ' Stunden' : 'weniger als einer Stunde') + '.';
     }
     return FEHLER[res.j.fehler] || 'Das hat nicht geklappt (' + (res.j.fehler || res.status) + ').';
   }
@@ -353,6 +358,7 @@
       '<button type="button" class="btn btn-ghost" data-a="profil">Mein Profil</button>' +
       '<button type="button" class="btn btn-ghost" data-a="stand">Spielstände sichern und zurückholen</button>' +
       '<button type="button" class="btn btn-ghost" data-a="anz">Anzeigename ändern</button>' +
+      '<button type="button" class="btn btn-ghost" data-a="bn">Benutzernamen ändern</button>' +
       '<button type="button" class="btn btn-ghost" data-a="pw">Passwort ändern</button>' +
       '<button type="button" class="btn btn-ghost" data-a="aus">Abmelden</button>' +
       '<button type="button" class="btn btn-ghost gefahr" data-a="weg">Konto löschen</button>' +
@@ -386,6 +392,27 @@
                 if (t) t.textContent = anzeigeName(); if (av) av.textContent = anzeigeName().charAt(0).toUpperCase();
                 form.innerHTML = '<p>Gespeichert. Andere sehen dich jetzt als <b>' + esc(anzeigeName()) + '</b>.</p><div class="btn-row"><button class="btn btn-primary" data-zu type="button">Fertig</button></div>';
               });
+            });
+          if (a === 'bn') formular(
+            '<label>Neuer Benutzername<input id="bn0" type="text" maxlength="20" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="' + esc(konto.name) + '"></label>' +
+            '<label>Zur Bestätigung dein Passwort<input id="bn1" type="password" autocomplete="current-password"></label>' +
+            '<div class="konto-regel">Dein Benutzername ist der Name nach dem @ und gilt für die Anmeldung und für Freundschaftsanfragen. Du kannst ihn nur einmal pro Woche ändern, und nur auf einen Namen, der noch frei ist. Freunde, Spielstände und Anmeldungen bleiben erhalten. Der alte Name wird danach frei für andere.</div>',
+            function (fe, fertig) {
+              var nn = form.querySelector('#bn0').value.trim().replace(/^@/, '').normalize('NFC'), pw = form.querySelector('#bn1').value;
+              if (!NAME_RE.test(nn)) { fe.textContent = FEHLER.name; return fertig(); }
+              if (nn === konto.name) { fe.textContent = FEHLER.name_gleich; return fertig(); }
+              if (!pw) { fe.textContent = FEHLER.eingabe; return fertig(); }
+              Promise.all([schluessel(konto.name, pw), schluessel(nn, pw)]).then(function (k) {
+                return api('POST', '/api/benutzername', { name: nn, key: k[0], neu: k[1] });
+              }).then(function (res) {
+                if (!res.ok) { fe.textContent = fehlerText(res); return fertig(); }
+                speichereKonto({ name: res.j.name, anzeige: res.j.anzeige || res.j.name, token: konto.token });
+                aktualisiereKnopf(); benachrichtige();
+                var sub = el.querySelector('.dlg-sub'), t = el.querySelector('#dlg-titel'), av = el.querySelector('#dlg-av');
+                if (sub) sub.textContent = '@' + konto.name + ' · Angemeldet auf diesem Gerät';
+                if (t) t.textContent = anzeigeName(); if (av) av.textContent = anzeigeName().charAt(0).toUpperCase();
+                form.innerHTML = '<p>Dein Benutzername ist jetzt <b>@' + esc(konto.name) + '</b>. Zum Anmelden brauchst du ab jetzt diesen Namen.</p><div class="btn-row"><button class="btn btn-primary" data-zu type="button">Fertig</button></div>';
+              }, function () { fe.textContent = 'Das ist hier nicht möglich (Browser ohne Verschlüsselung).'; fertig(); });
             });
           if (a === 'pw') formular(
             '<label>Altes Passwort<input id="pw0" type="password" autocomplete="current-password"></label>' +
@@ -551,7 +578,7 @@
       // Nur bei eindeutiger Ablehnung abmelden; ohne Netz bleibt man angemeldet
       if (res.ok) {
         // Anzeigename kann auf einem anderen Gerät geändert worden sein
-        if (res.j.anzeige && res.j.anzeige !== konto.anzeige) speichereKonto({ name: konto.name, anzeige: res.j.anzeige, token: konto.token });
+        if (res.j.name && (res.j.name !== konto.name || (res.j.anzeige && res.j.anzeige !== konto.anzeige))) { speichereKonto({ name: res.j.name, anzeige: res.j.anzeige || res.j.name, token: konto.token }); aktualisiereKnopf(); }
         nachAnmeldung();
       }
       else if (res.status === 0) { meldeAn(); }
