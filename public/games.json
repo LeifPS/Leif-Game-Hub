@@ -591,20 +591,6 @@
       ]
     },
     {
-      "id": "svvonline",
-      "name": "SVV Online",
-      "text": "Strategisches Kartenspiel mit Decks wie dem Königreich: Spiele Karten mit Kosten, Angriff und Leben und nutze ihre Fähigkeiten.",
-      "url": "https://svv-online.de",
-      "farbe": "#b5733a",
-      "phase": "alpha",
-      "erschienen": "2026-05-07",
-      "kategorien": [
-        "Karten",
-        "Strategie"
-      ],
-      "icon": "screens/svvonline-icon.webp"
-    },
-    {
       "id": "nebelmeer",
       "name": "Nebelmeer Tiefe",
       "text": "Fahre mit Boot und Laterne über ein riesiges Meer im Nebel, sammle, baue und tauche tiefer, zusammen mit anderen Spielern.",
