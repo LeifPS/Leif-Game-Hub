@@ -321,7 +321,7 @@
     var online = kategorien(sp).indexOf('Online') >= 0;
     var h = '<div class="detail-banner' + (titel ? ' titel' : '') + '">' + (titel ? '<img class="titelbild" src="' + esc(sp.wallpaper) + '" alt="' + esc(sp.name) + '" decoding="async">' : art(sp, 1400, 420)) + '<a class="zurueck-link" href="#"><svg aria-hidden="true"><use href="#i-back"/></svg>Alle Spiele</a></div>';
     h += '<div class="shop' + (titel ? ' titel' : '') + '">';
-    h += '<div class="shop-titelzeile">' + titelHtml(sp) + '<a class="btn btn-primary btn-spielen" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a></div>';
+    h += '<div class="shop-titelzeile">' + titelHtml(sp) + '<div class="spiel-aktion"><div class="spielinfo" hidden></div><a class="btn btn-primary btn-spielen" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a></div></div>';
     var gal = galerieHtml(sp);
     var text = (sp.beschreibung && sp.beschreibung !== sp.text) ? '<section class="shop-text"><h2>Über dieses Spiel</h2><p>' + esc(sp.beschreibung) + '</p></section>' : '';
     h += '<div class="shop-oben' + (gal ? '' : ' ohne-galerie') + '">' + (gal ? '<div class="shop-haupt">' + gal + text + '</div>' : '');
@@ -693,6 +693,35 @@
     var m = Math.round(sek / 60); if (m < 60) return m + ' Min.';
     var h = Math.floor(m / 60); m = m % 60; return h + ' Std.' + (m ? ' ' + m + ' Min.' : '');
   }
+  /* Detailseite: "Zuletzt gespielt" und "Spielzeit" neben dem Spielen-Knopf (aus den Profildaten des Kontos; nur sichtbar, wenn schon gespielt) */
+  var eigenSpiele = { t: 0, liste: null, lauf: false }, spielInfoLauscher = false;
+  function spielInfoZeigen(id) {
+    var el = inhalt.querySelector('.spielinfo');
+    if (!el) return;
+    var x = null;
+    if (eigenSpiele.liste) x = eigenSpiele.liste.filter(function (g) { return g.spiel === id; })[0] || null;
+    if (!x || !x.zuletzt) { el.hidden = true; el.innerHTML = ''; return; }
+    el.innerHTML = '<div><small>Zuletzt gespielt</small><b>' + esc(relZeit(Math.max(0, Math.floor(Date.now() / 1000) - x.zuletzt))) + '</b></div>' +
+      '<div><small>Spielzeit</small><b>' + esc(dauer(x.sekunden)) + '</b></div>';
+    el.hidden = false;
+  }
+  function spielInfoLaden(id, nochmal) {
+    if (!window.LghKonto || !LghKonto.angemeldet || !LghKonto.angemeldet()) {
+      eigenSpiele.liste = null; spielInfoZeigen(id);
+      if (nochmal !== false) setTimeout(function () { if (location.hash === '#spiel/' + encodeURIComponent(id)) spielInfoLaden(id, false); }, 1800);   // das Konto wird beim Start erst kurz nach der Seite geladen
+      return;
+    }
+    if (!spielInfoLauscher && LghKonto.beiAenderung) { spielInfoLauscher = true; LghKonto.beiAenderung(function () { eigenSpiele.t = 0; var m = /^#spiel\/([^\/]+)$/.exec(location.hash); if (m) spielInfoLaden(decodeURIComponent(m[1])); }); }
+    spielInfoZeigen(id);   // zuerst mit dem, was schon da ist
+    if (eigenSpiele.lauf || Date.now() - eigenSpiele.t < 15000) return;
+    eigenSpiele.lauf = true;
+    LghKonto.profil().then(function (res) {
+      eigenSpiele.lauf = false;
+      if (res && res.ok && res.j && res.j.spiele) { eigenSpiele.liste = res.j.spiele; eigenSpiele.t = Date.now(); }
+      var m = /^#spiel\/([^\/]+)$/.exec(location.hash);
+      if (m && decodeURIComponent(m[1]) === id) spielInfoZeigen(id);
+    }, function () { eigenSpiele.lauf = false; });
+  }
   function renderProfil(name) {
     inhalt.innerHTML = '<div class="pf-wrap"><div class="fr-leer">Lädt …</div></div>';
     var tok = ++profilZaehler;
@@ -785,6 +814,7 @@
     if (sp) {
       body.setAttribute('data-view', 'detail');
       zeigeAnsicht('detail|' + sp.id, function () { renderDetail(sp); }); renderSide(sp.id);
+      spielInfoLaden(sp.id);
       document.title = sp.name + ' – Leif Game Hub';
       window.scrollTo(0, 0);
       return;
