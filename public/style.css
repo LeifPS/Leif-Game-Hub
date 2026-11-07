@@ -661,13 +661,15 @@ body.konto-offen { overflow: hidden; }
 #splash { position: fixed; inset: 0; z-index: 2147483000; background: #000; display: grid; place-items: center; --len: 6000; animation: sp-aus .55s ease-in 3.35s forwards; }
 #splash.schnell { transition: opacity .25s; opacity: 0; pointer-events: none; animation: none; }
 #splash .sp-logo { width: min(54vw, 40vh, 280px); min-width: 110px; height: auto; overflow: visible; filter: drop-shadow(0 0 10px rgba(255, 196, 80, .35)); }
-#splash #logo-linie { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: sp-zeichnen 2.5s cubic-bezier(.4, .05, .55, 1) .25s forwards; }
-#splash .sp-voll { opacity: 0; animation: sp-voll .5s ease-out 2.6s forwards; }
-#splash.ohne-strich #logo-linie { stroke-dasharray: none; stroke-dashoffset: 0; animation: none; }
+#splash .sp-strich { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: sp-zeichnen 2.1s cubic-bezier(.55, .1, .35, 1) .25s forwards, sp-duenn .7s ease 2.35s forwards; }
+#splash .sp-fuell { opacity: 0; animation: sp-fuellen .8s ease-out 2.2s forwards; }
+#splash.ohne-strich .sp-strich { display: none; }
 @keyframes sp-zeichnen { to { stroke-dashoffset: 0; } }
-@keyframes sp-voll { to { opacity: 1; } }
+@keyframes sp-duenn { to { stroke-width: 0; opacity: .0; } }
+@keyframes sp-fuellen { to { opacity: 1; } }
 @keyframes sp-aus { to { opacity: 0; visibility: hidden; } }
 @media (prefers-reduced-motion: reduce) {
-  #splash { animation-delay: .7s; animation-duration: .25s; }
-  #splash #logo-linie { animation: none; stroke-dasharray: none; stroke-dashoffset: 0; }
+  #splash { animation-delay: .9s; animation-duration: .3s; }
+  #splash .sp-strich { animation: none; display: none; }
+  #splash .sp-fuell { animation-duration: .2s; animation-delay: 0s; }
 }

@@ -13,15 +13,11 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body data-view="home">
-<!-- Startbildschirm: schwarz, das Logo wird in einem Zug in Gold geschrieben (siehe style.css und das Skript am Ende) -->
+<!-- Startbildschirm: schwarz, das Logo wird in Gold nachgezeichnet (siehe style.css und das Skript am Ende) -->
 <div id="splash" aria-hidden="true">
   <svg class="sp-logo" viewBox="0 0 1122 1283" focusable="false">
-    <!-- Mittellinie des Schriftzugs (ein durchgehender Schwung); sie deckt das Logo beim Zeichnen Stück für Stück auf -->
-    <mask id="sp-maske" maskUnits="userSpaceOnUse" x="0" y="0" width="1122" height="1283">
-      <path id="logo-linie" d="M57 862C67.2 850.5 100.5 808.3 118 793C135.5 777.7 153.5 788.7 162 770C170.5 751.3 164.7 706.3 169 681C173.3 655.7 186.8 631.2 188 618C189.2 604.8 176.7 620.3 176 602C175.3 583.7 176.8 549 184 508C191.2 467 206.3 399 219 356C231.7 313 247.7 277.2 260 250C272.3 222.8 281.2 209.5 293 193C304.8 176.5 318 160.5 331 151C344 141.5 359.7 137.5 371 136C382.3 134.5 392.5 138.2 399 142C405.5 145.8 407 147.3 410 159C413 170.7 417 192.2 417 212C417 231.8 414.5 255.7 410 278C405.5 300.3 402 317.2 390 346C378 374.8 362 410.3 338 451C314 491.7 271 562.7 246 590C221 617.3 200.8 599.8 188 615C175.2 630.2 173.7 654.5 169 681C164.3 707.5 158.3 755.8 160 774C161.7 792.2 172 775.7 179 790C186 804.3 193.7 842.8 202 860C210.3 877.2 215.5 886 229 893C242.5 900 264.8 903.2 283 902C301.2 900.8 315 901 338 886C361 871 404.7 832.7 421 812C437.3 791.3 437.5 773.7 436 762C434.5 750.3 417 752.3 412 742C407 731.7 403.8 715.7 406 700C408.2 684.3 408.3 673.2 425 648C441.7 622.8 479.7 568.8 506 549C532.3 529.2 573.2 504.7 583 529C592.8 553.3 576.5 664.2 565 695C553.5 725.8 528.8 705 514 714C499.2 723 489 741 476 749C463 757 436 762 436 762C436 762 463 757 476 749C489 741 499.2 723 514 714C528.8 705 554.8 696.7 565 695C575.2 693.3 571.7 687.5 575 704C578.3 720.5 582 777 585 794C588 811 594.8 789.8 593 806C591.2 822.2 587.8 873 574 891C560.2 909 545.5 891.5 510 914C474.5 936.5 399.8 998.7 361 1026C322.2 1053.3 293 1065.3 277 1078C261 1090.7 265.7 1092 265 1102C264.3 1112 263.2 1122.3 273 1138C282.8 1153.7 311 1183.5 324 1196C337 1208.5 339.7 1208.7 351 1213C362.3 1217.3 378.3 1221.3 392 1222C405.7 1222.7 421.7 1219.7 433 1217C444.3 1214.3 450.8 1212 460 1206C469.2 1200 476.3 1197.3 488 1181C499.7 1164.7 517.8 1135 530 1108C542.2 1081 553.2 1051 561 1019C568.8 987 575.5 936.7 577 916C578.5 895.3 568.8 903 570 895C571.2 887 580.2 883.5 584 868C587.8 852.5 582.7 815.7 593 802C603.3 788.3 624.7 794.8 646 786C667.3 777.2 707 752.3 721 749C735 745.7 730.2 749.3 730 766C729.8 782.7 720 849 720 849C720 849 729.8 782.7 730 766C730.2 749.3 717.3 761.7 721 749C724.7 736.3 748.3 701.3 752 690C755.7 678.7 744 695.7 743 681C742 666.3 741.7 640.7 746 602C750.3 563.3 758.5 538.5 769 449C779.5 359.5 809 65 809 65C809 65 779.5 359.5 769 449C758.5 538.5 750.3 563.3 746 602C741.7 640.7 742 666.3 743 681C744 695.7 740.7 692.5 752 690C763.3 687.5 798.3 672.5 811 666C823.7 659.5 819.3 655.2 828 651C836.7 646.8 853.2 640.5 863 641C872.8 641.5 875.7 633 887 654C898.3 675 920 744.3 931 767C942 789.7 944.5 785 953 790C961.5 795 972.3 797.2 982 797C991.7 796.8 997.3 802.3 1011 789C1024.7 775.7 1055.2 729 1064 717" fill="none" stroke="#fff" stroke-width="116" stroke-linecap="round" stroke-linejoin="round"/>
-    </mask>
-    <g mask="url(#sp-maske)"><use href="#logo-pfad" fill="url(#splash-gold)" fill-rule="evenodd"/></g>
-    <use class="sp-voll" href="#logo-pfad" fill="url(#splash-gold)" fill-rule="evenodd"/>
+    <use class="sp-fuell" href="#logo-pfad" fill="url(#splash-gold)" fill-rule="evenodd"/>
+    <use class="sp-strich" href="#logo-pfad" fill="none" stroke="url(#splash-gold)" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
   </svg>
 </div>
 
@@ -98,13 +94,13 @@
 </div>
 
 <script>
-/* Startbildschirm: misst die Länge der Mittellinie, damit sie per CSS "gezeichnet" werden kann, und entfernt ihn danach.
+/* Startbildschirm: misst die Länge des Umrisses, damit er per CSS "gezeichnet" werden kann, und entfernt ihn danach.
    Tippen, Klick oder Taste überspringt ihn. Fällt etwas aus, verschwindet er spätestens nach 5 Sekunden. */
 (function () {
   var sp = document.getElementById('splash');
   if (!sp) return;
   try {
-    var p = document.getElementById('logo-linie');
+    var p = document.getElementById('logo-pfad');
     var len = Math.ceil(p.getTotalLength());
     if (len > 0) sp.style.setProperty('--len', len);
   } catch (e) { sp.classList.add('ohne-strich'); }
