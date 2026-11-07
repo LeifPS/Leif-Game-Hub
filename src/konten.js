@@ -66,6 +66,13 @@ function schemaSichern(db) {
     if (!spalten.results.some((c) => c.name === 'avatar')) {
       try { await db.prepare('ALTER TABLE users ADD COLUMN avatar TEXT').run(); } catch (e) { /* parallel schon angelegt */ }
     }
+    // Sichtbarkeit (1 = Freunde, 0 = niemand): Online-Status (inkl. zuletzt online) und gespielte Spiele (inkl. aktuelles Spiel)
+    if (!spalten.results.some((c) => c.name === 'vis_online')) {
+      try { await db.prepare('ALTER TABLE users ADD COLUMN vis_online INTEGER NOT NULL DEFAULT 1').run(); } catch (e) { /* parallel schon angelegt */ }
+    }
+    if (!spalten.results.some((c) => c.name === 'vis_spiele')) {
+      try { await db.prepare('ALTER TABLE users ADD COLUMN vis_spiele INTEGER NOT NULL DEFAULT 1').run(); } catch (e) { /* parallel schon angelegt */ }
+    }
     // Zeitpunkt der letzten Änderung des Benutzernamens (NULL = nie geändert)
     if (!spalten.results.some((c) => c.name === 'name_changed')) {
       try { await db.prepare('ALTER TABLE users ADD COLUMN name_changed INTEGER').run(); } catch (e) { /* parallel schon angelegt */ }
@@ -103,7 +110,7 @@ async function sitzung(request, db, jetzt) {
   const m = /^Bearer ([0-9a-f]{64})$/.exec(request.headers.get('authorization') || '');
   if (!m) return null;
   const th = await sha256(m[1]);
-  const s = await db.prepare('SELECT s.user_id AS id, s.last AS last, u.name AS name, u.display AS display, u.avatar AS avatar, u.device_id AS gid FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?').bind(th).first();
+  const s = await db.prepare('SELECT s.user_id AS id, s.last AS last, u.name AS name, u.display AS display, u.avatar AS avatar, u.vis_online AS vo, u.vis_spiele AS vs, u.device_id AS gid FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?').bind(th).first();
   if (!s) return null;
   if (jetzt - s.last > SITZUNG_TAGE * 86400) { await db.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(th).run(); return null; }
   if (jetzt - s.last > 3600) await db.prepare('UPDATE sessions SET last = ? WHERE token_hash = ?').bind(jetzt, th).run();
@@ -112,7 +119,7 @@ async function sitzung(request, db, jetzt) {
     const g = gidVon(request.headers.get('x-geraet'));
     if (g) await db.prepare('UPDATE users SET device_id = ? WHERE id = ? AND device_id IS NULL').bind(g, s.id).run();
   }
-  return { id: s.id, name: s.name, anzeige: s.display || s.name, avatar: s.avatar || null, th };
+  return { id: s.id, name: s.name, anzeige: s.display || s.name, avatar: s.avatar || null, sicht: { online: s.vo === 0 ? 0 : 1, spiele: s.vs === 0 ? 0 : 1 }, th };
 }
 async function neueSitzung(db, userId, geraet, jetzt) {
   const token = zufall(32);
@@ -248,6 +255,21 @@ async function avatarAendern(request, db, s, env) {
   return antwort({ ok: true, av: v.wert });
 }
 
+async function sichtAendern(request, db, s) {
+  const { b } = await lies(request);
+  if (!b || typeof b !== 'object') return fehler(400, 'eingabe');
+  const felder = [];
+  for (const [k, spalte] of [['online', 'vis_online'], ['spiele', 'vis_spiele']]) {
+    if (b[k] === undefined) continue;
+    if (b[k] !== 0 && b[k] !== 1) return fehler(400, 'eingabe');
+    felder.push([spalte, b[k]]);
+  }
+  if (!felder.length) return fehler(400, 'eingabe');
+  await db.prepare('UPDATE users SET ' + felder.map((f) => f[0] + ' = ?').join(', ') + ' WHERE id = ?').bind(...felder.map((f) => f[1]), s.id).run();
+  const r = await db.prepare('SELECT vis_online AS vo, vis_spiele AS vs FROM users WHERE id = ?').bind(s.id).first();
+  return antwort({ ok: true, sicht: { online: r.vo === 0 ? 0 : 1, spiele: r.vs === 0 ? 0 : 1 } });
+}
+
 async function kontoLoeschen(request, db, s, jetzt) {
   const { b } = await lies(request);
   if (!b || typeof b.key !== 'string' || !KEY_RE.test(b.key)) return fehler(400, 'eingabe');
@@ -350,12 +372,12 @@ const paar = (x, y) => (x < y ? [x, y] : [y, x]);
 async function suche(db, name) {
   if (typeof name !== 'string') return null;
   const n = name.normalize('NFC').trim().replace(/^@/, '');   // "@leif" und "leif" meinen denselben Benutzernamen
-  return db.prepare('SELECT id, name, display, avatar FROM users WHERE name_lc = ?').bind(n.toLowerCase()).first();
+  return db.prepare('SELECT id, name, display, avatar, vis_online, vis_spiele FROM users WHERE name_lc = ?').bind(n.toLowerCase()).first();
 }
 
 async function freundeListe(db, s, jetzt) {
   const r = await db.prepare(
-    `SELECT u.name AS name, u.display AS display, u.avatar AS avatar, f.status AS status, f.requester AS requester, p.game AS game, p.raum AS raum, p.seen AS seen
+    `SELECT u.name AS name, u.display AS display, u.avatar AS avatar, f.status AS status, f.requester AS requester, p.game AS game, p.raum AS raum, p.seen AS seen, u.vis_online AS vo, u.vis_spiele AS vs
      FROM friends f JOIN users u ON u.id = CASE WHEN f.a = ? THEN f.b ELSE f.a END
      LEFT JOIN presence p ON p.user_id = u.id
      WHERE f.a = ? OR f.b = ? ORDER BY lower(COALESCE(u.display, u.name))`
@@ -363,8 +385,10 @@ async function freundeListe(db, s, jetzt) {
   const freunde = [], eingehend = [], ausgehend = [];
   for (const x of r.results) {
     if (x.status === 'accepted') {
-      const online = !!x.seen && jetzt - x.seen < ONLINE_SEKUNDEN;
-      freunde.push({ name: x.name, anzeige: x.display || x.name, av: avParse(x.avatar), online, spiel: online ? x.game || null : null, raum: online && x.game ? x.raum || null : null, zuletzt: x.seen || null });
+      // Was ein Freund verbergen will, verlässt den Server gar nicht erst: Online-Status (auch "zuletzt online") und gespielte Spiele (auch das aktuelle) sind getrennt einstellbar
+      const privat = x.vo === 0, spielZeigen = x.vs !== 0;
+      const online = !privat && !!x.seen && jetzt - x.seen < ONLINE_SEKUNDEN;
+      freunde.push({ name: x.name, anzeige: x.display || x.name, av: avParse(x.avatar), online, privat, spiel: online && spielZeigen ? x.game || null : null, raum: online && spielZeigen && x.game ? x.raum || null : null, zuletzt: privat ? null : x.seen || null });
     } else if (x.requester === s.id) ausgehend.push({ name: x.name, anzeige: x.display || x.name, av: avParse(x.avatar) });
     else eingehend.push({ name: x.name, anzeige: x.display || x.name, av: avParse(x.avatar) });
   }
@@ -458,20 +482,25 @@ async function profil(db, s, name, jetzt) {
     if (!f || f.status !== 'accepted') return fehler(404, 'unbekannt');
     u = z;
   }
-  const row = await db.prepare('SELECT created FROM users WHERE id = ?').bind(u.id).first();
+  const row = await db.prepare('SELECT created, vis_online, vis_spiele FROM users WHERE id = ?').bind(u.id).first();
   const zeit = (await db.prepare('SELECT game, seconds, last FROM playtime WHERE user_id = ? ORDER BY last DESC').bind(u.id).all()).results;
   const fr = await db.prepare("SELECT COUNT(*) AS n FROM friends WHERE (a = ? OR b = ?) AND status = 'accepted'").bind(u.id, u.id).first();
   const p = await db.prepare('SELECT game, seen FROM presence WHERE user_id = ?').bind(u.id).first();
-  const online = !!p && !!p.seen && jetzt - p.seen < ONLINE_SEKUNDEN;
   const eigen = u.id === s.id;
+  // Eigene Einstellungen gelten nicht gegen einen selbst; bei Freunden bleibt verborgen, was sie verbergen wollen
+  const statusPrivat = !eigen && !!row && row.vis_online === 0, spielePrivat = !eigen && !!row && row.vis_spiele === 0;
+  const online = !statusPrivat && !!p && !!p.seen && jetzt - p.seen < ONLINE_SEKUNDEN;
   const out = {
     name: u.name, anzeige: u.display || u.name, av: avParse(u.avatar), seit: row ? row.created : null, eigen,
-    freunde: fr ? fr.n : 0, online, spiel: online ? p.game || null : null, zuletzt: p ? p.seen : null,
+    freunde: fr ? fr.n : 0, online, spiel: online && !spielePrivat ? p.game || null : null, zuletzt: statusPrivat ? null : p ? p.seen : null,
   };
+  if (statusPrivat) out.statusPrivat = true;
+  if (spielePrivat) out.spielePrivat = true;
   // Welche Spiele jemand schon gespielt hat, dürfen Freunde sehen; wann und wie lange ist privat (nur das eigene Profil bekommt Zeit und Datum).
   // Bei Freunden steht die Liste alphabetisch, damit die Reihenfolge nichts darüber verrät, was zuletzt gespielt wurde.
-  if (!eigen) out.spiele = zeit.map((t) => ({ spiel: t.game })).sort((x, y) => (x.spiel < y.spiel ? -1 : 1));
+  if (!eigen) out.spiele = spielePrivat ? [] : zeit.map((t) => ({ spiel: t.game })).sort((x, y) => (x.spiel < y.spiel ? -1 : 1));
   if (eigen) {
+    out.sicht = { online: row && row.vis_online === 0 ? 0 : 1, spiele: row && row.vis_spiele === 0 ? 0 : 1 };
     out.spiele = zeit.map((t) => ({ spiel: t.game, sekunden: t.seconds, zuletzt: t.last }));
     const st = await db.prepare('SELECT game, COUNT(*) AS n, MAX(updated) AS neu FROM saves WHERE user_id = ? GROUP BY game').bind(u.id).all();
     out.staende = st.results.map((t) => ({ spiel: t.game, versionen: t.n, aktualisiert: t.neu }));
@@ -502,8 +531,9 @@ export async function handle(request, env, jetztMs = Date.now()) {
     const s = await sitzung(request, db, jetzt);
     if (!s) return fehler(401, 'nicht_angemeldet');
 
-    if (pfad === '/api/ich' && m === 'GET') return antwort({ name: s.name, anzeige: s.anzeige, av: avParse(s.avatar) });
+    if (pfad === '/api/ich' && m === 'GET') return antwort({ name: s.name, anzeige: s.anzeige, av: avParse(s.avatar), sicht: s.sicht });
     if (pfad === '/api/anzeige' && m === 'POST') return await anzeigeAendern(request, db, s);
+    if (pfad === '/api/sichtbarkeit' && m === 'POST') return await sichtAendern(request, db, s);
     if (pfad === '/api/avatar' && m === 'POST') return await avatarAendern(request, db, s, env);
     if (pfad === '/api/abmelden' && m === 'POST') { await db.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(s.th).run(); return antwort({ ok: true }); }
     if (pfad === '/api/benutzername' && m === 'POST') return await benutzernameAendern(request, db, s, jetzt);

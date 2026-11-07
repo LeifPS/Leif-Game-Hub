@@ -783,3 +783,14 @@ body.konto-offen { overflow: hidden; }
 .dlg-zeile.gefahr .pfeil { display: none; }
 
 .ver-pill.alpha { background: rgba(255, 107, 107, .15); color: #ff8f8f; }
+
+/* Sichtbarkeit */
+.sicht-block { margin-bottom: 16px; }
+.sicht-titel { font-weight: 600; font-size: 15px; margin-bottom: 3px; }
+.sicht-text { font-size: 13px; color: var(--muted); line-height: 1.45; margin-bottom: 8px; }
+.dlg-wahl { display: flex; gap: 0; background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 3px; }
+.dlg-wahl button { all: unset; box-sizing: border-box; flex: 1; text-align: center; padding: 10px 8px; border-radius: 9px; cursor: pointer; font-size: 14px; color: var(--muted); font-weight: 500; }
+.dlg-wahl button:hover { color: var(--text); }
+.dlg-wahl button[aria-checked="true"] { background: var(--accent); color: #fff; }
+.dlg-wahl button:focus-visible { outline: 2px solid var(--accent-hi); outline-offset: 1px; }
+.dlg-wahl button:disabled { opacity: .6; cursor: default; }

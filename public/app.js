@@ -576,6 +576,7 @@
           if (offen) akt += '<a class="btn btn-primary fr-btn" href="#spiel/' + encodeURIComponent(f.spiel) + '/play">Mitspielen</a>';
           if (f.raum) akt += '<button type="button" class="btn btn-ghost fr-btn" data-a="kopie" data-n="' + n(f.raum) + '">Code kopieren</button>';
         } else if (f.online) status = '<span class="punkt an"></span>Im Hub';
+        else if (f.privat) status = '<span class="punkt"></span>Status privat';
         else status = '<span class="punkt"></span>' + (f.zuletzt ? 'Zuletzt online ' + relZeit(Math.max(0, d.jetzt - f.zuletzt)) : 'Noch nie online');
         akt += entfernenFrage === f.name
           ? '<button type="button" class="btn btn-ghost fr-btn gefahr" data-a="entfernen" data-n="' + n(f.name) + '">Wirklich entfernen?</button>'
@@ -828,13 +829,13 @@
         zeilen += '<a class="pf-spiel" href="#spiel/' + encodeURIComponent(sp.id) + '"><span class="pf-icon">' + art(sp, 100, 100) + '</span><span class="pf-text"><b>' + esc(sp.name) + '</b>' +
           (p.eigen ? '<small>Zuletzt ' + relZeit(Math.max(0, jetzt - x.zuletzt)) + ' · Spielzeit ' + dauer(x.sekunden) + (st ? ' · ' + st.versionen + (st.versionen === 1 ? ' Sicherung' : ' Sicherungen') + ' auf dem Server' : '') + '</small>' : '') + '</span></a>';
       });
-      var status = p.online ? '<span class="pf-punkt"></span>Online' + (p.spiel ? ' · spielt ' + esc(spielName(p.spiel)) : '') : (p.zuletzt ? 'Zuletzt online ' + relZeit(Math.max(0, jetzt - p.zuletzt)) : 'Noch nie online');
+      var status = p.statusPrivat ? 'Status privat' : p.online ? '<span class="pf-punkt"></span>Online' + (p.spiel ? ' · spielt ' + esc(spielName(p.spiel)) : '') : (p.zuletzt ? 'Zuletzt online ' + relZeit(Math.max(0, jetzt - p.zuletzt)) : 'Noch nie online');
       w.innerHTML = '<div class="pf-kopf">' + LghKonto.avatar('avatar gross', p.name, p.anzeige, p.av) +
         '<div class="pf-kopftext"><h1 class="pf-name">' + esc(p.anzeige) + '</h1><div class="pf-at">@' + esc(p.name) + (seit ? ' · dabei seit ' + esc(seit) : '') + '</div><div class="pf-status">' + status + '</div></div></div>' +
-        '<div class="pf-zahlen">' + (p.eigen ? '<div><b>' + esc(dauer(gesamt)) + '</b><small>Spielzeit gesamt</small></div>' : '') + '<div><b>' + gespielt + '</b><small>' + (gespielt === 1 ? 'Spiel gespielt' : 'Spiele gespielt') + '</small></div><div><b>' + p.freunde + '</b><small>' + (p.freunde === 1 ? 'Freund' : 'Freunde') + '</small></div></div>' +
+        '<div class="pf-zahlen">' + (p.eigen ? '<div><b>' + esc(dauer(gesamt)) + '</b><small>Spielzeit gesamt</small></div>' : '') + '<div><b>' + (p.spielePrivat ? '–' : gespielt) + '</b><small>' + (gespielt === 1 ? 'Spiel gespielt' : 'Spiele gespielt') + '</small></div><div><b>' + p.freunde + '</b><small>' + (p.freunde === 1 ? 'Freund' : 'Freunde') + '</small></div></div>' +
         (p.eigen ? '<div class="pf-aktionen"><button type="button" class="btn btn-ghost" data-pf="bild">Profilbild ändern</button><button type="button" class="btn btn-ghost" data-pf="anz">Anzeigename ändern</button><button type="button" class="btn btn-ghost" data-pf="stand">Spielstände sichern und zurückholen</button><button type="button" class="btn btn-ghost" data-pf="konto">Konto</button></div>' : '') +
         '<h2 class="fr-abschnitt">' + (p.eigen ? 'Zuletzt gespielt' : 'Gespielte Spiele') + '</h2>' +
-        (zeilen ? '<div class="pf-liste">' + zeilen + '</div>' : '<div class="fr-leer">' + (p.eigen ? 'Noch nichts gespielt. Die Spielzeit wird ab jetzt gezählt.' : 'Noch nichts gespielt.') + '</div>');
+        (zeilen ? '<div class="pf-liste">' + zeilen + '</div>' : '<div class="fr-leer">' + (p.spielePrivat ? 'Diese Person zeigt ihre gespielten Spiele nicht.' : p.eigen ? 'Noch nichts gespielt. Die Spielzeit wird ab jetzt gezählt.' : 'Noch nichts gespielt.') + '</div>');
     });
   }
   inhalt.addEventListener('click', function (e) {

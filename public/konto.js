@@ -374,6 +374,44 @@
       return gruppen.every(function (alt) { return alt.some(function (t) { return n.indexOf(t) >= 0; }); });
     });
   }
+  /* ---------- Sichtbarkeit: wer sieht Online-Status und gespielte Spiele (1 = Freunde, 0 = niemand) ---------- */
+  function sichtAnsicht(el, menue) {
+    var box = el.querySelector('#dlg-sicht');
+    menue.hidden = true; box.hidden = false;
+    var wahl = function (feld, titel, text, wert) {
+      return '<div class="sicht-block"><div class="sicht-titel">' + titel + '</div><div class="sicht-text">' + text + '</div>' +
+        '<div class="dlg-wahl" role="radiogroup" aria-label="' + titel + '">' +
+        '<button type="button" role="radio" data-f="' + feld + '" data-w="1" aria-checked="' + (wert === 1) + '">Freunde</button>' +
+        '<button type="button" role="radio" data-f="' + feld + '" data-w="0" aria-checked="' + (wert === 0) + '">Niemand</button></div></div>';
+    };
+    box.innerHTML = '<div class="st-leer">Lädt …</div>';
+    api('GET', '/api/ich').then(function (res) {
+      if (!res.ok || !res.j.sicht) { box.innerHTML = '<div class="konto-fehler" role="alert">Die Einstellungen konnten gerade nicht geladen werden.</div><div class="btn-row"><button class="btn btn-ghost" type="button" data-zurueck>Zurück</button></div>'; box.querySelector('[data-zurueck]').onclick = function () { box.hidden = true; menue.hidden = false; }; return; }
+      var sicht = res.j.sicht;
+      box.innerHTML =
+        wahl('online', 'Online-Status', 'Ob du gerade online bist und wann du zuletzt online warst. Bei „Niemand“ siehst du für andere immer offline aus.', sicht.online) +
+        wahl('spiele', 'Gespielte Spiele', 'Welche Spiele du schon gespielt hast und welches du gerade spielst. Bei „Niemand“ können Freunde dir auch nicht in ein Spiel folgen.', sicht.spiele) +
+        '<div class="konto-regel">Sehen können es nur deine Freunde, andere Personen sehen dein Profil nie. Spielzeit und das Datum des letzten Spielens sieht ohnehin nur du selbst.</div>' +
+        '<div class="st-meld" id="si-meld" role="status"></div>' +
+        '<div class="btn-row"><button class="btn btn-ghost" type="button" data-zurueck>Zurück</button></div>';
+      box.querySelector('[data-zurueck]').onclick = function () { box.hidden = true; menue.hidden = false; };
+      var meld = box.querySelector('#si-meld');
+      box.addEventListener('click', function (e) {
+        var b = e.target.closest ? e.target.closest('[data-f]') : null;
+        if (!b) return;
+        var feld = b.getAttribute('data-f'), w = +b.getAttribute('data-w'), body = {};
+        body[feld] = w;
+        var knoepfe = box.querySelectorAll('[data-f]'); for (var i = 0; i < knoepfe.length; i++) knoepfe[i].disabled = true;
+        api('POST', '/api/sichtbarkeit', body).then(function (r) {
+          for (var j = 0; j < knoepfe.length; j++) knoepfe[j].disabled = false;
+          if (!r.ok) { meld.textContent = 'Das hat nicht geklappt. Bitte noch einmal versuchen.'; meld.className = 'st-meld fehler'; return; }
+          for (var k = 0; k < knoepfe.length; k++) knoepfe[k].setAttribute('aria-checked', String(+knoepfe[k].getAttribute('data-w') === r.j.sicht[knoepfe[k].getAttribute('data-f')]));
+          meld.textContent = 'Gespeichert.'; meld.className = 'st-meld';
+        });
+      });
+    });
+  }
+
   function bildAnsicht(el, menue) {
     var box = el.querySelector('#dlg-bild'), dlg = el;
     menue.hidden = true; box.hidden = false; dlg.classList.add('breit');
@@ -466,6 +504,7 @@
     anz: '<path d="M5 19l1-4 9.5-9.5a2.1 2.1 0 013 3L9 18z"/><path d="M14 7l3 3"/>',
     bn: '<circle cx="12" cy="12" r="3.5"/><path d="M15.5 12v1.3a2.4 2.4 0 004.8 0V12a8.3 8.3 0 10-3.3 6.6"/>',
     pw: '<circle cx="8" cy="15" r="3.6"/><path d="M10.6 12.4L19 4M16 7l2.5 2.5"/>',
+    sicht: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
     stand: '<rect x="3.5" y="4.5" width="17" height="5" rx="1.5"/><path d="M5 9.5V18a1.5 1.5 0 001.5 1.5h11A1.5 1.5 0 0019 18V9.5M10 13.5h4"/>',
     aus: '<path d="M10 4.5H7A2.5 2.5 0 004.5 7v10A2.5 2.5 0 007 19.5h3M14 8l4 4-4 4M18 12H9.5"/>',
     weg: '<path d="M5 7h14M10 7V5h4v2M7 7l.8 11.2a1.8 1.8 0 001.8 1.6h4.8a1.8 1.8 0 001.8-1.6L17 7M10.5 11v5M13.5 11v5"/>'
@@ -483,12 +522,12 @@
       '<button type="button" class="dlg-x" data-zu aria-label="Schließen"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
       '<div class="dlg-teil" id="dlg-menue">' +
       '<div class="dlg-ueber">Profil</div><div class="dlg-gruppe">' +
-      menueZeile('profil', 'Mein Profil') + menueZeile('bild', 'Profilbild ändern') + menueZeile('anz', 'Anzeigename ändern') +
+      menueZeile('profil', 'Mein Profil') + menueZeile('bild', 'Profilbild ändern') + menueZeile('anz', 'Anzeigename ändern') + menueZeile('sicht', 'Sichtbarkeit', 'Wer Online-Status und Spiele sieht') +
       '</div><div class="dlg-ueber">Konto</div><div class="dlg-gruppe">' +
       menueZeile('bn', 'Benutzernamen ändern') + menueZeile('pw', 'Passwort ändern') + menueZeile('stand', 'Spielstände', 'Sichern und zurückholen') +
       '</div><div class="dlg-gruppe dlg-ende">' +
       menueZeile('aus', 'Abmelden', 'Nur auf diesem Gerät') + menueZeile('weg', 'Konto löschen', '', true) +
-      '</div></div><form class="dlg-teil" id="dlg-form" hidden novalidate></form><div class="dlg-teil" id="dlg-stand" hidden></div><div class="dlg-teil" id="dlg-bild" hidden></div>',
+      '</div></div><form class="dlg-teil" id="dlg-form" hidden novalidate></form><div class="dlg-teil" id="dlg-stand" hidden></div><div class="dlg-teil" id="dlg-bild" hidden></div><div class="dlg-teil" id="dlg-sicht" hidden></div>',
       function (el, zu) {
         var menue = el.querySelector('#dlg-menue'), form = el.querySelector('#dlg-form');
         function formular(html, los) {
@@ -504,6 +543,7 @@
           if (a === 'profil') { zu(); location.hash = '#profil'; }
           if (a === 'stand') standAnsicht(el, menue);
           if (a === 'bild') bildAnsicht(el, menue);
+          if (a === 'sicht') sichtAnsicht(el, menue);
           if (a === 'anz') formular(
             '<label>Anzeigename<input id="anz0" type="text" maxlength="24" autocomplete="nickname" spellcheck="false" value="' + esc(konto.anzeige && konto.anzeige !== konto.name ? konto.anzeige : '') + '" placeholder="' + esc(konto.name) + '"></label>' +
             '<div class="konto-regel">So sehen dich andere (Freunde, Freundesleiste). Dein Benutzername @' + esc(konto.name) + ' bleibt gleich. Leer lassen = Benutzername.</div>',

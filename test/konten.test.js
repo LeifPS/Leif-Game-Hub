@@ -27,7 +27,7 @@ async function neuesKonto(env, name = 'Leif', pw = 'geheim123') {
 test('Registrieren, Abmelden, Anmelden', async () => {
   const env = umgebung();
   const t = await neuesKonto(env);
-  assert.deepEqual((await call(env, 'GET', '/api/ich', undefined, t)).j, { name: 'Leif', anzeige: 'Leif', av: null });
+  assert.deepEqual((await call(env, 'GET', '/api/ich', undefined, t)).j, { name: 'Leif', anzeige: 'Leif', av: null, sicht: { online: 1, spiele: 1 } });
   assert.equal((await call(env, 'POST', '/api/abmelden', {}, t)).status, 200);
   assert.equal((await call(env, 'GET', '/api/ich', undefined, t)).status, 401);
   // Name ohne Beachtung der Groß- und Kleinschreibung, falsches Passwort
@@ -303,7 +303,7 @@ test('Benutzername und Anzeigename: festlegen, ändern, Freunde suchen per @user
   assert.equal((await reg('emil', '<b>')).status, 400);
   assert.equal((await reg('Ben', 'Zweiter')).status, 409);   // @username bleibt eindeutig
   const a = r1.j.token, b = r2.j.token;
-  assert.deepEqual((await call(env, 'GET', '/api/ich', undefined, a)).j, { name: 'anna_k', anzeige: 'Anna die Große', av: null });
+  assert.deepEqual((await call(env, 'GET', '/api/ich', undefined, a)).j, { name: 'anna_k', anzeige: 'Anna die Große', av: null, sicht: { online: 1, spiele: 1 } });
   // Anmelden liefert den Anzeigenamen mit
   const an = await call(env, 'POST', '/api/anmelden', { name: 'anna_k', key: await schluessel('anna_k', 'geheim123') });
   assert.equal(an.j.anzeige, 'Anna die Große');
@@ -460,7 +460,7 @@ test('Benutzername ändern: nur mit Passwort, nur auf freie Namen, höchstens ei
   uhr = start + 5000;
   const ok = await aend('Mira_neu');
   assert.deepEqual([ok.status, ok.j.name, ok.j.anzeige], [200, 'Mira_neu', 'Mira_neu']);
-  assert.deepEqual((await call(env, 'GET', '/api/ich', undefined, t)).j, { name: 'Mira_neu', anzeige: 'Mira_neu', av: null });
+  assert.deepEqual((await call(env, 'GET', '/api/ich', undefined, t)).j, { name: 'Mira_neu', anzeige: 'Mira_neu', av: null, sicht: { online: 1, spiele: 1 } });
   assert.equal((await call(env, 'POST', '/api/anmelden', { name: 'Mira_neu', key: await schluessel('Mira_neu', 'geheim123') })).status, 200);
   assert.equal((await call(env, 'POST', '/api/anmelden', { name: 'Mira', key: await schluessel('Mira', 'geheim123') })).status, 401);
   // zweite Änderung innerhalb einer Woche: gesperrt, mit Wartezeit
@@ -511,4 +511,32 @@ test('Profilbild: speichern, prüfen, Freunde sehen es, zurücksetzen', async ()
   // Zurücksetzen auf den Buchstaben
   assert.equal((await call(env, 'POST', '/api/avatar', { av: null }, a)).status, 200);
   assert.equal((await call(env, 'GET', '/api/ich', undefined, a)).j.av, null);
+});
+
+test('Sichtbarkeit: Online-Status und Spiele getrennt verbergbar, serverseitig durchgesetzt', async () => {
+  const env = umgebung();
+  const a = await neuesKonto(env, 'Anna'), b = await neuesKonto(env, 'Ben');
+  await call(env, 'POST', '/api/freunde/anfrage', { name: 'Ben' }, a);
+  await call(env, 'POST', '/api/freunde/annehmen', { name: 'Anna' }, b);
+  await call(env, 'POST', '/api/praesenz', { spiel: 'spells', raum: 'XY' }, b);
+  const sehen = async () => ({ f: (await call(env, 'GET', '/api/freunde', undefined, a)).j.freunde[0], p: (await call(env, 'GET', '/api/profil/Ben', undefined, a)).j });
+  let x = await sehen();
+  assert.equal(x.f.online, true); assert.equal(x.f.spiel, 'spells'); assert.equal(x.f.raum, 'XY'); assert.deepEqual(x.p.spiele, [{ spiel: 'spells' }]);
+  // Eingaben prüfen
+  assert.equal((await call(env, 'POST', '/api/sichtbarkeit', { online: 2 }, b)).status, 400);
+  assert.equal((await call(env, 'POST', '/api/sichtbarkeit', {}, b)).status, 400);
+  assert.equal((await call(env, 'POST', '/api/sichtbarkeit', { online: 0 })).status, 401);
+  // Spiele verbergen: online bleibt sichtbar, aber kein aktuelles Spiel, kein Raum, keine Liste
+  assert.deepEqual((await call(env, 'POST', '/api/sichtbarkeit', { spiele: 0 }, b)).j.sicht, { online: 1, spiele: 0 });
+  x = await sehen();
+  assert.equal(x.f.online, true); assert.equal(x.f.spiel, null); assert.equal(x.f.raum, null);
+  assert.equal(x.p.spielePrivat, true); assert.deepEqual(x.p.spiele, []); assert.equal(x.p.spiel, null);
+  // Online verbergen: offline, ohne "zuletzt online"; die Spielliste ist davon unabhängig
+  await call(env, 'POST', '/api/sichtbarkeit', { online: 0, spiele: 1 }, b);
+  x = await sehen();
+  assert.equal(x.f.online, false); assert.equal(x.f.privat, true); assert.equal(x.f.zuletzt, null); assert.equal(x.f.spiel, null);
+  assert.equal(x.p.statusPrivat, true); assert.equal(x.p.online, false); assert.equal(x.p.zuletzt, null); assert.deepEqual(x.p.spiele, [{ spiel: 'spells' }]);
+  // Das eigene Profil bleibt vollständig und zeigt die Einstellung
+  const ich = (await call(env, 'GET', '/api/profil', undefined, b)).j;
+  assert.equal(ich.online, true); assert.equal(ich.spiel, 'spells'); assert.deepEqual(ich.sicht, { online: 0, spiele: 1 });
 });
