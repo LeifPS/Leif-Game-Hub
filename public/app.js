@@ -454,6 +454,7 @@
     if (d.lgh === 'hallo') { var u = q.el && q.el._uebergabe; if (u && u.art === 'msg') { try { e.source.postMessage({ lgh: 'daten', json: u.json }, e.origin); } catch (x) { } } return; }
     if (d.lgh === 'fertig') { if (q.el && q.el._uebergabe) q.el._uebergabe.fertig = true; return; }
     if (d.spiel !== q.id) return;
+    if (q.el && q.el._ignorieren) return;   // Rahmen, dessen Stand gerade durch eine Wiederherstellung ersetzt wurde: sein letzter Stand darf ihn nicht überschreiben
     if (q.el && q.el._uebergabe && !q.el._uebergabe.fertig) return;   // Spiel hat den gesicherten Stand noch nicht übernommen: nichts überschreiben
     // Optional: ein Spiel kann einen Raumcode melden ({lgh:'status', spiel, raum:'ABC123'}), den Freunde dann sehen
     if (d.lgh === 'status') { if (!q.abgang) ausKonto(function (k) { k.raum(d.raum); }); return; }
@@ -468,6 +469,27 @@
     ausKonto(function (k) { k.stand(q.id, d.d); if (q.abgang) k.beimVerlassen(q.id); });   // nur still mitschreiben, das Spiel hängt nicht davon ab
     try { e.source.postMessage({ lgh: 'ok', t: Date.now() }, e.origin); } catch (x) { }
   });
+  /* Wiederherstellen (Konto → Spielstände, siehe konto.js): schreibt einen älteren Stand als aktuellen Hub-Stand. Der bisherige bleibt als
+     lgh.stand.<id>.vorher erhalten. Läuft das Spiel gerade, werden seine Rahmen ab jetzt ignoriert und es startet mit dem neuen Stand neu. */
+  function standAnwenden(id, d) {
+    try {
+      var neu = JSON.stringify({ t: Date.now(), d: d }), alt = localStorage.getItem(STAND + id);
+      if (alt) localStorage.setItem(STAND + id + '.vorher', alt);
+      localStorage.setItem(STAND + id, neu);
+    } catch (e) { return false; }
+    if (aktuell && aktuell.id === id && rahmen) rahmen._ignorieren = true;
+    abgehende.forEach(function (a) { if (a.id === id && a.el) a.el._ignorieren = true; });
+    if (aktuell && aktuell.id === id) ladeRahmen(aktuell, ++startZaehler);
+    return true;
+  }
+  function standLokal(id) { try { var j = localStorage.getItem(STAND + id); return j ? JSON.parse(j) : null; } catch (e) { return null; } }
+  function standSicherungen(id) {
+    var r = [];
+    [['vorher', 'Vor der letzten Wiederherstellung'], ['sicher', 'Vor einem plötzlichen Schrumpfen des Stands']].forEach(function (a) {
+      try { var j = localStorage.getItem(STAND + id + '.' + a[0]); if (!j) return; var o = JSON.parse(j); if (o && o.d) r.push({ art: a[0], text: a[1], t: Math.floor((o.t || 0) / 1000), groesse: j.length, d: o.d }); } catch (e) { }
+    });
+    return r;
+  }
   var startZaehler = 0;
   // Startet den Rahmen mit dem Stand aus dem Hub. Läuft dasselbe Spiel gerade noch als abgehender Rahmen, wird gewartet, bis seine letzte Meldung da ist.
   function ladeRahmen(sp, zaehler) {
@@ -519,8 +541,8 @@
   function spielName(id) { var sp = spiele.filter(function (x) { return x.id === id; })[0]; return sp ? sp.name : id; }
   function anz(f) { return f.anzeige || f.name; }
   function frItem(av, f, status, akt) {
-    return '<div class="fr-item"><span class="avatar" style="' + LghKonto.avatarStil(f.name) + '">' + esc(anz(f).charAt(0).toUpperCase()) + '</span>' +
-      '<div class="fr-text"><div class="fr-name">' + esc(anz(f)) + '<span class="fr-at">@' + esc(f.name) + '</span></div><div class="fr-status">' + status + '</div></div><div class="fr-akt">' + akt + '</div></div>';
+    return '<div class="fr-item"><a class="fr-hl" href="#profil/' + encodeURIComponent(f.name) + '" aria-label="Profil von ' + esc(anz(f)) + '"><span class="avatar" style="' + LghKonto.avatarStil(f.name) + '">' + esc(anz(f).charAt(0).toUpperCase()) + '</span>' +
+      '<div class="fr-text"><div class="fr-name">' + esc(anz(f)) + '<span class="fr-at">@' + esc(f.name) + '</span></div><div class="fr-status">' + status + '</div></div></a><div class="fr-akt">' + akt + '</div></div>';
   }
   function zeichneFreunde(z, d) {
     var h = '', n = esc;
@@ -661,6 +683,52 @@
     });
   });
 
+  /* ---------- Profil ---------- */
+  var profilZaehler = 0;
+  function dauer(sek) {
+    if (sek < 60) return sek > 0 ? 'unter 1 Min.' : '0 Min.';
+    var m = Math.round(sek / 60); if (m < 60) return m + ' Min.';
+    var h = Math.floor(m / 60); m = m % 60; return h + ' Std.' + (m ? ' ' + m + ' Min.' : '');
+  }
+  function renderProfil(name) {
+    inhalt.innerHTML = '<div class="pf-wrap"><div class="fr-leer">Lädt …</div></div>';
+    var tok = ++profilZaehler;
+    if (!window.LghKonto) return;
+    LghKonto.profil(name).then(function (res) {
+      var w = inhalt.querySelector('.pf-wrap');
+      if (tok !== profilZaehler || !w || body.getAttribute('data-view') !== 'profil') return;
+      if (!res.ok) {
+        w.innerHTML = '<h1 class="fr-titel">Profil</h1><div class="fr-leer">' + (res.status === 404 ? 'Dieses Profil gibt es nicht oder es ist nur für Freunde sichtbar.' : 'Das Profil konnte nicht geladen werden.') + '</div><a class="btn btn-ghost" href="#freunde">Zu den Freunden</a>';
+        return;
+      }
+      var p = res.j, jetzt = Math.floor(Date.now() / 1000), gesamt = 0, gespielt = 0;
+      var seit = p.seit ? new Date(p.seit * 1000).toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+      var sicher = {}; (p.staende || []).forEach(function (x) { sicher[x.spiel] = x; });
+      var zeilen = '';
+      p.spiele.forEach(function (x) {
+        var sp = spiele.filter(function (g) { return g.id === x.spiel; })[0];
+        if (!sp) return;
+        gesamt += x.sekunden; if (x.sekunden > 0) gespielt++;
+        var st = sicher[x.spiel];
+        zeilen += '<a class="pf-spiel" href="#spiel/' + encodeURIComponent(sp.id) + '"><span class="pf-icon">' + art(sp, 100, 100) + '</span><span class="pf-text"><b>' + esc(sp.name) + '</b>' +
+          '<small>Zuletzt ' + relZeit(Math.max(0, jetzt - x.zuletzt)) + ' · Spielzeit ' + dauer(x.sekunden) + (st ? ' · ' + st.versionen + (st.versionen === 1 ? ' Sicherung' : ' Sicherungen') + ' auf dem Server' : '') + '</small></span></a>';
+      });
+      var status = p.online ? '<span class="pf-punkt"></span>Online' + (p.spiel ? ' · spielt ' + esc(spielName(p.spiel)) : '') : (p.zuletzt ? 'Zuletzt online ' + relZeit(Math.max(0, jetzt - p.zuletzt)) : 'Noch nie online');
+      w.innerHTML = '<div class="pf-kopf"><span class="avatar gross" style="' + LghKonto.avatarStil(p.name) + '">' + esc(p.anzeige.charAt(0).toUpperCase()) + '</span>' +
+        '<div class="pf-kopftext"><h1 class="pf-name">' + esc(p.anzeige) + '</h1><div class="pf-at">@' + esc(p.name) + (seit ? ' · dabei seit ' + esc(seit) : '') + '</div><div class="pf-status">' + status + '</div></div></div>' +
+        '<div class="pf-zahlen"><div><b>' + esc(dauer(gesamt)) + '</b><small>Spielzeit gesamt</small></div><div><b>' + gespielt + '</b><small>' + (gespielt === 1 ? 'Spiel gespielt' : 'Spiele gespielt') + '</small></div><div><b>' + p.freunde + '</b><small>' + (p.freunde === 1 ? 'Freund' : 'Freunde') + '</small></div></div>' +
+        (p.eigen ? '<div class="pf-aktionen"><button type="button" class="btn btn-ghost" data-pf="anz">Anzeigename ändern</button><button type="button" class="btn btn-ghost" data-pf="stand">Spielstände sichern und zurückholen</button><button type="button" class="btn btn-ghost" data-pf="konto">Konto</button></div>' : '') +
+        '<h2 class="fr-abschnitt">Zuletzt gespielt</h2>' +
+        (zeilen ? '<div class="pf-liste">' + zeilen + '</div>' : '<div class="fr-leer">Noch nichts gespielt. Die Spielzeit wird ab jetzt gezählt.</div>');
+    });
+  }
+  inhalt.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-pf]') : null;
+    if (!b || !window.LghKonto) return;
+    var a = b.getAttribute('data-pf');
+    window.LghKonto.kontoDialog(a === 'konto' ? null : a);
+  });
+
   /* ---------- Navigation ---------- */
   /* Ansichten bleiben als fertige Knoten erhalten: beim Zurück- oder Weiterklicken werden sie nur wieder eingehängt,
      so laden Bilder nicht jedes Mal neu und Galerie, Scrollstand und Update-Log bleiben, wie sie sind. */
@@ -668,7 +736,7 @@
   function homeKey() { return 'home|' + filter + '|' + suche; }
   function zeigeAnsicht(key, rendern) {
     if (ansichtKey === key && inhalt.firstChild) return;
-    if (ansichtKey === 'freunde') inhalt.innerHTML = '';
+    if (ansichtKey === 'freunde' || String(ansichtKey).indexOf('profil|') === 0) inhalt.innerHTML = '';
     else if (ansichtKey !== null) { var alt = document.createElement('div'); while (inhalt.firstChild) alt.appendChild(inhalt.firstChild); ansichtSpeicher[ansichtKey] = alt; }
     var neu = ansichtSpeicher[key];
     if (neu) { delete ansichtSpeicher[key]; while (neu.firstChild) inhalt.appendChild(neu.firstChild); }
@@ -686,6 +754,16 @@
     var vorher = body.getAttribute('data-view');
     if (vorher === 'play') stoppeSpiel();
     if (vorher === 'freunde' && location.hash !== '#freunde') { clearInterval(freundeTimer); freundeTimer = null; }
+    var pm = /^#profil(?:\/([^\/]+))?$/.exec(location.hash);
+    if (pm) {
+      var pn = pm[1] ? decodeURIComponent(pm[1]) : '';
+      body.setAttribute('data-view', 'profil');
+      if (String(ansichtKey).indexOf('profil|') === 0) ansichtKey = null;
+      zeigeAnsicht('profil|' + pn, function () { renderProfil(pn); }); renderSide(null, true);
+      document.title = 'Profil – Leif Game Hub';
+      window.scrollTo(0, 0);
+      return;
+    }
     if (location.hash === '#freunde') {
       body.setAttribute('data-view', 'freunde');
       if (ansichtKey === 'freunde') ansichtKey = null;   // immer frisch laden (Spiel dazwischen: sonst fehlt der Aktualisierungstakt)
@@ -745,6 +823,8 @@
     if (voll) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
     else (buehne.requestFullscreen || buehne.webkitRequestFullscreen).call(buehne);
   });
+
+  window.LghStand = { spielName: function (id) { return spielName(id); }, anwenden: standAnwenden, lokal: standLokal, sicherungen: standSicherungen };
 
   var BILD_V = '4';
   function json(url) { return fetch(url, { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); }
