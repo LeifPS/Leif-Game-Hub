@@ -1,59 +1,59 @@
 {
  "ballgegenball": {
-  "anzahl": 179,
-  "datum": "2026-11-06T18:58:53+01:00",
+  "anzahl": 180,
+  "datum": "2026-11-07T14:10:24+01:00",
   "erste": "2026-10-25T01:10:16+02:00",
   "offiziell": false,
-  "version": "0.59.1.0"
+  "version": "0.59.2.0"
  },
  "brutjagd": {
-  "anzahl": 48,
-  "datum": "2026-11-06T18:58:51+01:00",
+  "anzahl": 49,
+  "datum": "2026-11-07T14:10:26+01:00",
   "erste": "2026-10-04T18:15:04+02:00",
   "offiziell": false,
-  "version": "0.16.3.0"
+  "version": "0.16.4.0"
  },
  "businessempire": {
-  "anzahl": 4,
-  "datum": "2026-11-06T18:58:55+01:00",
+  "anzahl": 5,
+  "datum": "2026-11-07T14:10:28+01:00",
   "erste": "2026-10-24T20:28:04+02:00",
   "offiziell": false,
-  "version": "0.1.3.0"
+  "version": "0.1.4.0"
  },
  "chessrng": {
-  "anzahl": 9,
-  "datum": "2026-11-06T19:21:30+01:00",
+  "anzahl": 10,
+  "datum": "2026-11-07T14:10:30+01:00",
   "erste": "2026-09-25T23:00:38+02:00",
   "offiziell": false,
-  "version": "0.1.6.0"
+  "version": "0.1.7.0"
  },
  "cookierng": {
-  "anzahl": 5,
-  "datum": "2026-11-06T19:21:26+01:00",
+  "anzahl": 6,
+  "datum": "2026-11-07T14:10:32+01:00",
   "erste": "2026-09-27T10:02:39+02:00",
   "offiziell": true,
-  "version": "1.0.3.0"
+  "version": "1.0.4.0"
  },
  "cookierng2": {
-  "anzahl": 5,
-  "datum": "2026-11-06T19:04:25+01:00",
+  "anzahl": 6,
+  "datum": "2026-11-07T14:10:35+01:00",
   "erste": "2026-09-27T10:04:54+02:00",
   "offiziell": false,
-  "version": "0.1.3.0"
+  "version": "0.1.4.0"
  },
  "erntezeit": {
-  "anzahl": 73,
-  "datum": "2026-11-06T19:21:32+01:00",
+  "anzahl": 74,
+  "datum": "2026-11-07T14:10:43+01:00",
   "erste": "2026-04-02T14:01:48+02:00",
   "offiziell": false,
-  "version": "0.30.4.0"
+  "version": "0.30.5.0"
  },
  "fischerdock": {
-  "anzahl": 10,
-  "datum": "2026-11-06T18:59:19+01:00",
+  "anzahl": 11,
+  "datum": "2026-11-07T14:10:37+01:00",
   "erste": "2026-09-30T15:02:11+02:00",
   "offiziell": false,
-  "version": "0.6.1.0"
+  "version": "0.6.2.0"
  },
  "foilxi": {
   "anzahl": 875,
@@ -63,18 +63,18 @@
   "version": "1.87.1.0"
  },
  "papierhelden": {
-  "anzahl": 10,
-  "datum": "2026-11-06T18:59:16+01:00",
+  "anzahl": 11,
+  "datum": "2026-11-07T14:10:39+01:00",
   "erste": "2026-10-24T11:08:35+02:00",
   "offiziell": false,
-  "version": "0.6.2.0"
+  "version": "0.6.3.0"
  },
  "pizzafabrik": {
-  "anzahl": 84,
-  "datum": "2026-11-06T18:58:59+01:00",
+  "anzahl": 85,
+  "datum": "2026-11-07T14:10:41+01:00",
   "erste": "2026-10-31T12:14:47+01:00",
   "offiziell": false,
-  "version": "0.21.4.0"
+  "version": "0.21.5.0"
  },
  "schleimmerge": {
   "anzahl": 23,
@@ -84,45 +84,45 @@
   "version": "0.7.3.0"
  },
  "spells": {
-  "anzahl": 20,
-  "datum": "2026-11-06T18:58:56+01:00",
+  "anzahl": 21,
+  "datum": "2026-11-07T14:10:45+01:00",
   "erste": "2026-11-04T22:09:28+01:00",
   "offiziell": false,
-  "version": "0.9.4.0"
+  "version": "0.9.5.0"
  },
  "tierspiel": {
-  "anzahl": 148,
-  "datum": "2026-11-06T19:21:28+01:00",
+  "anzahl": 151,
+  "datum": "2026-11-07T14:10:47+01:00",
   "erste": "2026-09-20T11:40:54+02:00",
   "offiziell": false,
-  "version": "0.19.4.0"
+  "version": "0.20.2.0"
  },
  "tippspiel": {
-  "anzahl": 14,
-  "datum": "2026-11-06T19:12:49+01:00",
+  "anzahl": 15,
+  "datum": "2026-11-07T14:10:48+01:00",
   "erste": "2026-11-05T16:34:31+01:00",
   "offiziell": false,
-  "version": "0.3.8.0"
+  "version": "0.3.9.0"
  },
  "tonlinge": {
-  "anzahl": 283,
-  "datum": "2026-11-06T18:59:13+01:00",
+  "anzahl": 285,
+  "datum": "2026-11-07T14:10:50+01:00",
   "erste": "2026-10-17T13:34:56+02:00",
   "offiziell": false,
-  "version": "0.60.1.0"
+  "version": "0.60.3.0"
  },
  "wasserschlacht": {
-  "anzahl": 13,
-  "datum": "2026-11-06T18:59:18+01:00",
+  "anzahl": 14,
+  "datum": "2026-11-07T14:10:54+01:00",
   "erste": "2026-10-28T13:36:18+01:00",
   "offiziell": false,
-  "version": "0.8.1.0"
+  "version": "0.8.2.0"
  },
  "zahlenwerk": {
-  "anzahl": 5,
-  "datum": "2026-11-06T18:58:58+01:00",
+  "anzahl": 6,
+  "datum": "2026-11-07T14:10:55+01:00",
   "erste": "2026-11-03T18:29:05+01:00",
   "offiziell": false,
-  "version": "0.2.2.0"
+  "version": "0.2.3.0"
  }
 }
