@@ -1,6 +1,6 @@
 {
- "name": "Leifs Spiele",
- "short_name": "Leifs Spiele",
+ "name": "Leif Game Hub",
+ "short_name": "Leif Game Hub",
  "description": "Alle Spiele von Leif an einem Ort.",
  "start_url": "./",
  "display": "standalone",

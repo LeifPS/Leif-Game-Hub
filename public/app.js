@@ -651,7 +651,7 @@
       body.setAttribute('data-view', 'freunde');
       if (ansichtKey === 'freunde') ansichtKey = null;   // immer frisch laden (Spiel dazwischen: sonst fehlt der Aktualisierungstakt)
       zeigeAnsicht('freunde', renderFreunde); renderSide(null, true);
-      document.title = 'Freunde – Leifs Spiele';
+      document.title = 'Freunde – Leif Game Hub';
       window.scrollTo(0, 0);
       return;
     }
@@ -659,20 +659,20 @@
     if (sp && m[2]) {
       body.setAttribute('data-view', 'play');
       starteSpiel(sp);
-      document.title = sp.name + ' – Leifs Spiele';
+      document.title = sp.name + ' – Leif Game Hub';
       return;
     }
     if (sp) {
       body.setAttribute('data-view', 'detail');
       zeigeAnsicht('detail|' + sp.id, function () { renderDetail(sp); }); renderSide(sp.id);
-      document.title = sp.name + ' – Leifs Spiele';
+      document.title = sp.name + ' – Leif Game Hub';
       window.scrollTo(0, 0);
       return;
     }
     body.setAttribute('data-view', 'home');
     zeigeAnsicht(homeKey(), renderHome); renderSide(null);
     leisteStart();
-    document.title = 'Leifs Spiele';
+    document.title = 'Leif Game Hub';
     window.scrollTo(0, vorher === 'home' ? window.scrollY : homeScroll);
   }
 

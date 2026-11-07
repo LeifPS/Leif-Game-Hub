@@ -101,7 +101,7 @@
     el.innerHTML =
       '<div class="konto-karte">' +
       '<svg class="brand-mark" aria-hidden="true"><use href="#logo"/></svg>' +
-      '<h1>Leifs Spiele</h1>' +
+      '<h1>Leif Game Hub</h1>' +
       '<p class="konto-sub">Mit einem Konto spielst du auf jedem Gerät als du selbst und siehst, was deine Freunde gerade spielen.</p>' +
       '<div class="konto-tabs" role="tablist"><button type="button" class="aktiv" data-m="an" role="tab">Anmelden</button><button type="button" data-m="neu" role="tab">Konto erstellen</button></div>' +
       '<form id="konto-form" novalidate>' +
