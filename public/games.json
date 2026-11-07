@@ -604,6 +604,15 @@
         "Strategie"
       ],
       "icon": "screens/numberfactory-icon.webp",
+      "wallpaper": "screens/numberfactory-wallpaper.webp",
+      "schrift": {
+        "familie": "lilita",
+        "versalien": false,
+        "abstand": 0.008,
+        "fuell": "#ffffff",
+        "rand": "#1f6f69",
+        "randbreite": 0.169
+      },
       "screenshots": [
         "screens/shots/numberfactory/1.webp",
         "screens/shots/numberfactory/2.webp",
