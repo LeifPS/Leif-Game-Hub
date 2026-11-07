@@ -98,7 +98,7 @@
     var timer = 0, sperre = false;
     var melden = function () {
       clearTimeout(timer); timer = 0;
-      if (sperre) return;
+      if (sperre || window.__lghWartet) return;   // solange der Stand aus dem Hub noch nicht eingelesen ist, nichts melden
       try { var d = dump(); if (Object.keys(d).length) window.parent.postMessage({ lgh: 'stand', spiel: SPIEL, t: Date.now(), d: d }, '*'); } catch (e) { }
     };
     var plan = function () { if (!timer) timer = setTimeout(melden, 800); };

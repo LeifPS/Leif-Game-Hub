@@ -136,3 +136,7 @@ Die Bilder in `public/screens/` (außer `shots/`) werden vom Browser bei jedem A
 ## Spiel vorübergehend sperren (Wartung)
 
 In `public/games.json` beim Spiel `"wartung": true` eintragen. Das Spiel bleibt in der Liste, ist aber mit dem Hinweis „Wartung“ nicht spielbar (auch nicht über einen direkten Link). Zum Freigeben das Feld wieder entfernen.
+
+### Große Spielstände (Übergabe per postMessage)
+
+Stände bis ca. 100.000 Zeichen (Base64) gehen weiter über `#lgh=<Base64url>` an die Spieladresse. Größere (z. B. Tierspiel mit tausenden Tieren) gehen nicht mehr durch die Adresse, sondern per `postMessage`: Der Hub setzt `#lgh=msg`, das Spiel fragt mit `{lgh:'hallo'}` nach, bekommt `{lgh:'daten', json}` und meldet `{lgh:'fertig'}` (Vorlade-Skript `tools/lgh-vorlade.js`, der Spielcode startet erst nach `window.__lghBereit`, siehe Tierspiel `index.html`). Bis `fertig` kommt, nimmt der Hub keine Stände von diesem Rahmen an. Schrumpft ein Stand plötzlich stark, bleibt der alte als `lgh.stand.<id>.sicher` erhalten.

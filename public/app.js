@@ -379,8 +379,9 @@
      Würde der Rahmen sofort entfernt, ginge die letzte Änderung verloren. Die Meldungen der abgehenden Rahmen nimmt der Hub weiter an. */
   var ABGANG_MS = 1300;
   var abgehende = [];   // { fenster, id, url }
-  function neuerRahmen(url, beiLaden, sp) {
+  function neuerRahmen(url, beiLaden, sp, uebergabe) {
     var alt = rahmen, n = alt.cloneNode(false);
+    n._uebergabe = uebergabe ? { json: uebergabe, fertig: false } : null;   // große Stände gehen per postMessage ins Spiel (siehe standHash)
     n.removeAttribute('src');
     if (sp) { n.setAttribute('data-sid', sp.id); n.setAttribute('data-surl', sp.url); }
     else { n.removeAttribute('data-sid'); n.removeAttribute('data-surl'); }
@@ -388,7 +389,7 @@
     if (url) n.src = url;
     var sid = alt.getAttribute('data-sid'), fenster = alt.contentWindow;
     if (sid && fenster && alt.getAttribute('src')) {
-      var eintrag = { fenster: fenster, id: sid, url: alt.getAttribute('data-surl') };
+      var eintrag = { fenster: fenster, id: sid, url: alt.getAttribute('data-surl'), el: alt };
       abgehende.push(eintrag);
       alt.removeAttribute('id'); alt.style.display = 'none'; alt.setAttribute('aria-hidden', 'true'); alt.setAttribute('tabindex', '-1');
       alt.parentNode.insertBefore(n, alt);
@@ -404,31 +405,48 @@
      und beim nächsten Start über #lgh=<Base64url(JSON)> an die Spieladresse zurückgibt. */
   var STAND = 'lgh.stand.';
   function bytesZuB64(u8) { var s = ''; for (var i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
-  function standHash(id) {
+  /* Kleine Stände hängen direkt an der Adresse (#lgh=<Base64url>). Große gehen nicht durch die Adresse (Browser, vor allem Safari auf dem iPhone,
+     und eine Obergrenze machen das unzuverlässig): Dann steht nur #lgh=msg dort, das Spiel fragt mit {lgh:'hallo'} nach, bekommt den Stand per
+     postMessage und meldet {lgh:'fertig'}. Bis dahin nimmt der Hub keine Stände von diesem Rahmen an, damit ein Spiel, das den Stand nicht
+     bekommen hat (etwa eine ältere Version ohne diese Funktion), den gesicherten Stand nie mit einem leeren überschreibt. */
+  var HASH_MAX = 100000;
+  function standUebergabe(id) {
     try {
       var j = localStorage.getItem(STAND + id);
-      if (!j) return '';
+      if (!j) return { hash: '', json: null };
       var h = bytesZuB64(new TextEncoder().encode(j));
-      return h.length < 1500000 ? '#lgh=' + h : '';
-    } catch (e) { return ''; }
+      return h.length <= HASH_MAX ? { hash: '#lgh=' + h, json: null } : { hash: '#lgh=msg', json: j };
+    } catch (e) { return { hash: '', json: null }; }
   }
+  function standHash(id) { return standUebergabe(id).hash; }
   function absender(e) {
-    if (aktuell && rahmen.contentWindow && e.source === rahmen.contentWindow) return { id: aktuell.id, url: aktuell.url, abgang: false };
-    for (var i = 0; i < abgehende.length; i++) if (e.source === abgehende[i].fenster) return { id: abgehende[i].id, url: abgehende[i].url, abgang: true };
+    if (aktuell && rahmen.contentWindow && e.source === rahmen.contentWindow) return { id: aktuell.id, url: aktuell.url, abgang: false, el: rahmen };
+    for (var i = 0; i < abgehende.length; i++) if (e.source === abgehende[i].fenster) return { id: abgehende[i].id, url: abgehende[i].url, abgang: true, el: abgehende[i].el };
     return null;
   }
   // Die Anbindung ans Konto darf nie das Speichern oder Spielen stören
   function ausKonto(f) { try { if (window.LghKonto) f(window.LghKonto); } catch (x) { } }
   window.addEventListener('message', function (e) {
     var d = e.data;
-    if (!d || (d.lgh !== 'stand' && d.lgh !== 'status')) return;
+    if (!d || (d.lgh !== 'stand' && d.lgh !== 'status' && d.lgh !== 'hallo' && d.lgh !== 'fertig')) return;
     var q = absender(e);
-    if (!q || d.spiel !== q.id) return;
+    if (!q) return;
     try { if (e.origin !== new URL(q.url).origin) return; } catch (x) { return; }
+    // Übergabe großer Stände: Spiel fragt nach dem Stand (hallo) und meldet, dass es ihn eingelesen hat (fertig)
+    if (d.lgh === 'hallo') { var u = q.el && q.el._uebergabe; if (u) { try { e.source.postMessage({ lgh: 'daten', json: u.json }, e.origin); } catch (x) { } } return; }
+    if (d.lgh === 'fertig') { if (q.el && q.el._uebergabe) q.el._uebergabe.fertig = true; return; }
+    if (d.spiel !== q.id) return;
+    if (q.el && q.el._uebergabe && !q.el._uebergabe.fertig) return;   // Spiel hat den gesicherten Stand noch nicht übernommen: nichts überschreiben
     // Optional: ein Spiel kann einen Raumcode melden ({lgh:'status', spiel, raum:'ABC123'}), den Freunde dann sehen
     if (d.lgh === 'status') { if (!q.abgang) ausKonto(function (k) { k.raum(d.raum); }); return; }
     if (!d.d || typeof d.d !== 'object' || !Object.keys(d.d).length) return;
-    try { localStorage.setItem(STAND + q.id, JSON.stringify({ t: d.t || Date.now(), d: d.d })); } catch (x) { return; }
+    var neu = JSON.stringify({ t: d.t || Date.now(), d: d.d });
+    try {
+      // Sicherheitsnetz: schrumpft der Stand plötzlich stark (z. B. leerer Neustart), bleibt der bisherige als Kopie erhalten
+      var alt = localStorage.getItem(STAND + q.id);
+      if (alt && alt.length > 3000 && neu.length < alt.length * 0.4 && alt.length < 1500000) { try { localStorage.setItem(STAND + q.id + '.sicher', alt); } catch (x2) { } }
+    } catch (x) { }
+    try { localStorage.setItem(STAND + q.id, neu); } catch (x) { return; }
     ausKonto(function (k) { k.stand(q.id, d.d); if (q.abgang) k.beimVerlassen(q.id); });   // nur still mitschreiben, das Spiel hängt nicht davon ab
     try { e.source.postMessage({ lgh: 'ok', t: Date.now() }, e.origin); } catch (x) { }
   });
@@ -440,7 +458,8 @@
       if (aktuell !== sp || zaehler !== startZaehler) return;
       clearTimeout(hinweisTimer);
       hinweisTimer = setTimeout(function () { hinweis.classList.add('sichtbar'); }, 7000);
-      neuerRahmen(sp.url + standHash(sp.id), function () { clearTimeout(hinweisTimer); hinweis.classList.remove('sichtbar'); }, sp);
+      var ue = standUebergabe(sp.id);
+      neuerRahmen(sp.url + ue.hash, function () { clearTimeout(hinweisTimer); hinweis.classList.remove('sichtbar'); }, sp, ue.json);
     }, warte);
   }
   function starteSpiel(sp) {
