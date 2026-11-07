@@ -26,8 +26,21 @@
         "randbreite": 0.15
       },
       "screenshots": [
-        "screens/tonlinge-wide.webp"
-      ]
+        "screens/shots/tonlinge/1.webp",
+        "screens/shots/tonlinge/2.webp",
+        "screens/shots/tonlinge/3.webp",
+        "screens/shots/tonlinge/4.webp",
+        "screens/shots/tonlinge/5.webp",
+        "screens/shots/tonlinge/6.webp",
+        "screens/shots/tonlinge/7.webp",
+        "screens/shots/tonlinge/8.webp",
+        "screens/shots/tonlinge/9.webp",
+        "screens/shots/tonlinge/10.webp"
+      ],
+      "trailer": {
+        "video": "screens/shots/tonlinge/trailer.mp4",
+        "poster": "screens/shots/tonlinge/trailer-poster.webp"
+      }
     },
     {
       "id": "foilxi",
