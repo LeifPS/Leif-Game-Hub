@@ -28,6 +28,23 @@ export const SCHEMA = [
     device TEXT,
     PRIMARY KEY (user_id, game, rev)
   )`,
+  // Freundschaften: ein Eintrag pro Paar (a < b), requester hat die Anfrage gestellt
+  `CREATE TABLE IF NOT EXISTS friends (
+    a INTEGER NOT NULL,
+    b INTEGER NOT NULL,
+    requester INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    created INTEGER NOT NULL,
+    PRIMARY KEY (a, b)
+  )`,
+  `CREATE INDEX IF NOT EXISTS friends_b ON friends(b)`,
+  // Wer ist gerade in welchem Spiel (nur für Freunde sichtbar); seen = letzter Herzschlag des Hubs
+  `CREATE TABLE IF NOT EXISTS presence (
+    user_id INTEGER PRIMARY KEY,
+    game TEXT,
+    raum TEXT,
+    seen INTEGER NOT NULL
+  )`,
   // Zähler gegen Raten von Passwörtern und Massenanmeldungen
   `CREATE TABLE IF NOT EXISTS limits (
     k TEXT PRIMARY KEY,

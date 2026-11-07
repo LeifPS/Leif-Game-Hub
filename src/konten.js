@@ -20,7 +20,8 @@ export const NAME_RE = /^[\p{L}\p{N}._-]{3,20}$/u;
 export const KEY_RE = /^[0-9a-f]{64}$/;
 export const SPIEL_RE = /^[a-z0-9_-]{1,40}$/;
 export const MAX_BYTES = 1900000;      // D1 erlaubt pro Zeile 2 MB
-export const VERSIONEN = 5;            // so viele Stände pro Spiel bleiben erhalten
+export const VERSIONEN = 6;            // so viele Stände pro Spiel bleiben höchstens erhalten (der aktuelle und bis zu 5 ältere)
+export const ABSTAND = 1800;           // ältere Stände werden höchstens alle 30 Minuten festgehalten, sonst gäbe es nach wenigen Minuten Spielzeit nur noch ganz junge
 const SITZUNG_TAGE = 400;
 
 const antwort = (obj, status = 200) => new Response(JSON.stringify(obj), {
@@ -148,6 +149,8 @@ async function kontoLoeschen(request, db, s, jetzt) {
   await db.batch([
     db.prepare('DELETE FROM saves WHERE user_id = ?').bind(s.id),
     db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(s.id),
+    db.prepare('DELETE FROM friends WHERE a = ? OR b = ?').bind(s.id, s.id),
+    db.prepare('DELETE FROM presence WHERE user_id = ?').bind(s.id),
     db.prepare('DELETE FROM users WHERE id = ?').bind(s.id),
   ]);
   return antwort({ ok: true });
@@ -176,6 +179,18 @@ async function versionen(db, s, spiel) {
   return antwort({ versionen: r.results.map(meta) });
 }
 
+// Der vorherige Stand bleibt als Sicherung erhalten, wenn der neue in einem späteren 30-Minuten-Fenster liegt (er war dann der letzte seines Fensters).
+// So hebt minütliches Speichern etwa alle 30 Minuten einen Stand auf und jede Spielrunde hinterlässt ihren letzten.
+async function ausduennen(db, userId, spiel, behalten) {
+  const r = (await db.prepare('SELECT rev, updated FROM saves WHERE user_id = ? AND game = ? ORDER BY rev DESC').bind(userId, spiel).all()).results;
+  if (r.length < 2) return;
+  const weg = [];
+  // behalten: der verdrängte Stand bleibt auf jeden Fall als Sicherung erhalten (für spätere Konfliktabfragen)
+  if (!behalten && Math.floor(r[0].updated / ABSTAND) === Math.floor(r[1].updated / ABSTAND)) weg.push(r[1].rev);
+  for (let i = 0; i < r.length; i++) if (i >= VERSIONEN && !weg.includes(r[i].rev)) weg.push(r[i].rev);
+  if (weg.length) await db.batch(weg.map((rev) => db.prepare('DELETE FROM saves WHERE user_id = ? AND game = ? AND rev = ?').bind(userId, spiel, rev)));
+}
+
 async function speichern(request, db, s, spiel, jetzt) {
   const l = await lies(request);
   if (l.zuGross) return fehler(413, 'zu_gross');
@@ -198,12 +213,104 @@ async function speichern(request, db, s, spiel, jetzt) {
        SELECT ?, ?, ?, ?, ?, ?, ? WHERE COALESCE((SELECT MAX(rev) FROM saves WHERE user_id = ? AND game = ?), 0) = ?`
     ).bind(s.id, spiel, neu, b.daten, groesse, jetzt, geraet, s.id, spiel, curRev).run();
     if (r.meta && r.meta.changes === 1) {
-      await db.prepare('DELETE FROM saves WHERE user_id = ? AND game = ? AND rev <= ?').bind(s.id, spiel, neu - VERSIONEN).run();
+      await ausduennen(db, s.id, spiel, !!b.behalten);
       return antwort({ rev: neu, aktualisiert: jetzt });
     }
     // Zwischen Lesen und Schreiben hat ein anderes Gerät gespeichert: noch einmal prüfen (bei erzwingen wird neu aufgesetzt)
   }
   return fehler(409, 'konflikt');
+}
+
+/* ---------- Freunde ---------- */
+export const ONLINE_SEKUNDEN = 100;     // so lange nach dem letzten Herzschlag gilt jemand als online
+const MAX_FREUNDE = 50, MAX_OFFEN = 20;
+const paar = (x, y) => (x < y ? [x, y] : [y, x]);
+
+async function suche(db, name) {
+  if (typeof name !== 'string') return null;
+  return db.prepare('SELECT id, name FROM users WHERE name_lc = ?').bind(name.normalize('NFC').toLowerCase()).first();
+}
+
+async function freundeListe(db, s, jetzt) {
+  const r = await db.prepare(
+    `SELECT u.name AS name, f.status AS status, f.requester AS requester, p.game AS game, p.raum AS raum, p.seen AS seen
+     FROM friends f JOIN users u ON u.id = CASE WHEN f.a = ? THEN f.b ELSE f.a END
+     LEFT JOIN presence p ON p.user_id = u.id
+     WHERE f.a = ? OR f.b = ? ORDER BY u.name_lc`
+  ).bind(s.id, s.id, s.id).all();
+  const freunde = [], eingehend = [], ausgehend = [];
+  for (const x of r.results) {
+    if (x.status === 'accepted') {
+      const online = !!x.seen && jetzt - x.seen < ONLINE_SEKUNDEN;
+      freunde.push({ name: x.name, online, spiel: online ? x.game || null : null, raum: online && x.game ? x.raum || null : null, zuletzt: x.seen || null });
+    } else if (x.requester === s.id) ausgehend.push({ name: x.name });
+    else eingehend.push({ name: x.name });
+  }
+  return antwort({ freunde, eingehend, ausgehend, jetzt });
+}
+
+async function freundAnfrage(request, db, s, jetzt) {
+  const { b } = await lies(request);
+  if (!b) return fehler(400, 'eingabe');
+  const k = 'f:' + s.id;
+  const warte = await gesperrt(db, k, jetzt);
+  if (warte) return fehler(429, 'zu_viele', { warte });
+  const ziel = await suche(db, b.name);
+  await zaehle(db, k, jetzt, 20, 3600, 3600);
+  if (!ziel) return fehler(404, 'unbekannter_name');
+  if (ziel.id === s.id) return fehler(400, 'selbst');
+  const [x, y] = paar(s.id, ziel.id);
+  const alt = await db.prepare('SELECT requester, status FROM friends WHERE a = ? AND b = ?').bind(x, y).first();
+  if (alt) {
+    if (alt.status === 'accepted') return fehler(409, 'schon_freunde');
+    if (alt.requester === s.id) return fehler(409, 'schon_angefragt');
+    await db.prepare("UPDATE friends SET status = 'accepted' WHERE a = ? AND b = ?").bind(x, y).run(); // er hatte schon angefragt: gegenseitig
+    return antwort({ ok: true, freunde: true, name: ziel.name });
+  }
+  const zaehl = await db.prepare("SELECT COUNT(*) AS n FROM friends WHERE (a = ? OR b = ?) AND (status = 'accepted' OR requester = ?)").bind(s.id, s.id, s.id).first();
+  if (zaehl.n >= MAX_FREUNDE) return fehler(409, 'zu_viele_freunde');
+  const offen = await db.prepare("SELECT COUNT(*) AS n FROM friends WHERE requester = ? AND status = 'pending'").bind(s.id).first();
+  if (offen.n >= MAX_OFFEN) return fehler(409, 'zu_viele_offen');
+  await db.prepare("INSERT INTO friends (a, b, requester, status, created) VALUES (?, ?, ?, 'pending', ?)").bind(x, y, s.id, jetzt).run();
+  return antwort({ ok: true, freunde: false, name: ziel.name });
+}
+
+async function freundAnnehmen(request, db, s) {
+  const { b } = await lies(request);
+  const ziel = b && await suche(db, b.name);
+  if (!ziel) return fehler(404, 'unbekannter_name');
+  const [x, y] = paar(s.id, ziel.id);
+  const r = await db.prepare("UPDATE friends SET status = 'accepted' WHERE a = ? AND b = ? AND status = 'pending' AND requester = ?").bind(x, y, ziel.id).run();
+  if (!r.meta || r.meta.changes !== 1) return fehler(404, 'keine_anfrage');
+  return antwort({ ok: true });
+}
+
+// Ablehnen einer eingehenden Anfrage, Zurückziehen einer ausgehenden und Entfernen eines Freundes: der Eintrag verschwindet
+async function freundLoeschen(request, db, s, nurAnfrage) {
+  const { b } = await lies(request);
+  const ziel = b && await suche(db, b.name);
+  if (!ziel) return fehler(404, 'unbekannter_name');
+  const [x, y] = paar(s.id, ziel.id);
+  const r = await db.prepare(`DELETE FROM friends WHERE a = ? AND b = ?${nurAnfrage ? " AND status = 'pending'" : ''}`).bind(x, y).run();
+  if (!r.meta || r.meta.changes !== 1) return fehler(404, 'nicht_gefunden');
+  return antwort({ ok: true });
+}
+
+async function praesenz(request, db, s, jetzt) {
+  const { b } = await lies(request);
+  if (!b) return fehler(400, 'eingabe');
+  let spiel = null, raum = null, seen = jetzt;
+  if (b.offline) seen = 0;
+  else {
+    if (b.spiel != null) { if (typeof b.spiel !== 'string' || !SPIEL_RE.test(b.spiel)) return fehler(400, 'spiel'); spiel = b.spiel; }
+    if (b.raum != null) {
+      if (typeof b.raum !== 'string' || b.raum.length > 40 || /[\u0000-\u001f<>]/.test(b.raum)) return fehler(400, 'raum');
+      raum = b.raum || null;
+    }
+  }
+  await db.prepare('INSERT INTO presence (user_id, game, raum, seen) VALUES (?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET game = excluded.game, raum = excluded.raum, seen = excluded.seen')
+    .bind(s.id, spiel, raum, seen).run();
+  return antwort({ ok: true });
 }
 
 /* ---------- Verteilung ---------- */
@@ -234,6 +341,12 @@ export async function handle(request, env, jetztMs = Date.now()) {
     if (pfad === '/api/passwort' && m === 'POST') return await passwortAendern(request, db, s, jetzt);
     if (pfad === '/api/loeschen' && m === 'POST') return await kontoLoeschen(request, db, s, jetzt);
     if (pfad === '/api/staende' && m === 'GET') return await liste(db, s);
+    if (pfad === '/api/freunde' && m === 'GET') return await freundeListe(db, s, jetzt);
+    if (pfad === '/api/freunde/anfrage' && m === 'POST') return await freundAnfrage(request, db, s, jetzt);
+    if (pfad === '/api/freunde/annehmen' && m === 'POST') return await freundAnnehmen(request, db, s);
+    if (pfad === '/api/freunde/ablehnen' && m === 'POST') return await freundLoeschen(request, db, s, true);
+    if (pfad === '/api/freunde/entfernen' && m === 'POST') return await freundLoeschen(request, db, s, false);
+    if (pfad === '/api/praesenz' && m === 'POST') return await praesenz(request, db, s, jetzt);
 
     const sp = /^\/api\/stand\/([^/]+)(?:\/(versionen))?$/.exec(pfad);
     if (sp) {

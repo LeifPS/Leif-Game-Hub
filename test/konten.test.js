@@ -77,6 +77,7 @@ test('Spielstand: speichern, laden, Versionen, Konflikt', async () => {
   // gleicher Inhalt: keine neue Version
   const gl = await call(env, 'PUT', '/api/stand/zahlenwerk', { basis: 1, daten: '{"t":1,"d":{"x":"1"}}' }, a);
   assert.deepEqual([gl.status, gl.j.rev, gl.j.gleich], [200, 1, true]);
+  uhr += 1_900_000; // spätere Spielrunde: der erste Stand wird als Sicherung aufgehoben
   const p2 = await call(env, 'PUT', '/api/stand/zahlenwerk', { basis: 1, daten: '{"t":2,"d":{"x":"2"}}', geraet: 'iPad' }, a);
   assert.equal(p2.j.rev, 2);
   // zweites Gerät kennt nur Version 1
@@ -98,17 +99,53 @@ test('Spielstand: speichern, laden, Versionen, Konflikt', async () => {
   assert.deepEqual(l.j.staende.map((s) => [s.spiel, s.rev]), [['zahlenwerk', 3]]);
 });
 
-test('Es bleiben nur die letzten Versionen', async () => {
+test('Ältere Stände: alle 30 Minuten einer, höchstens 5 neben dem aktuellen', async () => {
   const env = umgebung();
   const a = await neuesKonto(env);
-  for (let i = 0; i < VERSIONEN + 3; i++) {
-    const r = await call(env, 'PUT', '/api/stand/spiel', { basis: i, daten: JSON.stringify({ i }) }, a);
-    assert.equal(r.j.rev, i + 1);
+  // Minütliches Speichern über 5 Stunden
+  const start = uhr;
+  let basis = 0;
+  for (let m = 0; m < 300; m++) {
+    uhr = start + m * 60_000;
+    const r = await call(env, 'PUT', '/api/stand/spiel', { basis, daten: JSON.stringify({ m }) }, a);
+    assert.equal(r.status, 200);
+    basis = r.j.rev;
   }
   const v = (await call(env, 'GET', '/api/stand/spiel/versionen', undefined, a)).j.versionen;
-  assert.equal(v.length, VERSIONEN);
-  assert.equal(v[0].rev, VERSIONEN + 3);
-  assert.equal((await call(env, 'GET', '/api/stand/spiel?rev=1', undefined, a)).status, 404);
+  assert.ok(v.length <= VERSIONEN, 'zu viele Versionen: ' + v.length);
+  assert.equal(v[0].rev, 300);
+  assert.ok(v.length >= 5, 'zu wenige Versionen: ' + v.length);
+  // Abstand der älteren Stände: mindestens ungefähr 30 Minuten
+  for (let i = 2; i < v.length; i++) assert.ok(v[i - 1].aktualisiert - v[i].aktualisiert >= 1800 - 60, 'Abstand zu klein');
+  uhr = start;
+});
+
+test('Bewusstes Überschreiben behält den verdrängten Stand immer', async () => {
+  const env = umgebung();
+  const a = await neuesKonto(env);
+  await call(env, 'PUT', '/api/stand/spiel', { basis: 0, daten: '{"v":"cloud"}', geraet: 'iPad' }, a);
+  const e = await call(env, 'PUT', '/api/stand/spiel', { erzwingen: true, behalten: true, daten: '{"v":"lokal"}', geraet: 'iPhone' }, a);
+  assert.equal(e.j.rev, 2);
+  assert.equal((await call(env, 'GET', '/api/stand/spiel?rev=1', undefined, a)).j.daten, '{"v":"cloud"}');
+});
+
+test('Bei kurzen Sitzungen bleibt der letzte Stand jeder Sitzung erhalten', async () => {
+  const env = umgebung();
+  const a = await neuesKonto(env);
+  const start = uhr; let basis = 0;
+  for (const [tag, n] of [[0, 5], [1, 5], [2, 5]]) {
+    for (let i = 0; i < n; i++) {
+      uhr = start + tag * 86400_000 + i * 60_000;
+      basis = (await call(env, 'PUT', '/api/stand/spiel', { basis, daten: JSON.stringify({ tag, i }) }, a)).j.rev;
+    }
+  }
+  const v = (await call(env, 'GET', '/api/stand/spiel/versionen', undefined, a)).j.versionen;
+  const daten = [];
+  for (const x of v) daten.push(JSON.parse((await call(env, 'GET', '/api/stand/spiel?rev=' + x.rev, undefined, a)).j.daten));
+  assert.deepEqual(daten[0], { tag: 2, i: 4 });
+  assert.ok(daten.some((d) => d.tag === 1 && d.i === 4), 'Ende von Tag 2 fehlt');
+  assert.ok(daten.some((d) => d.tag === 0 && d.i === 4), 'Ende von Tag 1 fehlt');
+  uhr = start;
 });
 
 test('Stände sind getrennt pro Konto; ohne Anmeldung kein Zugriff', async () => {
@@ -174,4 +211,76 @@ test('Zwei gleichzeitige Speichervorgänge mit gleicher Basis: nur einer gewinnt
     call(env, 'PUT', '/api/stand/spiel', { basis: 1, daten: '{"v":"y"}' }, a),
   ]);
   assert.deepEqual([x.status, y.status].sort(), [200, 409]);
+});
+
+test('Freunde: Anfrage, Annehmen, Liste mit Präsenz, Entfernen', async () => {
+  const env = umgebung();
+  const a = await neuesKonto(env, 'Anna'), b = await neuesKonto(env, 'Ben');
+  assert.equal((await call(env, 'POST', '/api/freunde/anfrage', { name: 'Niemand' }, a)).j.fehler, 'unbekannter_name');
+  assert.equal((await call(env, 'POST', '/api/freunde/anfrage', { name: 'anna' }, a)).j.fehler, 'selbst');
+  assert.equal((await call(env, 'POST', '/api/freunde/anfrage', { name: 'BEN' }, a)).status, 200);
+  assert.equal((await call(env, 'POST', '/api/freunde/anfrage', { name: 'Ben' }, a)).j.fehler, 'schon_angefragt');
+  const la = (await call(env, 'GET', '/api/freunde', undefined, a)).j, lb = (await call(env, 'GET', '/api/freunde', undefined, b)).j;
+  assert.deepEqual([la.ausgehend, la.eingehend, la.freunde], [[{ name: 'Ben' }], [], []]);
+  assert.deepEqual([lb.eingehend, lb.ausgehend, lb.freunde], [[{ name: 'Anna' }], [], []]);
+  // Anna kann ihre eigene Anfrage nicht annehmen, Ben schon
+  assert.equal((await call(env, 'POST', '/api/freunde/annehmen', { name: 'Ben' }, a)).status, 404);
+  assert.equal((await call(env, 'POST', '/api/freunde/annehmen', { name: 'Anna' }, b)).status, 200);
+  assert.equal((await call(env, 'POST', '/api/freunde/anfrage', { name: 'Ben' }, a)).j.fehler, 'schon_freunde');
+  // Präsenz: Ben spielt Zahlenwerk in einem Raum
+  assert.equal((await call(env, 'POST', '/api/praesenz', { spiel: 'zahlenwerk', raum: 'ABC123' }, b)).status, 200);
+  let f = (await call(env, 'GET', '/api/freunde', undefined, a)).j.freunde[0];
+  assert.deepEqual([f.name, f.online, f.spiel, f.raum], ['Ben', true, 'zahlenwerk', 'ABC123']);
+  // Im Hub, ohne Spiel
+  await call(env, 'POST', '/api/praesenz', { spiel: null }, b);
+  f = (await call(env, 'GET', '/api/freunde', undefined, a)).j.freunde[0];
+  assert.deepEqual([f.online, f.spiel, f.raum], [true, null, null]);
+  // Nach 2 Minuten ohne Herzschlag: offline, kein Spiel sichtbar
+  await call(env, 'POST', '/api/praesenz', { spiel: 'zahlenwerk' }, b);
+  uhr += 120_000;
+  f = (await call(env, 'GET', '/api/freunde', undefined, a)).j.freunde[0];
+  assert.deepEqual([f.online, f.spiel], [false, null]);
+  assert.ok(f.zuletzt > 0);
+  // Abmelden vom Hub setzt sofort auf offline
+  await call(env, 'POST', '/api/praesenz', { spiel: 'zahlenwerk' }, b);
+  await call(env, 'POST', '/api/praesenz', { offline: true }, b);
+  assert.equal((await call(env, 'GET', '/api/freunde', undefined, a)).j.freunde[0].online, false);
+  // Entfernen
+  assert.equal((await call(env, 'POST', '/api/freunde/entfernen', { name: 'Ben' }, a)).status, 200);
+  assert.deepEqual((await call(env, 'GET', '/api/freunde', undefined, b)).j.freunde, []);
+});
+
+test('Freunde: Präsenz nur für Freunde sichtbar; gegenseitige Anfrage wird zur Freundschaft; Ablehnen', async () => {
+  const env = umgebung();
+  const a = await neuesKonto(env, 'Anna'), b = await neuesKonto(env, 'Ben'), c = await neuesKonto(env, 'Carl');
+  await call(env, 'POST', '/api/praesenz', { spiel: 'spells' }, a);
+  assert.deepEqual((await call(env, 'GET', '/api/freunde', undefined, b)).j, { freunde: [], eingehend: [], ausgehend: [], jetzt: Math.floor(uhr / 1000) });
+  // Ben und Carl fragen sich gegenseitig an
+  await call(env, 'POST', '/api/freunde/anfrage', { name: 'Carl' }, b);
+  const g = await call(env, 'POST', '/api/freunde/anfrage', { name: 'Ben' }, c);
+  assert.equal(g.j.freunde, true);
+  assert.equal((await call(env, 'GET', '/api/freunde', undefined, b)).j.freunde[0].name, 'Carl');
+  // Ablehnen und Zurückziehen
+  await call(env, 'POST', '/api/freunde/anfrage', { name: 'Anna' }, b);
+  assert.equal((await call(env, 'POST', '/api/freunde/ablehnen', { name: 'Ben' }, a)).status, 200);
+  assert.equal((await call(env, 'GET', '/api/freunde', undefined, b)).j.ausgehend.length, 0);
+  await call(env, 'POST', '/api/freunde/anfrage', { name: 'Anna' }, b);
+  assert.equal((await call(env, 'POST', '/api/freunde/ablehnen', { name: 'Anna' }, b)).status, 200); // zurückziehen
+  // Ablehnen löscht keine bestehende Freundschaft
+  assert.equal((await call(env, 'POST', '/api/freunde/ablehnen', { name: 'Carl' }, b)).status, 404);
+  assert.equal((await call(env, 'GET', '/api/freunde', undefined, b)).j.freunde.length, 1);
+});
+
+test('Präsenz: ungültige Eingaben, Konto löschen entfernt Freunde und Präsenz', async () => {
+  const env = umgebung();
+  const a = await neuesKonto(env, 'Anna'), b = await neuesKonto(env, 'Ben');
+  assert.equal((await call(env, 'POST', '/api/praesenz', { spiel: 'Falsch!' }, a)).status, 400);
+  assert.equal((await call(env, 'POST', '/api/praesenz', { spiel: 'x', raum: '<b>' }, a)).status, 400);
+  assert.equal((await call(env, 'POST', '/api/praesenz', { spiel: 'x', raum: 'y'.repeat(41) }, a)).status, 400);
+  await call(env, 'POST', '/api/freunde/anfrage', { name: 'Ben' }, a);
+  await call(env, 'POST', '/api/praesenz', { spiel: 'x' }, a);
+  assert.equal((await call(env, 'POST', '/api/loeschen', { key: await schluessel('Anna', 'geheim123') }, a)).status, 200);
+  assert.equal(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM friends').get().n, 0);
+  assert.equal(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM presence').get().n, 0);
+  assert.deepEqual((await call(env, 'GET', '/api/freunde', undefined, b)).j.eingehend, []);
 });
