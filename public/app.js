@@ -224,8 +224,9 @@
     var v = document.getElementById('gal-video'), g = G();
     var soll = !!v && body.getAttribute('data-view') === 'detail' && istVideo(g.liste[g.i]);
     var alle = document.querySelectorAll('video');
-    for (var j = 0; j < alle.length; j++) if (!(soll && alle[j] === v)) alle[j].pause();
-    if (soll) { v.muted = true; tonAnzeige(); var pr = v.play(); if (pr && pr.catch) pr.catch(function () { }); }
+    for (var j = 0; j < alle.length; j++) if (!(soll && alle[j] === v)) { alle[j].pause(); alle[j]._lief = false; }
+    /* Wer die Detailseite (oder den Trailer-Reiter) neu öffnet, sieht den Trailer wieder von vorne */
+    if (soll) { v.muted = true; tonAnzeige(); if (!v._lief) { try { v.currentTime = 0; } catch (e) { } } v._lief = true; var pr = v.play(); if (pr && pr.catch) pr.catch(function () { }); }
   }
   function galerieZeige(k, richtung) {
     var n = G().liste.length;
@@ -739,7 +740,7 @@
   function zeigeAnsicht(key, rendern) {
     if (ansichtKey === key && inhalt.firstChild) return;
     if (ansichtKey === 'freunde' || String(ansichtKey).indexOf('profil|') === 0) inhalt.innerHTML = '';
-    else if (ansichtKey !== null) { var alt = document.createElement('div'); while (inhalt.firstChild) alt.appendChild(inhalt.firstChild); ansichtSpeicher[ansichtKey] = alt; }
+    else if (ansichtKey !== null) { var alt = document.createElement('div'); while (inhalt.firstChild) alt.appendChild(inhalt.firstChild); var vs = alt.querySelectorAll('video'); for (var vi = 0; vi < vs.length; vi++) { vs[vi].pause(); vs[vi]._lief = false; } ansichtSpeicher[ansichtKey] = alt; }
     var neu = ansichtSpeicher[key];
     if (neu) { delete ansichtSpeicher[key]; while (neu.firstChild) inhalt.appendChild(neu.firstChild); }
     else rendern();
