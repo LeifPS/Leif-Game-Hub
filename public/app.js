@@ -180,7 +180,10 @@
   }
 
   /* ---------- Detailseite im Stil einer Shop-Seite ---------- */
-  var galerie = { liste: [], i: 0, name: '' };
+  /* Der Galerie-Zustand hängt am Galerie-Element der jeweiligen Detailseite (nicht an einer globalen Variable):
+     Detailseiten bleiben als fertige Knoten gespeichert und werden beim Zurückkehren wieder eingehängt, ohne neu gebunden zu werden. */
+  var GALERIE_LEER = { liste: [], i: 0, name: '' };
+  function G() { var r = document.querySelector('.gal'); return (r && r._g) || GALERIE_LEER; }
   function bilderVon(sp) {
     if (sp.screenshots && sp.screenshots.length) return sp.screenshots;
     return sp.banner ? [sp.banner] : [];
@@ -199,35 +202,37 @@
     return h + '</div>';
   }
   function galerieZeige(k) {
-    var n = galerie.liste.length;
+    var n = G().liste.length;
     if (!n) return;
-    galerie.i = (k + n) % n;
+    G().i = (k + n) % n;
     var img = document.getElementById('gal-img');
-    if (img) { img.src = galerie.liste[galerie.i]; img.alt = 'Screenshot ' + (galerie.i + 1) + ' von ' + galerie.name; }
+    if (img) { img.src = G().liste[G().i]; img.alt = 'Screenshot ' + (G().i + 1) + ' von ' + G().name; }
     var minis = document.querySelectorAll('.gal-mini');
     for (var j = 0; j < minis.length; j++) {
-      var an = j === galerie.i;
+      var an = j === G().i;
       minis[j].classList.toggle('aktiv', an);
       if (an && minis[j].scrollIntoView) { var r = document.getElementById('gal-reihe'); if (r) r.scrollTo({ left: minis[j].offsetLeft - r.clientWidth / 2 + minis[j].clientWidth / 2, behavior: 'smooth' }); }
     }
     var lb = document.getElementById('lightbox');
-    if (lb && lb.classList.contains('offen')) document.getElementById('lb-img').src = galerie.liste[galerie.i];
+    if (lb && lb.classList.contains('offen')) document.getElementById('lb-img').src = G().liste[G().i];
   }
   function galerieBinden(sp) {
-    galerie = { liste: bilderVon(sp), i: 0, name: sp.name };
-    if (!galerie.liste.length) return;
+    var wurzel = document.querySelector('.gal');
+    if (!wurzel) return;
+    wurzel._g = { liste: bilderVon(sp), i: 0, name: sp.name };
+    if (!wurzel._g.liste.length) return;
     var reihe = document.getElementById('gal-reihe');
     if (reihe) reihe.addEventListener('click', function (e) { var m = e.target.closest('.gal-mini'); if (m) galerieZeige(+m.getAttribute('data-k')); });
     var vor = document.getElementById('gal-vor'), zu = document.getElementById('gal-zu');
-    if (vor) vor.addEventListener('click', function () { galerieZeige(galerie.i + 1); });
-    if (zu) zu.addEventListener('click', function () { galerieZeige(galerie.i - 1); });
+    if (vor) vor.addEventListener('click', function () { galerieZeige(G().i + 1); });
+    if (zu) zu.addEventListener('click', function () { galerieZeige(G().i - 1); });
     document.getElementById('gal-bild').addEventListener('click', lightboxAuf);
     var x0 = null, bild = document.getElementById('gal-bild');
     bild.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
     bild.addEventListener('touchend', function (e) {
       if (x0 == null) return;
       var dx = e.changedTouches[0].clientX - x0; x0 = null;
-      if (Math.abs(dx) > 50) { galerieZeige(galerie.i + (dx < 0 ? 1 : -1)); bild.setAttribute('data-wisch', '1'); setTimeout(function () { bild.removeAttribute('data-wisch'); }, 300); }
+      if (Math.abs(dx) > 50) { galerieZeige(G().i + (dx < 0 ? 1 : -1)); bild.setAttribute('data-wisch', '1'); setTimeout(function () { bild.removeAttribute('data-wisch'); }, 300); }
     });
     bild.addEventListener('click', function (e) { if (bild.getAttribute('data-wisch')) e.stopImmediatePropagation(); }, true);
   }
@@ -238,14 +243,14 @@
       lb.innerHTML = '<button type="button" class="lb-zu" aria-label="Schließen">&times;</button><button type="button" class="gal-pfeil links" id="lb-zurueck" aria-label="Voriger Screenshot"><svg aria-hidden="true"><use href="#i-back"/></svg></button><img id="lb-img" alt=""><button type="button" class="gal-pfeil rechts" id="lb-weiter" aria-label="Nächster Screenshot"><svg aria-hidden="true"><use href="#i-back"/></svg></button>';
       document.body.appendChild(lb);
       lb.addEventListener('click', function (e) {
-        if (e.target.id === 'lb-zurueck') galerieZeige(galerie.i - 1);
-        else if (e.target.closest && e.target.closest('#lb-zurueck')) galerieZeige(galerie.i - 1);
-        else if (e.target.closest && e.target.closest('#lb-weiter')) galerieZeige(galerie.i + 1);
+        if (e.target.id === 'lb-zurueck') galerieZeige(G().i - 1);
+        else if (e.target.closest && e.target.closest('#lb-zurueck')) galerieZeige(G().i - 1);
+        else if (e.target.closest && e.target.closest('#lb-weiter')) galerieZeige(G().i + 1);
         else if (e.target.id !== 'lb-img') lightboxZu();
       });
     }
-    lb.querySelector('#lb-img').src = galerie.liste[galerie.i];
-    var mehrere = galerie.liste.length > 1;
+    lb.querySelector('#lb-img').src = G().liste[G().i];
+    var mehrere = G().liste.length > 1;
     lb.querySelector('#lb-zurueck').style.display = lb.querySelector('#lb-weiter').style.display = mehrere ? '' : 'none';
     lb.classList.add('offen');
   }
@@ -254,8 +259,8 @@
     var lb = document.getElementById('lightbox');
     var offen = lb && lb.classList.contains('offen');
     if (e.key === 'Escape' && offen) lightboxZu();
-    else if (e.key === 'ArrowRight' && (offen || document.getElementById('gal-img'))) galerieZeige(galerie.i + 1);
-    else if (e.key === 'ArrowLeft' && (offen || document.getElementById('gal-img'))) galerieZeige(galerie.i - 1);
+    else if (e.key === 'ArrowRight' && (offen || document.getElementById('gal-img'))) galerieZeige(G().i + 1);
+    else if (e.key === 'ArrowLeft' && (offen || document.getElementById('gal-img'))) galerieZeige(G().i - 1);
   });
 
   function faktZeile(k, v) { return v ? '<div class="fakt"><dt>' + esc(k) + '</dt><dd>' + v + '</dd></div>' : ''; }
@@ -598,6 +603,7 @@
     if (m) { var id = decodeURIComponent(m[1]); sp = spielbar().filter(function (s) { return s.id === id; })[0] || null; }
     if (m && !sp) { location.replace('#'); return; }
 
+    lightboxZu();
     var vorher = body.getAttribute('data-view');
     if (vorher === 'play') stoppeSpiel();
     if (vorher === 'freunde' && location.hash !== '#freunde') { clearInterval(freundeTimer); freundeTimer = null; }
