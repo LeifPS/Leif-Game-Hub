@@ -132,3 +132,7 @@ Der Hub ist ohne Konto gesperrt (Name und Passwort, keine E-Mail). Konten, Freun
 ## Bilder ersetzen (Icons, Titelbilder, Wallpaper)
 
 Die Bilder in `public/screens/` (außer `shots/`) werden vom Browser bei jedem Aufruf beim Server nachgefragt und nur neu geladen, wenn sie sich geändert haben (`public/_headers`). Zusätzlich hängt `app.js` die Nummer `BILD_V` an die Bildadressen. Wer ein Bild ersetzt und sicher gehen will, dass wirklich alle es sofort sehen, zählt `BILD_V` in `public/app.js` (und `?v=` bei Favicon und Apple-Touch-Icon in `public/index.html`) hoch.
+
+## Spiel vorübergehend sperren (Wartung)
+
+In `public/games.json` beim Spiel `"wartung": true` eintragen. Das Spiel bleibt in der Liste, ist aber mit dem Hinweis „Wartung“ nicht spielbar (auch nicht über einen direkten Link). Zum Freigeben das Feld wieder entfernen.

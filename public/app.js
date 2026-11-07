@@ -92,7 +92,7 @@
     var s = '<article class="tile' + (offen ? '' : ' off') + '">';
     s += offen ? '<a class="tile-link" href="#spiel/' + id + '" aria-label="' + esc(sp.name) + '">' : '<div class="tile-link">';
     s += '<div class="tile-art">' + art(sp, 400, 400);
-    if (!offen) s += '<span class="badge">Bald</span>';
+    if (!offen) s += '<span class="badge">' + (sp.wartung ? 'Wartung' : 'Bald') + '</span>';
     else if (v) s += '<span class="ver-tag">' + (v.offiziell ? '' : 'Beta ') + esc(v.version) + '</span>';
     s += '</div>';
     s += '<div class="tile-text"><strong>' + esc(sp.name) + '</strong><span>' + esc(kategorien(sp).join(', ')) + '</span></div>';
@@ -125,7 +125,7 @@
     s += '<div class="nav-label">Bibliothek</div>';
     alphabetisch().forEach(function (sp) {
       var offen = !!sp.url;
-      var inner = '<span class="lib-icon">' + art(sp, 100, 100) + '</span><span class="name">' + esc(sp.name) + '</span>' + (offen ? '' : '<small>Bald</small>');
+      var inner = '<span class="lib-icon">' + art(sp, 100, 100) + '</span><span class="name">' + esc(sp.name) + '</span>' + (offen ? '' : '<small>' + (sp.wartung ? 'Wartung' : 'Bald') + '</small>');
       s += offen
         ? '<a class="lib-item' + (sp.id === aktivId ? ' aktiv' : '') + '" href="#spiel/' + encodeURIComponent(sp.id) + '">' + inner + '</a>'
         : '<div class="lib-item off">' + inner + '</div>';
@@ -713,6 +713,8 @@
     .then(function (d) {
       spiele = d[0].games || []; versionen = d[1] || {};
       // Beim Ersetzen eines Bildes die Nummer BILD_V hochzählen: alle Browser holen dann die neue Datei statt der zwischengespeicherten.
+      // "wartung": true in games.json sperrt ein Spiel vorübergehend (wie "Bald", aber mit Hinweis "Wartung"); zum Freigeben das Feld entfernen.
+      spiele.forEach(function (sp) { if (sp.wartung) sp.url = ''; });
       spiele.forEach(function (sp) { ['bild', 'banner', 'icon', 'wallpaper'].forEach(function (k) { if (typeof sp[k] === 'string' && sp[k].indexOf('?') < 0) sp[k] += '?v=' + BILD_V; }); });
       route();
     })
