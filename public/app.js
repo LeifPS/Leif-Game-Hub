@@ -615,8 +615,14 @@
     else (buehne.requestFullscreen || buehne.webkitRequestFullscreen).call(buehne);
   });
 
+  var BILD_V = '2';
   function json(url) { return fetch(url, { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); }
   Promise.all([json('games.json'), json('versions.json').catch(function () { return {}; })])
-    .then(function (d) { spiele = d[0].games || []; versionen = d[1] || {}; route(); })
+    .then(function (d) {
+      spiele = d[0].games || []; versionen = d[1] || {};
+      // Beim Ersetzen eines Bildes die Nummer BILD_V hochzählen: alle Browser holen dann die neue Datei statt der zwischengespeicherten.
+      spiele.forEach(function (sp) { ['bild', 'banner', 'icon', 'wallpaper'].forEach(function (k) { if (typeof sp[k] === 'string' && sp[k].indexOf('?') < 0) sp[k] += '?v=' + BILD_V; }); });
+      route();
+    })
     .catch(function () { inhalt.innerHTML = '<div class="leer" style="padding:80px 28px">Die Spieleliste konnte nicht geladen werden.</div>'; });
 })();

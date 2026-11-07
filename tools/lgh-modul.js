@@ -43,7 +43,10 @@
   var KANN_ZIP = typeof CompressionStream === 'function' && typeof DecompressionStream === 'function';
 
   function erzeuge() {
-    var roh = new TextEncoder().encode(JSON.stringify({ t: Date.now(), d: dump() }));
+    var d = dump();
+    // Optional: Das Spiel kann den Speicher-Auszug vor dem Verpacken verkleinern (window.LGH_PACKEN = { ein: function (d) { return d; }, aus: function (d) { return d; } }).
+    if (window.LGH_PACKEN && typeof window.LGH_PACKEN.ein === 'function') { try { d = window.LGH_PACKEN.ein(d) || d; } catch (e) { } }
+    var roh = new TextEncoder().encode(JSON.stringify({ t: Date.now(), d: d }));
     var p = KANN_ZIP ? pipe(roh, CompressionStream, 'deflate-raw') : Promise.resolve(roh);
     return p.then(function (b) {
       var daten = toB64(b);
@@ -66,6 +69,11 @@
     return p.then(function (b) {
       var o = JSON.parse(new TextDecoder().decode(b));
       if (!o || typeof o.d !== 'object') throw new Error('Der Code ist beschädigt.');
+      var kompakt = Object.keys(o.d).some(function (k) { return /#k$/.test(k); });
+      if (kompakt) {
+        if (!window.LGH_PACKEN || typeof window.LGH_PACKEN.aus !== 'function') throw new Error('Dieser Code braucht die neueste Spielversion. Bitte die Seite neu laden.');
+        try { o.d = window.LGH_PACKEN.aus(o.d); } catch (e) { throw new Error('Der Code ist beschädigt.'); }
+      }
       return o;
     }, function () { throw new Error('Der Code ist beschädigt.'); });
   }
@@ -173,7 +181,7 @@
     el('lgh-sc-ein').value = '';
     el('lgh-sc-aus').value = 'Wird erzeugt …';
     dlg.classList.add('offen');
-    erzeuge().then(function (c) { el('lgh-sc-aus').value = c; }, function () { el('lgh-sc-aus').value = ''; meldung('Der Code konnte nicht erzeugt werden.', true); });
+    erzeuge().then(function (c) { el('lgh-sc-aus').value = c; meldung(c.length.toLocaleString('de-DE') + ' Zeichen'); }, function () { el('lgh-sc-aus').value = ''; meldung('Der Code konnte nicht erzeugt werden.', true); });
   }
   function zu() { dlg.classList.remove('offen'); }
   knopf.addEventListener('click', auf);
