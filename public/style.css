@@ -492,12 +492,14 @@ h1, h2, h3 { letter-spacing: -.022em; }
 .shop-titelzeile h1, .shop-titelzeile h1.titelschrift { margin: 0; min-width: 0; }
 .shop-titelzeile .btn-spielen { flex: none; min-width: 168px; height: 46px; font-size: 15px; }
 .spiel-aktion { display: flex; align-items: center; gap: 12px 22px; flex: none; }
-.spielinfo { display: flex; align-items: center; gap: 22px; }
+.spielinfo { display: flex; align-items: center; gap: 26px; }
 .spielinfo[hidden] { display: none; }
-.spielinfo div { display: flex; flex-direction: column; gap: 1px; text-align: right; }
+.spielinfo .si { display: flex; align-items: center; gap: 10px; text-align: left; }
+.spielinfo .si svg { width: 28px; height: 28px; flex: none; color: var(--muted); }
+.spielinfo .si span { display: flex; flex-direction: column; gap: 1px; }
 .spielinfo small { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
-.spielinfo b { font-size: 14px; font-weight: 650; color: var(--text); white-space: nowrap; }
-@media (max-width: 900px) { .spiel-aktion { flex-direction: column-reverse; align-items: stretch; width: 100%; } .shop-titelzeile .btn-spielen { width: 100%; } .spielinfo { justify-content: space-between; } .spielinfo div { text-align: left; } .spielinfo div:last-child { text-align: right; } }
+.spielinfo b { font-size: 15px; font-weight: 600; color: var(--text); white-space: nowrap; }
+@media (max-width: 900px) { .spiel-aktion { flex-direction: column-reverse; align-items: stretch; width: 100%; } .shop-titelzeile .btn-spielen { width: 100%; } .spielinfo { justify-content: space-between; } }
 
 /* Detailseite: Gliederung (links Galerie + Beschreibung, rechts Infos) */
 .shop-haupt { min-width: 0; display: flex; flex-direction: column; gap: 4px; }

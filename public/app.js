@@ -705,14 +705,22 @@
     var kurz = ['Jan', 'Feb', 'März', 'Apr', 'Mai', 'Juni', 'Juli', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
     return d.getFullYear() === n.getFullYear() ? d.getDate() + '. ' + kurz[d.getMonth()] : d.getDate() + '. ' + lang[d.getMonth()] + ' ' + d.getFullYear();
   }
+  /* Spielzeit wie bei Steam: unter einer Stunde in Minuten, sonst Stunden mit einer Nachkommastelle ("5,7 Stunden") */
+  function spielzeitText(sek) {
+    if (sek < 60) return 'unter 1 Minute';
+    if (sek < 3570) { var m = Math.round(sek / 60); return m + (m === 1 ? ' Minute' : ' Minuten'); }
+    return (Math.round(sek / 360) / 10).toFixed(1).replace('.', ',') + ' Stunden';
+  }
   function spielInfoZeigen(id) {
     var el = inhalt.querySelector('.spielinfo');
     if (!el) return;
     var x = null;
     if (eigenSpiele.liste) x = eigenSpiele.liste.filter(function (g) { return g.spiel === id; })[0] || null;
     if (!x || !x.zuletzt) { el.hidden = true; el.innerHTML = ''; return; }
-    el.innerHTML = '<div><small>Zuletzt gespielt</small><b>' + esc(spielTag(x.zuletzt)) + '</b></div>' +
-      '<div><small>Spielzeit</small><b>' + esc(dauer(x.sekunden)) + '</b></div>';
+    var ico = function (pfad) { return '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + pfad + '</svg>'; };
+    var uhr = ico('<circle cx="12" cy="12" r="9.2"/><path d="M12 6.8V12l3.4 2"/>'), kal = ico('<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>');
+    el.innerHTML = '<div class="si">' + kal + '<span><small>Zuletzt gespielt</small><b>' + esc(spielTag(x.zuletzt)) + '</b></span></div>' +
+      '<div class="si">' + uhr + '<span><small>Spielzeit</small><b>' + esc(spielzeitText(x.sekunden)) + '</b></span></div>';
     el.hidden = false;
   }
   function spielInfoLaden(id, nochmal) {
