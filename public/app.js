@@ -856,6 +856,24 @@
     ansichtKey = key;
   }
   function route() { routeEx(); videoSteuern(); }
+  var alphaOk = null;
+  function alphaWarnung(sp) {
+    if (document.querySelector('.dlg-alpha')) return;
+    var hinter = document.createElement('div');
+    hinter.className = 'dlg-hinter dlg-alpha';
+    hinter.innerHTML = '<div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="alpha-t"><div class="dlg-titel" id="alpha-t" style="margin-bottom:10px"><span class="ver-pill alpha">Alpha</span> ' + esc(sp.name) + '</div>' +
+      '<p style="margin:0 0 6px;line-height:1.5">Dieses Spiel ist noch in einer frühen Entwicklungsphase. Es kann Fehler geben, Teile können fehlen oder sich ändern, und durch Updates kann dein Spielstand beschädigt werden oder verloren gehen.</p>' +
+      '<div class="dlg-fuss" style="gap:10px"><button type="button" class="btn btn-ghost" data-zu>Zurück</button><button type="button" class="btn btn-primary" data-los>Trotzdem spielen</button></div></div>';
+    function zu() { hinter.remove(); document.removeEventListener('keydown', taste); }
+    function taste(e) { if (e.key === 'Escape') zu(); }
+    hinter.addEventListener('click', function (e) {
+      if (e.target === hinter || (e.target.closest && e.target.closest('[data-zu]'))) return zu();
+      if (e.target.closest && e.target.closest('[data-los]')) { zu(); alphaOk = sp.id; location.hash = '#spiel/' + encodeURIComponent(sp.id) + '/play'; }
+    });
+    document.addEventListener('keydown', taste);
+    document.body.appendChild(hinter);
+    var b = hinter.querySelector('[data-los]'); if (b) b.focus();
+  }
   function routeEx() {
     var m = /^#spiel\/([^\/]+)(\/play)?$/.exec(location.hash);
     var sp = null;
@@ -865,7 +883,7 @@
 
     lightboxZu();
     var vorher = body.getAttribute('data-view');
-    if (vorher === 'play') stoppeSpiel();
+    if (vorher === 'play') { stoppeSpiel(); alphaOk = null; }
     if (vorher === 'freunde' && location.hash !== '#freunde') { clearInterval(freundeTimer); freundeTimer = null; }
     var pm = /^#profil(?:\/([^\/]+))?$/.exec(location.hash);
     if (pm) {
@@ -886,6 +904,11 @@
       return;
     }
 
+    if (sp && m[2] && sp.phase === 'alpha' && alphaOk !== sp.id) {   // Alpha: erst die Warnung, das Spiel startet erst nach "Trotzdem spielen"
+      location.replace('#spiel/' + encodeURIComponent(sp.id));
+      alphaWarnung(sp);
+      return;
+    }
     if (sp && m[2]) {
       body.setAttribute('data-view', 'play');
       starteSpiel(sp);
