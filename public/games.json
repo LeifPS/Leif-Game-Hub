@@ -157,8 +157,21 @@
         "randbreite": 0.197
       },
       "screenshots": [
-        "screens/ballgegenball-wide.webp"
-      ]
+        "screens/shots/ballgegenball/1.webp",
+        "screens/shots/ballgegenball/2.webp",
+        "screens/shots/ballgegenball/3.webp",
+        "screens/shots/ballgegenball/4.webp",
+        "screens/shots/ballgegenball/5.webp",
+        "screens/shots/ballgegenball/6.webp",
+        "screens/shots/ballgegenball/7.webp",
+        "screens/shots/ballgegenball/8.webp",
+        "screens/shots/ballgegenball/9.webp",
+        "screens/shots/ballgegenball/10.webp"
+      ],
+      "trailer": {
+        "video": "screens/shots/ballgegenball/trailer.mp4",
+        "poster": "screens/shots/ballgegenball/trailer-poster.webp"
+      }
     },
     {
       "id": "papierhelden",
