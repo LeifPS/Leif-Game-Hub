@@ -46,6 +46,9 @@ body[data-view="play"] { overflow: hidden; }
 .lib-item.aktiv { background: rgba(79, 140, 255, .16); color: #fff; }
 .lib-item.off { color: var(--muted); cursor: default; }
 .lib-item.off:hover { background: none; color: var(--muted); }
+a.lib-item.off { cursor: pointer; }
+a.lib-item.off:hover { background: rgba(255, 255, 255, .05); color: var(--text); }
+.tile.off a.tile-link { cursor: pointer; }
 .lib-item .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lib-item small { margin-left: auto; font-size: 11px; color: var(--muted); }
 .lib-icon { width: 34px; height: 34px; border-radius: 8px; overflow: hidden; flex: none; position: relative; background: var(--panel-2); }
@@ -642,6 +645,7 @@ body.konto-offen { overflow: hidden; }
   background: linear-gradient(180deg, #3ed884 0%, #1fa85a 100%); color: #fff;
   box-shadow: 0 8px 24px rgba(31, 168, 90, .38), inset 0 1px 0 rgba(255, 255, 255, .28);
 }
+.btn-spielen.gesperrt, .btn-spielen.gesperrt:hover { background: #232a38; color: var(--muted); box-shadow: none; cursor: default; filter: none; }
 .btn-primary[href$="/play"]:hover, .btn-spielen:hover { background: linear-gradient(180deg, #52e395 0%, #28b867 100%); filter: none; }
 .tile .play { background: #1fa85a; color: #fff; }
 .tile .play:hover { background: #28b867; }
@@ -723,3 +727,31 @@ body.konto-offen { overflow: hidden; }
 .st-leer { color: var(--muted); font-size: 13px; padding: 4px 0; }
 .st-meld { min-height: 18px; font-size: 13px; color: #7ee2a8; margin-bottom: 6px; }
 .st-meld.fehler { color: #ff8a8a; }
+
+/* Profilbilder mit Symbol (game-icons.net): Kreis mit Hintergrundfarbe, darin das eingefärbte Symbol, drehbar und zoombar */
+.avatar.av-bild { position: relative; }
+.av-bild .avb { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; display: block; }
+.av-bild .avb i, .bi-sym i { position: absolute; inset: 12%; display: block; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; -webkit-mask-size: contain; mask-size: contain; }
+.tbtn.konto.av-bild { position: relative; padding: 0; }
+.dlg.breit { width: min(560px, 100%); }
+.bi-kopf { display: flex; gap: 16px; align-items: center; margin-bottom: 12px; }
+.bi-vorschau { flex: none; }
+.avatar.vorschau { width: 96px; height: 96px; font-size: 40px; }
+.bi-regler { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.bi-zeile { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bi-zeile label { margin: 0; width: 86px; flex: none; }
+.bi-zeile input[type=color] { width: 36px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: none; cursor: pointer; flex: none; }
+.bi-zeile input[type=range] { flex: 1; min-width: 100px; padding: 0; height: 28px; accent-color: var(--accent); }
+.bi-zeile output { width: 52px; text-align: right; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bi-fl { display: flex; gap: 5px; flex-wrap: wrap; }
+.bi-fk { width: 22px; height: 22px; padding: 0; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .25); cursor: pointer; }
+.bi-fk:focus-visible, .bi-sym:focus-visible { outline: 2px solid var(--accent-hi); outline-offset: 2px; }
+.bi-raster { --f: #fff; --b: #345; display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 8px; max-height: 250px; overflow-y: auto; margin: 10px 0 4px; padding: 4px; }
+.bi-sym { position: relative; width: 100%; aspect-ratio: 1; padding: 0; border-radius: 50%; border: 2px solid transparent; background: var(--b); cursor: pointer; }
+.bi-sym i { background: var(--f); }
+.bi-sym:hover { border-color: rgba(255, 255, 255, .5); }
+.bi-sym.gewaehlt { border-color: #fff; box-shadow: 0 0 0 2px var(--accent); }
+.bi-zahl { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.bi-quelle { font-size: 12px; color: var(--muted); margin: 4px 0 10px; }
+.bi-quelle a { color: #7fb0ff; }
+@media (max-width: 520px) { .bi-kopf { flex-direction: column; align-items: stretch; } .bi-vorschau { align-self: center; } }

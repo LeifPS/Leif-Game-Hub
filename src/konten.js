@@ -62,6 +62,10 @@ function schemaSichern(db) {
     if (!spalten.results.some((c) => c.name === 'device_id')) {
       try { await db.prepare('ALTER TABLE users ADD COLUMN device_id TEXT').run(); } catch (e) { /* parallel schon angelegt */ }
     }
+    // Profilbild als JSON-Text (NULL = Buchstabe auf farbigem Kreis)
+    if (!spalten.results.some((c) => c.name === 'avatar')) {
+      try { await db.prepare('ALTER TABLE users ADD COLUMN avatar TEXT').run(); } catch (e) { /* parallel schon angelegt */ }
+    }
     // Zeitpunkt der letzten Änderung des Benutzernamens (NULL = nie geändert)
     if (!spalten.results.some((c) => c.name === 'name_changed')) {
       try { await db.prepare('ALTER TABLE users ADD COLUMN name_changed INTEGER').run(); } catch (e) { /* parallel schon angelegt */ }
@@ -99,7 +103,7 @@ async function sitzung(request, db, jetzt) {
   const m = /^Bearer ([0-9a-f]{64})$/.exec(request.headers.get('authorization') || '');
   if (!m) return null;
   const th = await sha256(m[1]);
-  const s = await db.prepare('SELECT s.user_id AS id, s.last AS last, u.name AS name, u.display AS display, u.device_id AS gid FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?').bind(th).first();
+  const s = await db.prepare('SELECT s.user_id AS id, s.last AS last, u.name AS name, u.display AS display, u.avatar AS avatar, u.device_id AS gid FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?').bind(th).first();
   if (!s) return null;
   if (jetzt - s.last > SITZUNG_TAGE * 86400) { await db.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(th).run(); return null; }
   if (jetzt - s.last > 3600) await db.prepare('UPDATE sessions SET last = ? WHERE token_hash = ?').bind(jetzt, th).run();
@@ -108,7 +112,7 @@ async function sitzung(request, db, jetzt) {
     const g = gidVon(request.headers.get('x-geraet'));
     if (g) await db.prepare('UPDATE users SET device_id = ? WHERE id = ? AND device_id IS NULL').bind(g, s.id).run();
   }
-  return { id: s.id, name: s.name, anzeige: s.display || s.name, th };
+  return { id: s.id, name: s.name, anzeige: s.display || s.name, avatar: s.avatar || null, th };
 }
 async function neueSitzung(db, userId, geraet, jetzt) {
   const token = zufall(32);
@@ -149,7 +153,7 @@ async function pruefeSchluessel(db, userName, key, jetzt, request) {
   const kn = 'l:' + lc, ki = 'i:' + ip(request);
   const warte = Math.max(await gesperrt(db, kn, jetzt), await gesperrt(db, ki, jetzt));
   if (warte) return { fehler: fehler(429, 'zu_viele', { warte }) };
-  const u = await db.prepare('SELECT id, name, display, salt, hash, device_id, name_changed FROM users WHERE name_lc = ?').bind(lc).first();
+  const u = await db.prepare('SELECT id, name, display, avatar, salt, hash, device_id, name_changed FROM users WHERE name_lc = ?').bind(lc).first();
   // Auch bei unbekanntem Namen gleich viel rechnen, damit man nicht erkennt, welche Namen es gibt
   const h = await sha256((u ? u.salt : 'x'.repeat(32)) + ':' + key);
   if (!u || !gleich(h, u.hash)) {
@@ -173,7 +177,7 @@ async function anmelden(request, db, jetzt) {
     if (!r.user.device_id && g) await db.prepare('UPDATE users SET device_id = ? WHERE id = ? AND device_id IS NULL').bind(g, r.user.id).run();
   }
   const token = await neueSitzung(db, r.user.id, geraetName(b.geraet), jetzt);
-  return antwort({ token, name: r.user.name, anzeige: r.user.display || r.user.name });
+  return antwort({ token, name: r.user.name, anzeige: r.user.display || r.user.name, av: avParse(r.user.avatar) });
 }
 
 async function passwortAendern(request, db, s, jetzt) {
@@ -217,6 +221,31 @@ async function anzeigeAendern(request, db, s) {
   if (az.fehler) return fehler(400, 'anzeige');
   await db.prepare('UPDATE users SET display = ? WHERE id = ?').bind(az.wert, s.id).run();
   return antwort({ ok: true, name: s.name, anzeige: az.wert || s.name });
+}
+
+/* ---------- Profilbild ---------- */
+// Symbol aus public/icons (Ordner/Name), Symbolfarbe f, Hintergrundfarbe b, Zoom z (1 = Standardgröße), Drehung r in Grad
+const AV_SYMBOL_RE = /^[a-z0-9-]{1,40}\/[a-z0-9-]{1,80}$/, AV_FARBE_RE = /^#[0-9a-fA-F]{6}$/;
+export function avBereinigen(a) {
+  if (a === null || a === undefined) return { wert: null };
+  if (typeof a !== 'object' || Array.isArray(a)) return { fehler: true };
+  const z = Number(a.z), r = Number(a.r);
+  if (typeof a.i !== 'string' || !AV_SYMBOL_RE.test(a.i) || typeof a.f !== 'string' || !AV_FARBE_RE.test(a.f) || typeof a.b !== 'string' || !AV_FARBE_RE.test(a.b)) return { fehler: true };
+  if (!Number.isFinite(z) || z < 0.3 || z > 3 || !Number.isFinite(r) || r < -360 || r > 360) return { fehler: true };
+  return { wert: { i: a.i, f: a.f.toLowerCase(), b: a.b.toLowerCase(), z: Math.round(z * 100) / 100, r: Math.round(r * 10) / 10 } };
+}
+function avParse(t) { if (!t) return null; try { const a = JSON.parse(t); return avBereinigen(a).wert; } catch (e) { return null; } }
+
+async function avatarAendern(request, db, s, env) {
+  const { b } = await lies(request);
+  if (!b) return fehler(400, 'eingabe');
+  const v = avBereinigen(b.av);
+  if (v.fehler) return fehler(400, 'avatar');
+  if (v.wert && env && env.ASSETS) {   // das Symbol muss es im Hub wirklich geben
+    try { const r = await env.ASSETS.fetch(new Request(new URL('/icons/' + v.wert.i + '.svg', request.url))); if (!r.ok) return fehler(400, 'symbol'); } catch (e) { return fehler(400, 'symbol'); }
+  }
+  await db.prepare('UPDATE users SET avatar = ? WHERE id = ?').bind(v.wert ? JSON.stringify(v.wert) : null, s.id).run();
+  return antwort({ ok: true, av: v.wert });
 }
 
 async function kontoLoeschen(request, db, s, jetzt) {
@@ -321,12 +350,12 @@ const paar = (x, y) => (x < y ? [x, y] : [y, x]);
 async function suche(db, name) {
   if (typeof name !== 'string') return null;
   const n = name.normalize('NFC').trim().replace(/^@/, '');   // "@leif" und "leif" meinen denselben Benutzernamen
-  return db.prepare('SELECT id, name, display FROM users WHERE name_lc = ?').bind(n.toLowerCase()).first();
+  return db.prepare('SELECT id, name, display, avatar FROM users WHERE name_lc = ?').bind(n.toLowerCase()).first();
 }
 
 async function freundeListe(db, s, jetzt) {
   const r = await db.prepare(
-    `SELECT u.name AS name, u.display AS display, f.status AS status, f.requester AS requester, p.game AS game, p.raum AS raum, p.seen AS seen
+    `SELECT u.name AS name, u.display AS display, u.avatar AS avatar, f.status AS status, f.requester AS requester, p.game AS game, p.raum AS raum, p.seen AS seen
      FROM friends f JOIN users u ON u.id = CASE WHEN f.a = ? THEN f.b ELSE f.a END
      LEFT JOIN presence p ON p.user_id = u.id
      WHERE f.a = ? OR f.b = ? ORDER BY lower(COALESCE(u.display, u.name))`
@@ -335,9 +364,9 @@ async function freundeListe(db, s, jetzt) {
   for (const x of r.results) {
     if (x.status === 'accepted') {
       const online = !!x.seen && jetzt - x.seen < ONLINE_SEKUNDEN;
-      freunde.push({ name: x.name, anzeige: x.display || x.name, online, spiel: online ? x.game || null : null, raum: online && x.game ? x.raum || null : null, zuletzt: x.seen || null });
-    } else if (x.requester === s.id) ausgehend.push({ name: x.name, anzeige: x.display || x.name });
-    else eingehend.push({ name: x.name, anzeige: x.display || x.name });
+      freunde.push({ name: x.name, anzeige: x.display || x.name, av: avParse(x.avatar), online, spiel: online ? x.game || null : null, raum: online && x.game ? x.raum || null : null, zuletzt: x.seen || null });
+    } else if (x.requester === s.id) ausgehend.push({ name: x.name, anzeige: x.display || x.name, av: avParse(x.avatar) });
+    else eingehend.push({ name: x.name, anzeige: x.display || x.name, av: avParse(x.avatar) });
   }
   return antwort({ freunde, eingehend, ausgehend, jetzt });
 }
@@ -420,7 +449,7 @@ async function praesenz(request, db, s, jetzt) {
 async function profil(db, s, name, jetzt) {
   let u;
   name = name ? name.replace(/^@/, '') : name;
-  if (!name || name.toLowerCase() === s.name.toLowerCase()) u = { id: s.id, name: s.name, display: s.anzeige !== s.name ? s.anzeige : null };
+  if (!name || name.toLowerCase() === s.name.toLowerCase()) u = { id: s.id, name: s.name, display: s.anzeige !== s.name ? s.anzeige : null, avatar: s.avatar };
   else {
     const z = await suche(db, name);
     if (!z) return fehler(404, 'unbekannt');
@@ -436,7 +465,7 @@ async function profil(db, s, name, jetzt) {
   const online = !!p && !!p.seen && jetzt - p.seen < ONLINE_SEKUNDEN;
   const eigen = u.id === s.id;
   const out = {
-    name: u.name, anzeige: u.display || u.name, seit: row ? row.created : null, eigen,
+    name: u.name, anzeige: u.display || u.name, av: avParse(u.avatar), seit: row ? row.created : null, eigen,
     freunde: fr ? fr.n : 0, online, spiel: online ? p.game || null : null, zuletzt: p ? p.seen : null,
   };
   // Welche Spiele jemand schon gespielt hat, dürfen Freunde sehen; wann und wie lange ist privat (nur das eigene Profil bekommt Zeit und Datum).
@@ -473,8 +502,9 @@ export async function handle(request, env, jetztMs = Date.now()) {
     const s = await sitzung(request, db, jetzt);
     if (!s) return fehler(401, 'nicht_angemeldet');
 
-    if (pfad === '/api/ich' && m === 'GET') return antwort({ name: s.name, anzeige: s.anzeige });
+    if (pfad === '/api/ich' && m === 'GET') return antwort({ name: s.name, anzeige: s.anzeige, av: avParse(s.avatar) });
     if (pfad === '/api/anzeige' && m === 'POST') return await anzeigeAendern(request, db, s);
+    if (pfad === '/api/avatar' && m === 'POST') return await avatarAendern(request, db, s, env);
     if (pfad === '/api/abmelden' && m === 'POST') { await db.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(s.th).run(); return antwort({ ok: true }); }
     if (pfad === '/api/benutzername' && m === 'POST') return await benutzernameAendern(request, db, s, jetzt);
     if (pfad === '/api/passwort' && m === 'POST') return await passwortAendern(request, db, s, jetzt);

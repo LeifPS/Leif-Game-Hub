@@ -99,7 +99,7 @@
     return FEHLER[res.j.fehler] || 'Das hat nicht geklappt (' + (res.j.fehler || res.status) + ').';
   }
 
-  function speichereKonto(k) { konto = k; lsSet(KEY, JSON.stringify(k)); }
+  function speichereKonto(k) { if (k.av === undefined && konto) k.av = konto.av; konto = k; lsSet(KEY, JSON.stringify(k)); }
   function ladeKonto() { try { var k = JSON.parse(lsGet(KEY)); if (k && k.name && /^[0-9a-f]{64}$/.test(k.token)) return k; } catch (e) { } return null; }
   // Name, wie andere dich sehen: der Anzeigename, sonst der Benutzername
   function anzeigeName() { return konto ? (konto.anzeige || konto.name) : null; }
@@ -175,7 +175,7 @@
         return api('POST', modus === 'neu' ? '/api/registrieren' : '/api/anmelden', { name: name, anzeige: anz || undefined, key: key, geraet: geraet(), gid: geraetId() || undefined }, { ohneToken: true });
       }).then(function (res) {
         if (!res.ok) { fehler.textContent = fehlerText(res); los.disabled = false; los.textContent = modus === 'neu' ? 'Konto erstellen' : 'Anmelden'; return; }
-        speichereKonto({ name: res.j.name, anzeige: res.j.anzeige || res.j.name, token: res.j.token });
+        speichereKonto({ name: res.j.name, anzeige: res.j.anzeige || res.j.name, token: res.j.token, av: res.j.av || null });
         el.remove(); document.body.classList.remove('konto-offen');
         nachAnmeldung();
       }, function () { fehler.textContent = 'Die Anmeldung ist hier nicht möglich (Browser ohne Verschlüsselung).'; los.disabled = false; });
@@ -349,20 +349,131 @@
     laden();
   }
 
+  /* ---------- Profilbild wählen ---------- */
+  var symbolIndex = null;     // { urheber: {ordner: name}, symbole: ['ordner/name', ...] } aus icons/index.json
+  // Deutsche Suchwörter für die englischen Symbolnamen (englisch geht immer auch)
+  var DE = { drache: 'dragon', katze: 'cat', hund: 'dog', schwert: 'sword', feuer: 'fire', flamme: 'flame', wasser: 'water', herz: 'heart', stern: 'star', schaedel: 'skull', schädel: 'skull', krone: 'crown', pilz: 'mushroom', fisch: 'fish', vogel: 'bird', baum: 'tree', auto: 'car', rakete: 'rocket', roboter: 'robot', zauberer: 'wizard', magier: 'wizard', schild: 'shield', bogen: 'bow', pfeil: 'arrow', bombe: 'bomb', muenze: 'coin', münze: 'coin', schatz: 'treasure', wuerfel: 'dice', würfel: 'dice', karte: 'card', geist: 'ghost', hase: 'rabbit', baer: 'bear', bär: 'bear', loewe: 'lion', löwe: 'lion', eule: 'owl', fuchs: 'fox', schlange: 'snake', spinne: 'spider', kuh: 'cow', pferd: 'horse', affe: 'monkey', hai: 'shark', wal: 'whale', krebs: 'crab', biene: 'bee', blume: 'flower', sonne: 'sun', mond: 'moon', blitz: 'lightning', eis: 'ice', schnee: 'snow', diamant: 'diamond', schluessel: 'key', schlüssel: 'key', buch: 'book', trank: 'potion', hut: 'hat', helm: 'helmet', axt: 'axe', pistole: 'pistol', fluegel: 'wing', flügel: 'wing', auge: 'eye', hand: 'hand', fuss: 'foot', fuß: 'foot', zahn: 'tooth', knochen: 'bone', maske: 'mask', ritter: 'knight', pirat: 'pirate', engel: 'angel', teufel: 'devil', kuchen: 'cake', apfel: 'apple', kaffee: 'coffee', musik: 'music', gitarre: 'guitar', trommel: 'drum', glocke: 'bell', uhr: 'clock', kompass: 'compass', schiff: 'ship', boot: 'boat', flugzeug: 'plane', zug: 'train', rad: 'wheel', zahnrad: 'gear', schmetterling: 'butterfly', ente: 'duck', huhn: 'chicken', schwein: 'pig', schaf: 'sheep', ziege: 'goat', frosch: 'frog', schildkroete: 'turtle', schildkröte: 'turtle', elefant: 'elephant', pinguin: 'penguin', krake: 'octopus', qualle: 'jellyfish', ei: 'egg', kaese: 'cheese', käse: 'cheese', brot: 'bread', kerze: 'candle', laterne: 'lantern', fackel: 'torch', tuer: 'door', tür: 'door', turm: 'tower', burg: 'castle', schloss: 'castle', haus: 'house', berg: 'mountain', insel: 'island', vulkan: 'volcano', wolke: 'cloud', regen: 'rain', komet: 'comet', vampir: 'vampire', werwolf: 'werewolf', wikinger: 'viking', koch: 'chef', arzt: 'doctor', fernglas: 'binoculars', lupe: 'magnifying', spaten: 'shovel', netz: 'net', falle: 'trap', kristall: 'crystal', edelstein: 'gem', kette: 'necklace', brille: 'glasses', handy: 'phone', maus: 'mouse', fussball: 'soccer', fußball: 'soccer', schach: 'chess', spiel: 'game' };
+  var SWATCH = ['#ffffff', '#111827', '#ef4444', '#f97316', '#facc15', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
+  function hslHex(h, sat, l) {
+    sat /= 100; l /= 100;
+    var a = sat * Math.min(l, 1 - l), f = function (n) { var k = (n + h / 30) % 12, c = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1); return ('0' + Math.round(255 * c).toString(16)).slice(-2); };
+    return '#' + f(0) + f(8) + f(4);
+  }
+  function standardHintergrund(name) { var h = 0; for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360; return hslHex(h, 48, 36); }
+  function symbolSuche(index, text) {
+    var teile = text.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    if (!teile.length) return index.symbole;
+    var gruppen = teile.map(function (t) {
+      var alt = [t];
+      if (DE[t]) alt.push(DE[t]);
+      else if (t.length >= 3) Object.keys(DE).forEach(function (k) { if (k.indexOf(t) === 0 && alt.indexOf(DE[k]) < 0) alt.push(DE[k]); });
+      return alt;
+    });
+    return index.symbole.filter(function (id) {
+      var n = id.split('/')[1].replace(/-/g, ' ');
+      return gruppen.every(function (alt) { return alt.some(function (t) { return n.indexOf(t) >= 0; }); });
+    });
+  }
+  function bildAnsicht(el, menue) {
+    var box = el.querySelector('#dlg-bild'), dlg = el;
+    menue.hidden = true; box.hidden = false; dlg.classList.add('breit');
+    var alt = avOk(konto.av);
+    var st = { i: alt ? alt.i : null, f: alt ? alt.f : '#ffffff', b: alt ? alt.b : standardHintergrund(konto.name), z: alt ? alt.z : 1, r: alt ? alt.r : 0 };
+    var swatches = function (id) { return SWATCH.map(function (c) { return '<button type="button" class="bi-fk" data-for="' + id + '" data-c="' + c + '" style="background:' + c + '" aria-label="Farbe ' + c + '"></button>'; }).join(''); };
+    box.innerHTML =
+      '<div class="bi-kopf"><div class="bi-vorschau" id="bi-vorschau"></div><div class="bi-regler">' +
+      '<div class="bi-zeile"><label for="bi-f">Symbol</label><input type="color" id="bi-f"><span class="bi-fl">' + swatches('f') + '</span></div>' +
+      '<div class="bi-zeile"><label for="bi-b">Hintergrund</label><input type="color" id="bi-b"><span class="bi-fl">' + swatches('b') + '</span></div>' +
+      '<div class="bi-zeile"><label for="bi-z">Zoom</label><input type="range" id="bi-z" min="40" max="220" step="1"><output id="bi-zo"></output></div>' +
+      '<div class="bi-zeile"><label for="bi-r">Drehung</label><input type="range" id="bi-r" min="-180" max="180" step="1"><output id="bi-ro"></output></div>' +
+      '</div></div>' +
+      '<input type="search" id="bi-suche" placeholder="Symbol suchen, zum Beispiel Drache oder dragon" autocomplete="off" spellcheck="false" aria-label="Symbol suchen">' +
+      '<div class="bi-raster" id="bi-raster" role="listbox" aria-label="Symbole"><div class="st-leer">Lädt …</div></div>' +
+      '<div class="bi-zahl" id="bi-zahl"></div><div class="konto-fehler" id="bi-fehler" role="alert"></div>' +
+      '<div class="bi-quelle">Symbole von <a href="credits.html" target="_blank" rel="noopener">game-icons.net</a> (CC BY 3.0)</div>' +
+      '<div class="btn-row"><button class="btn btn-primary" type="button" id="bi-ok">Speichern</button><button class="btn btn-ghost" type="button" id="bi-weg">Buchstabe statt Bild</button><button class="btn btn-ghost" type="button" data-zurueck>Zurück</button></div>';
+    var q = function (id) { return box.querySelector('#' + id); };
+    var raster = q('bi-raster'), fehl = q('bi-fehler'), liste = [], gezeigt = 0, SCHRITT = 96;
+    q('bi-f').value = st.f; q('bi-b').value = st.b; q('bi-z').value = Math.round(st.z * 100); q('bi-r').value = Math.round(st.r);
+    function vorschau() {
+      q('bi-zo').textContent = Math.round(st.z * 100) + ' %'; q('bi-ro').textContent = Math.round(st.r) + '°';
+      var a = st.i ? avOk({ i: st.i, f: st.f, b: st.b, z: st.z, r: st.r }) : null;
+      q('bi-vorschau').innerHTML = a ? '<span class="avatar vorschau av-bild">' + avInnen(a) + '</span>'
+        : '<span class="avatar vorschau" style="background:' + esc(st.b) + ';color:' + esc(st.f) + '">' + esc(anzeigeName().charAt(0).toUpperCase()) + '</span>';
+      raster.style.setProperty('--f', st.f); raster.style.setProperty('--b', st.b);
+    }
+    function mehr() {
+      var h = '';
+      for (var k = gezeigt; k < Math.min(liste.length, gezeigt + SCHRITT); k++) {
+        var id = liste[k], n = id.split('/')[1].replace(/-/g, ' '), u = 'url(icons/' + id + '.svg)';
+        h += '<button type="button" class="bi-sym' + (id === st.i ? ' gewaehlt' : '') + '" role="option" aria-selected="' + (id === st.i) + '" data-i="' + id + '" title="' + esc(n) + '" aria-label="' + esc(n) + '"><i style="-webkit-mask-image:' + u + ';mask-image:' + u + '"></i></button>';
+      }
+      gezeigt = Math.min(liste.length, gezeigt + SCHRITT);
+      raster.insertAdjacentHTML('beforeend', h);
+      q('bi-zahl').textContent = liste.length ? liste.length + (liste.length === 1 ? ' Symbol' : ' Symbole') : 'Nichts gefunden. Versuch es mit einem englischen Wort.';
+    }
+    function neuListe() { raster.innerHTML = ''; gezeigt = 0; liste = symbolIndex ? symbolSuche(symbolIndex, q('bi-suche').value) : []; raster.scrollTop = 0; mehr(); }
+    raster.addEventListener('scroll', function () { if (gezeigt < liste.length && raster.scrollTop + raster.clientHeight > raster.scrollHeight - 160) mehr(); });
+    raster.addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('.bi-sym') : null;
+      if (!b) return;
+      st.i = b.getAttribute('data-i');
+      [].forEach.call(raster.querySelectorAll('.bi-sym.gewaehlt'), function (x) { x.classList.remove('gewaehlt'); x.setAttribute('aria-selected', 'false'); });
+      b.classList.add('gewaehlt'); b.setAttribute('aria-selected', 'true'); fehl.textContent = ''; vorschau();
+    });
+    var suchTimer = null;
+    q('bi-suche').addEventListener('input', function () { clearTimeout(suchTimer); suchTimer = setTimeout(neuListe, 160); });
+    q('bi-f').addEventListener('input', function (e) { st.f = e.target.value; vorschau(); });
+    q('bi-b').addEventListener('input', function (e) { st.b = e.target.value; vorschau(); });
+    q('bi-z').addEventListener('input', function (e) { st.z = Number(e.target.value) / 100; vorschau(); });
+    q('bi-r').addEventListener('input', function (e) { st.r = Number(e.target.value); vorschau(); });
+    box.addEventListener('click', function (e) {
+      var fk = e.target.closest ? e.target.closest('.bi-fk') : null;
+      if (!fk) return;
+      var w = fk.getAttribute('data-for'), c = fk.getAttribute('data-c');
+      st[w] = c; q('bi-' + w).value = c; vorschau();
+    });
+    function zurueck() { box.hidden = true; menue.hidden = false; dlg.classList.remove('breit'); }
+    box.querySelector('[data-zurueck]').onclick = zurueck;
+    function fertig(av) {
+      speichereKonto({ name: konto.name, anzeige: konto.anzeige, token: konto.token, av: av });
+      aktualisiereKnopf(); benachrichtige();
+      var d = el.querySelector('#dlg-av'); if (d) d.outerHTML = avatarHtml('avatar gross', konto.name, anzeigeName(), konto.av, '', 'dlg-av');
+      zurueck();
+    }
+    function senden(av, btn) {
+      btn.disabled = true; fehl.textContent = '';
+      api('POST', '/api/avatar', { av: av }).then(function (res) {
+        btn.disabled = false;
+        if (!res.ok) { fehl.textContent = res.j && res.j.fehler === 'symbol' ? 'Dieses Symbol gibt es nicht mehr.' : fehlerText(res); return; }
+        fertig(res.j.av || null);
+      });
+    }
+    q('bi-ok').onclick = function () {
+      if (!st.i) { fehl.textContent = 'Wähle zuerst ein Symbol aus.'; return; }
+      senden({ i: st.i, f: st.f, b: st.b, z: Math.round(st.z * 100) / 100, r: Math.round(st.r) }, this);
+    };
+    q('bi-weg').onclick = function () { senden(null, this); };
+    vorschau();
+    if (symbolIndex) neuListe();
+    else fetch('icons/index.json').then(function (r) { if (!r.ok) throw new Error(); return r.json(); }).then(function (j) { symbolIndex = j; neuListe(); }, function () { raster.innerHTML = '<div class="st-leer">Die Symbole konnten nicht geladen werden.</div>'; });
+  }
+
   function kontoDialog(start) {
     if (!konto) return;
     dialog(
-      '<div class="dlg-kopf"><span class="avatar gross" id="dlg-av" style="' + avatarStil(konto.name) + '">' + esc(anzeigeName().charAt(0).toUpperCase()) + '</span>' +
+      '<div class="dlg-kopf">' + avatarHtml('avatar gross', konto.name, anzeigeName(), konto.av, '', 'dlg-av') +
       '<div><div class="dlg-titel" id="dlg-titel">' + esc(anzeigeName()) + '</div><div class="dlg-sub">@' + esc(konto.name) + ' · Angemeldet auf diesem Gerät</div></div></div>' +
       '<div class="dlg-teil" id="dlg-menue">' +
       '<button type="button" class="btn btn-ghost" data-a="profil">Mein Profil</button>' +
       '<button type="button" class="btn btn-ghost" data-a="stand">Spielstände sichern und zurückholen</button>' +
+      '<button type="button" class="btn btn-ghost" data-a="bild">Profilbild ändern</button>' +
       '<button type="button" class="btn btn-ghost" data-a="anz">Anzeigename ändern</button>' +
       '<button type="button" class="btn btn-ghost" data-a="bn">Benutzernamen ändern</button>' +
       '<button type="button" class="btn btn-ghost" data-a="pw">Passwort ändern</button>' +
       '<button type="button" class="btn btn-ghost" data-a="aus">Abmelden</button>' +
       '<button type="button" class="btn btn-ghost gefahr" data-a="weg">Konto löschen</button>' +
-      '</div><form class="dlg-teil" id="dlg-form" hidden novalidate></form><div class="dlg-teil" id="dlg-stand" hidden></div>' +
+      '</div><form class="dlg-teil" id="dlg-form" hidden novalidate></form><div class="dlg-teil" id="dlg-stand" hidden></div><div class="dlg-teil" id="dlg-bild" hidden></div>' +
       '<div class="dlg-fuss"><button type="button" class="btn btn-ghost" data-zu>Schließen</button></div>',
       function (el, zu) {
         var menue = el.querySelector('#dlg-menue'), form = el.querySelector('#dlg-form');
@@ -378,6 +489,7 @@
           if (a === 'aus') { zu(); abmelden(); }
           if (a === 'profil') { zu(); location.hash = '#profil'; }
           if (a === 'stand') standAnsicht(el, menue);
+          if (a === 'bild') bildAnsicht(el, menue);
           if (a === 'anz') formular(
             '<label>Anzeigename<input id="anz0" type="text" maxlength="24" autocomplete="nickname" spellcheck="false" value="' + esc(konto.anzeige && konto.anzeige !== konto.name ? konto.anzeige : '') + '" placeholder="' + esc(konto.name) + '"></label>' +
             '<div class="konto-regel">So sehen dich andere (Freunde, Freundesleiste). Dein Benutzername @' + esc(konto.name) + ' bleibt gleich. Leer lassen = Benutzername.</div>',
@@ -389,7 +501,7 @@
                 speichereKonto({ name: konto.name, anzeige: res.j.anzeige || konto.name, token: konto.token });
                 aktualisiereKnopf(); benachrichtige();
                 var t = el.querySelector('#dlg-titel'), av = el.querySelector('#dlg-av');
-                if (t) t.textContent = anzeigeName(); if (av) av.textContent = anzeigeName().charAt(0).toUpperCase();
+                if (t) t.textContent = anzeigeName(); if (av && !avOk(konto.av)) av.textContent = anzeigeName().charAt(0).toUpperCase();
                 form.innerHTML = '<p>Gespeichert. Andere sehen dich jetzt als <b>' + esc(anzeigeName()) + '</b>.</p><div class="btn-row"><button class="btn btn-primary" data-zu type="button">Fertig</button></div>';
               });
             });
@@ -410,7 +522,7 @@
                 aktualisiereKnopf(); benachrichtige();
                 var sub = el.querySelector('.dlg-sub'), t = el.querySelector('#dlg-titel'), av = el.querySelector('#dlg-av');
                 if (sub) sub.textContent = '@' + konto.name + ' · Angemeldet auf diesem Gerät';
-                if (t) t.textContent = anzeigeName(); if (av) av.textContent = anzeigeName().charAt(0).toUpperCase();
+                if (t) t.textContent = anzeigeName(); if (av && !avOk(konto.av)) av.textContent = anzeigeName().charAt(0).toUpperCase();
                 form.innerHTML = '<p>Dein Benutzername ist jetzt <b>@' + esc(konto.name) + '</b>. Zum Anmelden brauchst du ab jetzt diesen Namen.</p><div class="btn-row"><button class="btn btn-primary" data-zu type="button">Fertig</button></div>';
               }, function () { fe.textContent = 'Das ist hier nicht möglich (Browser ohne Verschlüsselung).'; fertig(); });
             });
@@ -463,10 +575,33 @@
     var h = 0; for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
     return 'background:hsl(' + h + ',48%,36%);color:#fff';
   }
+  /* Profilbild: Symbol aus icons/ (game-icons.net), Symbolfarbe f, Hintergrund b, Zoom z, Drehung r. Alles wird streng geprüft, bevor es in HTML landet. */
+  function avOk(a) {
+    if (!a || typeof a !== 'object') return null;
+    if (typeof a.i !== 'string' || !/^[a-z0-9-]{1,40}\/[a-z0-9-]{1,80}$/.test(a.i)) return null;
+    if (typeof a.f !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(a.f) || typeof a.b !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(a.b)) return null;
+    var z = Number(a.z), r = Number(a.r);
+    if (!isFinite(z) || z < 0.3 || z > 3 || !isFinite(r) || r < -360 || r > 360) return null;
+    return { i: a.i, f: a.f, b: a.b, z: z, r: r };
+  }
+  function avGlyph(a) {
+    var u = 'url(icons/' + a.i + '.svg)';
+    return 'background:' + a.f + ';-webkit-mask-image:' + u + ';mask-image:' + u + ';transform:rotate(' + a.r + 'deg) scale(' + a.z + ')';
+  }
+  function avInnen(a) { return '<b class="avb" style="background:' + a.b + '"><i style="' + avGlyph(a) + '"></i></b>'; }
+  // Fertiges Profilbild-Element: mit gewähltem Symbol, sonst der Buchstabe auf farbigem Kreis. extra = zusätzliches HTML (z. B. der grüne Online-Punkt)
+  function avatarHtml(klasse, name, anzeige, av, extra, id) {
+    var a = avOk(av), ida = id ? ' id="' + id + '"' : '';
+    if (!a) return '<span class="' + klasse + '"' + ida + ' style="' + avatarStil(name) + '">' + esc(String(anzeige || name).charAt(0).toUpperCase()) + (extra || '') + '</span>';
+    return '<span class="' + klasse + ' av-bild"' + ida + '>' + avInnen(a) + (extra || '') + '</span>';
+  }
   function aktualisiereKnopf() {
     var b = document.getElementById('konto-knopf');
     if (!b) return;
-    if (konto) { b.hidden = false; b.textContent = anzeigeName().charAt(0).toUpperCase(); b.setAttribute('style', avatarStil(konto.name)); b.setAttribute('aria-label', 'Konto von ' + anzeigeName() + ' (@' + konto.name + ')'); }
+    var kav = konto ? avOk(konto.av) : null;
+    b.className = 'tbtn konto' + (kav ? ' av-bild' : '');
+    if (konto && kav) { b.hidden = false; b.innerHTML = avInnen(kav); b.setAttribute('style', 'background:transparent'); b.setAttribute('aria-label', 'Konto von ' + anzeigeName() + ' (@' + konto.name + ')'); }
+    else if (konto) { b.hidden = false; b.textContent = anzeigeName().charAt(0).toUpperCase(); b.setAttribute('style', avatarStil(konto.name)); b.setAttribute('aria-label', 'Konto von ' + anzeigeName() + ' (@' + konto.name + ')'); }
     else b.hidden = true;
   }
 
@@ -578,7 +713,7 @@
       // Nur bei eindeutiger Ablehnung abmelden; ohne Netz bleibt man angemeldet
       if (res.ok) {
         // Anzeigename kann auf einem anderen Gerät geändert worden sein
-        if (res.j.name && (res.j.name !== konto.name || (res.j.anzeige && res.j.anzeige !== konto.anzeige))) { speichereKonto({ name: res.j.name, anzeige: res.j.anzeige || res.j.name, token: konto.token }); aktualisiereKnopf(); }
+        if (res.j.name && (res.j.name !== konto.name || (res.j.anzeige && res.j.anzeige !== konto.anzeige) || JSON.stringify(res.j.av || null) !== JSON.stringify(konto.av || null))) { speichereKonto({ name: res.j.name, anzeige: res.j.anzeige || res.j.name, token: konto.token, av: res.j.av || null }); aktualisiereKnopf(); }
         nachAnmeldung();
       }
       else if (res.status === 0) { meldeAn(); }
@@ -588,7 +723,7 @@
   window.LghKonto = {
     bereit: bereit, name: function () { return konto ? konto.name : null; }, anzeige: anzeigeName, angemeldet: function () { return !!konto; },
     stand: stand, beimVerlassen: beimVerlassen, spiel: setzeSpiel, raum: setzeRaum,
-    freunde: freunde, setzeOffene: setzeOffene, avatarStil: avatarStil, dialog: dialog,
+    freunde: freunde, setzeOffene: setzeOffene, avatarStil: avatarStil, avatar: avatarHtml, dialog: dialog,
     kontoDialog: kontoDialog, profil: function (name) { return api('GET', '/api/profil' + (name ? '/' + encodeURIComponent(name) : '')); }, abmelden: abmelden, abzeichen: benachrichtige, beiAenderung: function (f) { lauscher.push(f); },
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();

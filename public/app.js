@@ -90,15 +90,15 @@
   function playIcon() { return '<svg aria-hidden="true"><use href="#i-play"/></svg>'; }
 
   function tile(sp) {
-    var offen = !!sp.url, id = encodeURIComponent(sp.id), v = ver(sp);
+    var offen = !!sp.url, detail = offen || !!sp.wartung, id = encodeURIComponent(sp.id), v = ver(sp);   // Spiele in Wartung haben weiter ihre Detailseite, nur Spielen geht nicht
     var s = '<article class="tile' + (offen ? '' : ' off') + '">';
-    s += offen ? '<a class="tile-link" href="#spiel/' + id + '" aria-label="' + esc(sp.name) + '">' : '<div class="tile-link">';
+    s += detail ? '<a class="tile-link" href="#spiel/' + id + '" aria-label="' + esc(sp.name) + '">' : '<div class="tile-link">';
     s += '<div class="tile-art">' + art(sp, 400, 400);
     if (!offen) s += '<span class="badge">' + (sp.wartung ? 'Wartung' : 'Bald') + '</span>';
     else if (v) s += '<span class="ver-tag">' + (v.offiziell ? '' : 'Beta ') + esc(vz(v.version)) + '</span>';
     s += '</div>';
     s += '<div class="tile-text"><strong>' + esc(sp.name) + '</strong><span>' + esc(kategorien(sp).join(', ')) + '</span></div>';
-    s += offen ? '</a>' : '</div>';
+    s += detail ? '</a>' : '</div>';
     if (offen) s += '<a class="play" href="#spiel/' + id + '/play" aria-label="' + esc(sp.name) + ' spielen">' + playIcon() + '</a>';
     return s + '</article>';
   }
@@ -128,8 +128,8 @@
     alphabetisch().forEach(function (sp) {
       var offen = !!sp.url;
       var inner = '<span class="lib-icon">' + art(sp, 100, 100) + '</span><span class="name">' + esc(sp.name) + '</span>' + (offen ? '' : '<small>' + (sp.wartung ? 'Wartung' : 'Bald') + '</small>');
-      s += offen
-        ? '<a class="lib-item' + (sp.id === aktivId ? ' aktiv' : '') + '" href="#spiel/' + encodeURIComponent(sp.id) + '">' + inner + '</a>'
+      s += offen || sp.wartung
+        ? '<a class="lib-item' + (offen ? '' : ' off') + (sp.id === aktivId ? ' aktiv' : '') + '" href="#spiel/' + encodeURIComponent(sp.id) + '">' + inner + '</a>'
         : '<div class="lib-item off">' + inner + '</div>';
     });
     bibliothek.innerHTML = s;
@@ -321,7 +321,7 @@
     var online = kategorien(sp).indexOf('Online') >= 0;
     var h = '<div class="detail-banner' + (titel ? ' titel' : '') + '">' + (titel ? '<img class="titelbild" src="' + esc(sp.wallpaper) + '" alt="' + esc(sp.name) + '" decoding="async">' : art(sp, 1400, 420)) + '<a class="zurueck-link" href="#"><svg aria-hidden="true"><use href="#i-back"/></svg>Alle Spiele</a></div>';
     h += '<div class="shop' + (titel ? ' titel' : '') + '">';
-    h += '<div class="shop-titelzeile">' + titelHtml(sp) + '<div class="spiel-aktion"><div class="spielinfo" hidden></div><a class="btn btn-primary btn-spielen" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a></div></div>';
+    h += '<div class="shop-titelzeile">' + titelHtml(sp) + '<div class="spiel-aktion"><div class="spielinfo" hidden></div>' + (sp.url ? '<a class="btn btn-primary btn-spielen" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a>' : '<span class="btn btn-spielen gesperrt" aria-disabled="true">Wartung</span>') + '</div></div>';
     var gal = galerieHtml(sp);
     var text = (sp.beschreibung && sp.beschreibung !== sp.text) ? '<section class="shop-text"><h2>Über dieses Spiel</h2><p>' + esc(sp.beschreibung) + '</p></section>' : '';
     h += '<div class="shop-oben' + (gal ? '' : ' ohne-galerie') + '">' + (gal ? '<div class="shop-haupt">' + gal + text + '</div>' : '');
@@ -544,7 +544,7 @@
   function spielName(id) { var sp = spiele.filter(function (x) { return x.id === id; })[0]; return sp ? sp.name : id; }
   function anz(f) { return f.anzeige || f.name; }
   function frItem(av, f, status, akt) {
-    return '<div class="fr-item"><a class="fr-hl" href="#profil/' + encodeURIComponent(f.name) + '" aria-label="Profil von ' + esc(anz(f)) + '"><span class="avatar" style="' + LghKonto.avatarStil(f.name) + '">' + esc(anz(f).charAt(0).toUpperCase()) + '</span>' +
+    return '<div class="fr-item"><a class="fr-hl" href="#profil/' + encodeURIComponent(f.name) + '" aria-label="Profil von ' + esc(anz(f)) + '">' + LghKonto.avatar('avatar', f.name, anz(f), f.av) +
       '<div class="fr-text"><div class="fr-name">' + esc(anz(f)) + '<span class="fr-at">@' + esc(f.name) + '</span></div><div class="fr-status">' + status + '</div></div></a><div class="fr-akt">' + akt + '</div></div>';
   }
   function zeichneFreunde(z, d) {
@@ -621,7 +621,7 @@
         status = esc(spielName(f.spiel));
       } else if (f.online) status = 'Im Hub';
       h += '<a class="fr-karte' + (f.spiel || f.online ? '' : ' aus') + '" href="' + ziel + '" title="' + n(anz(f)) + ' (@' + n(f.name) + ')' + (f.spiel ? ' spielt ' + n(spielName(f.spiel)) : f.online ? ' ist im Hub' : '') + '">' +
-        '<span class="fr-kreis" style="' + LghKonto.avatarStil(f.name) + '">' + n(anz(f).charAt(0).toUpperCase()) + (f.spiel || f.online ? '<span class="fr-punkt"></span>' : '') + '</span>' +
+        LghKonto.avatar('fr-kreis', f.name, anz(f), f.av, f.spiel || f.online ? '<span class="fr-punkt"></span>' : '') +
         '<span class="fr-n">' + n(anz(f)) + '</span><span class="fr-s">' + status + '</span></a>';
     });
     z.innerHTML = h + '</div>';
@@ -782,10 +782,10 @@
           (p.eigen ? '<small>Zuletzt ' + relZeit(Math.max(0, jetzt - x.zuletzt)) + ' · Spielzeit ' + dauer(x.sekunden) + (st ? ' · ' + st.versionen + (st.versionen === 1 ? ' Sicherung' : ' Sicherungen') + ' auf dem Server' : '') + '</small>' : '') + '</span></a>';
       });
       var status = p.online ? '<span class="pf-punkt"></span>Online' + (p.spiel ? ' · spielt ' + esc(spielName(p.spiel)) : '') : (p.zuletzt ? 'Zuletzt online ' + relZeit(Math.max(0, jetzt - p.zuletzt)) : 'Noch nie online');
-      w.innerHTML = '<div class="pf-kopf"><span class="avatar gross" style="' + LghKonto.avatarStil(p.name) + '">' + esc(p.anzeige.charAt(0).toUpperCase()) + '</span>' +
+      w.innerHTML = '<div class="pf-kopf">' + LghKonto.avatar('avatar gross', p.name, p.anzeige, p.av) +
         '<div class="pf-kopftext"><h1 class="pf-name">' + esc(p.anzeige) + '</h1><div class="pf-at">@' + esc(p.name) + (seit ? ' · dabei seit ' + esc(seit) : '') + '</div><div class="pf-status">' + status + '</div></div></div>' +
         '<div class="pf-zahlen">' + (p.eigen ? '<div><b>' + esc(dauer(gesamt)) + '</b><small>Spielzeit gesamt</small></div>' : '') + '<div><b>' + gespielt + '</b><small>' + (gespielt === 1 ? 'Spiel gespielt' : 'Spiele gespielt') + '</small></div><div><b>' + p.freunde + '</b><small>' + (p.freunde === 1 ? 'Freund' : 'Freunde') + '</small></div></div>' +
-        (p.eigen ? '<div class="pf-aktionen"><button type="button" class="btn btn-ghost" data-pf="anz">Anzeigename ändern</button><button type="button" class="btn btn-ghost" data-pf="stand">Spielstände sichern und zurückholen</button><button type="button" class="btn btn-ghost" data-pf="konto">Konto</button></div>' : '') +
+        (p.eigen ? '<div class="pf-aktionen"><button type="button" class="btn btn-ghost" data-pf="bild">Profilbild ändern</button><button type="button" class="btn btn-ghost" data-pf="anz">Anzeigename ändern</button><button type="button" class="btn btn-ghost" data-pf="stand">Spielstände sichern und zurückholen</button><button type="button" class="btn btn-ghost" data-pf="konto">Konto</button></div>' : '') +
         '<h2 class="fr-abschnitt">' + (p.eigen ? 'Zuletzt gespielt' : 'Gespielte Spiele') + '</h2>' +
         (zeilen ? '<div class="pf-liste">' + zeilen + '</div>' : '<div class="fr-leer">' + (p.eigen ? 'Noch nichts gespielt. Die Spielzeit wird ab jetzt gezählt.' : 'Noch nichts gespielt.') + '</div>');
     });
@@ -815,8 +815,9 @@
   function routeEx() {
     var m = /^#spiel\/([^\/]+)(\/play)?$/.exec(location.hash);
     var sp = null;
-    if (m) { var id = decodeURIComponent(m[1]); sp = spielbar().filter(function (s) { return s.id === id; })[0] || null; }
+    if (m) { var id = decodeURIComponent(m[1]); sp = spiele.filter(function (s) { return s.id === id && (s.url || s.wartung); })[0] || null; }
     if (m && !sp) { location.replace('#'); return; }
+    if (m && m[2] && !sp.url) { location.replace('#spiel/' + encodeURIComponent(sp.id)); return; }   // in Wartung: nur die Detailseite
 
     lightboxZu();
     var vorher = body.getAttribute('data-view');

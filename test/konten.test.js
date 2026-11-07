@@ -27,7 +27,7 @@ async function neuesKonto(env, name = 'Leif', pw = 'geheim123') {
 test('Registrieren, Abmelden, Anmelden', async () => {
   const env = umgebung();
   const t = await neuesKonto(env);
-  assert.deepEqual((await call(env, 'GET', '/api/ich', undefined, t)).j, { name: 'Leif', anzeige: 'Leif' });
+  assert.deepEqual((await call(env, 'GET', '/api/ich', undefined, t)).j, { name: 'Leif', anzeige: 'Leif', av: null });
   assert.equal((await call(env, 'POST', '/api/abmelden', {}, t)).status, 200);
   assert.equal((await call(env, 'GET', '/api/ich', undefined, t)).status, 401);
   // Name ohne Beachtung der Groß- und Kleinschreibung, falsches Passwort
@@ -222,8 +222,8 @@ test('Freunde: Anfrage, Annehmen, Liste mit Präsenz, Entfernen', async () => {
   assert.equal((await call(env, 'POST', '/api/freunde/anfrage', { name: 'BEN' }, a)).status, 200);
   assert.equal((await call(env, 'POST', '/api/freunde/anfrage', { name: 'Ben' }, a)).j.fehler, 'schon_angefragt');
   const la = (await call(env, 'GET', '/api/freunde', undefined, a)).j, lb = (await call(env, 'GET', '/api/freunde', undefined, b)).j;
-  assert.deepEqual([la.ausgehend, la.eingehend, la.freunde], [[{ name: 'Ben', anzeige: 'Ben' }], [], []]);
-  assert.deepEqual([lb.eingehend, lb.ausgehend, lb.freunde], [[{ name: 'Anna', anzeige: 'Anna' }], [], []]);
+  assert.deepEqual([la.ausgehend, la.eingehend, la.freunde], [[{ name: 'Ben', anzeige: 'Ben', av: null }], [], []]);
+  assert.deepEqual([lb.eingehend, lb.ausgehend, lb.freunde], [[{ name: 'Anna', anzeige: 'Anna', av: null }], [], []]);
   // Anna kann ihre eigene Anfrage nicht annehmen, Ben schon
   assert.equal((await call(env, 'POST', '/api/freunde/annehmen', { name: 'Ben' }, a)).status, 404);
   assert.equal((await call(env, 'POST', '/api/freunde/annehmen', { name: 'Anna' }, b)).status, 200);
@@ -303,7 +303,7 @@ test('Benutzername und Anzeigename: festlegen, ändern, Freunde suchen per @user
   assert.equal((await reg('emil', '<b>')).status, 400);
   assert.equal((await reg('Ben', 'Zweiter')).status, 409);   // @username bleibt eindeutig
   const a = r1.j.token, b = r2.j.token;
-  assert.deepEqual((await call(env, 'GET', '/api/ich', undefined, a)).j, { name: 'anna_k', anzeige: 'Anna die Große' });
+  assert.deepEqual((await call(env, 'GET', '/api/ich', undefined, a)).j, { name: 'anna_k', anzeige: 'Anna die Große', av: null });
   // Anmelden liefert den Anzeigenamen mit
   const an = await call(env, 'POST', '/api/anmelden', { name: 'anna_k', key: await schluessel('anna_k', 'geheim123') });
   assert.equal(an.j.anzeige, 'Anna die Große');
@@ -315,7 +315,7 @@ test('Benutzername und Anzeigename: festlegen, ändern, Freunde suchen per @user
   // Freunde: Anfrage per @username, Liste zeigt beides
   const fa = await call(env, 'POST', '/api/freunde/anfrage', { name: '@Anna_K' }, b);
   assert.deepEqual([fa.status, fa.j.name, fa.j.anzeige], [200, 'anna_k', 'Annchen']);
-  assert.deepEqual((await call(env, 'GET', '/api/freunde', undefined, a)).j.eingehend, [{ name: 'ben', anzeige: 'Anna die Große' }]);
+  assert.deepEqual((await call(env, 'GET', '/api/freunde', undefined, a)).j.eingehend, [{ name: 'ben', anzeige: 'Anna die Große', av: null }]);
   // Anzeigename ist keine Suchadresse
   assert.equal((await call(env, 'POST', '/api/freunde/anfrage', { name: 'Annchen' }, b)).status, 404);
   await call(env, 'POST', '/api/freunde/annehmen', { name: 'ben' }, a);
@@ -460,7 +460,7 @@ test('Benutzername ändern: nur mit Passwort, nur auf freie Namen, höchstens ei
   uhr = start + 5000;
   const ok = await aend('Mira_neu');
   assert.deepEqual([ok.status, ok.j.name, ok.j.anzeige], [200, 'Mira_neu', 'Mira_neu']);
-  assert.deepEqual((await call(env, 'GET', '/api/ich', undefined, t)).j, { name: 'Mira_neu', anzeige: 'Mira_neu' });
+  assert.deepEqual((await call(env, 'GET', '/api/ich', undefined, t)).j, { name: 'Mira_neu', anzeige: 'Mira_neu', av: null });
   assert.equal((await call(env, 'POST', '/api/anmelden', { name: 'Mira_neu', key: await schluessel('Mira_neu', 'geheim123') })).status, 200);
   assert.equal((await call(env, 'POST', '/api/anmelden', { name: 'Mira', key: await schluessel('Mira', 'geheim123') })).status, 401);
   // zweite Änderung innerhalb einer Woche: gesperrt, mit Wartezeit
@@ -487,4 +487,28 @@ test('Benutzername ändern: Freunde und Stände bleiben am Konto, nur Groß-/Kle
   const fr = (await call(env, 'GET', '/api/freunde', undefined, tb)).j;
   assert.deepEqual(fr.freunde.map((f) => f.name), ['ANNA']);
   uhr = start;
+});
+
+test('Profilbild: speichern, prüfen, Freunde sehen es, zurücksetzen', async () => {
+  const env = umgebung();
+  const a = await neuesKonto(env, 'Anna'), b = await neuesKonto(env, 'Ben');
+  const av = { i: 'lorc/dragon-head', f: '#FFFFFF', b: '#336699', z: 1.4, r: -30 };
+  assert.equal((await call(env, 'POST', '/api/avatar', { av }, a)).status, 200);
+  const ich = (await call(env, 'GET', '/api/ich', undefined, a)).j;
+  assert.deepEqual(ich.av, { i: 'lorc/dragon-head', f: '#ffffff', b: '#336699', z: 1.4, r: -30 });   // Farben werden klein geschrieben
+  // Ungültiges wird abgelehnt (Pfad, Farbe, Zoom, Drehung, falsche Form)
+  for (const schlecht of [{ ...av, i: '../x/y' }, { ...av, i: 'a/b/c' }, { ...av, f: 'red' }, { ...av, b: 'url(x)' }, { ...av, z: 9 }, { ...av, z: 0 }, { ...av, r: 999 }, { ...av, z: 'x' }, 'text', [1]]) {
+    assert.equal((await call(env, 'POST', '/api/avatar', { av: schlecht }, a)).status, 400, JSON.stringify(schlecht));
+  }
+  assert.equal((await call(env, 'POST', '/api/avatar', { av }, undefined)).status, 401);
+  // Freunde sehen das Bild in Liste und Profil, Fremde bekommen es nicht
+  await call(env, 'POST', '/api/freunde/anfrage', { name: 'Anna' }, b);
+  await call(env, 'POST', '/api/freunde/annehmen', { name: 'Ben' }, a);
+  const fl = (await call(env, 'GET', '/api/freunde', undefined, b)).j.freunde;
+  assert.equal(fl[0].av.i, 'lorc/dragon-head');
+  assert.equal((await call(env, 'GET', '/api/profil/Anna', undefined, b)).j.av.f, '#ffffff');
+  assert.equal((await call(env, 'GET', '/api/ich', undefined, b)).j.av, null);
+  // Zurücksetzen auf den Buchstaben
+  assert.equal((await call(env, 'POST', '/api/avatar', { av: null }, a)).status, 200);
+  assert.equal((await call(env, 'GET', '/api/ich', undefined, a)).j.av, null);
 });
