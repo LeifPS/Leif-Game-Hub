@@ -298,8 +298,21 @@
         "randbreite": 0.208
       },
       "screenshots": [
-        "screens/schleimmerge-wide.webp"
-      ]
+        "screens/shots/schleimmerge/1.webp",
+        "screens/shots/schleimmerge/2.webp",
+        "screens/shots/schleimmerge/3.webp",
+        "screens/shots/schleimmerge/4.webp",
+        "screens/shots/schleimmerge/5.webp",
+        "screens/shots/schleimmerge/6.webp",
+        "screens/shots/schleimmerge/7.webp",
+        "screens/shots/schleimmerge/8.webp",
+        "screens/shots/schleimmerge/9.webp",
+        "screens/shots/schleimmerge/10.webp"
+      ],
+      "trailer": {
+        "video": "screens/shots/schleimmerge/trailer.mp4",
+        "poster": "screens/shots/schleimmerge/trailer-poster.webp"
+      }
     },
     {
       "id": "zahlenwerk",
