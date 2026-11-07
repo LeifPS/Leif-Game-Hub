@@ -135,7 +135,7 @@
     bibliothek.innerHTML = s;
     if (window.LghKonto) LghKonto.abzeichen();
     var n = spielbar().length;
-    document.getElementById('side-fuss').innerHTML = n + (n === 1 ? ' Spiel' : ' Spiele') + ' spielbar · <a href="kontakt.html">Kontakt</a>';
+    document.getElementById('side-fuss').innerHTML = n + (n === 1 ? ' Spiel' : ' Spiele') + ' spielbar · <a href="kontakt.html">Kontakt</a> · <a href="credits.html">Quellen</a>';
   }
 
   function renderHome() {
