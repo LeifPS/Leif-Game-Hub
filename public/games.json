@@ -596,6 +596,7 @@
       "text": "Kein Ziel, keine Karte: Jemand hat dir ein Boot und eine Laterne dagelassen. Fahr durch den Nebel, finde Inseln, Siegel und Geheimnisse, manches zeigt sich nur bei Nacht.",
       "url": "https://claude.ai/artifact/KTgpNGHJ44FMWCYvA6kzHC",
       "repo": "LeifPS/nebelmeer",
+      "erschienen": "2026-11-07",
       "phase": "alpha",
       "farbe": "#1b3a52",
       "kategorien": [
@@ -626,6 +627,7 @@
       "text": "Fahre mit Boot und Laterne über ein riesiges Meer im Nebel, sammle, baue und tauche tiefer, zusammen mit anderen Spielern.",
       "url": "https://nebelmeer-tiefe.leifps.workers.dev",
       "repo": "LeifPS/nebelmeertiefe",
+      "erschienen": "2026-11-07",
       "farbe": "#1f4a6e",
       "kategorien": [
         "Abenteuer",
