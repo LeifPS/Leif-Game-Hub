@@ -62,6 +62,18 @@
   "offiziell": true,
   "version": "1.87.1.0"
  },
+ "nebelmeer": {
+  "anzahl": 0,
+  "datum": null,
+  "offiziell": false,
+  "version": "0.1.0.0"
+ },
+ "nebelmeertiefe": {
+  "anzahl": 0,
+  "datum": null,
+  "offiziell": false,
+  "version": "0.1.0.0"
+ },
  "papierhelden": {
   "anzahl": 11,
   "datum": "2026-11-07T14:10:39+01:00",

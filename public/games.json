@@ -592,17 +592,39 @@
     },
     {
       "id": "nebelmeer",
+      "name": "Nebelmeer",
+      "text": "Kein Ziel, keine Karte: Jemand hat dir ein Boot und eine Laterne dagelassen. Fahr durch den Nebel, finde Inseln, Siegel und Geheimnisse, manches zeigt sich nur bei Nacht.",
+      "url": "https://claude.ai/artifact/KTgpNGHJ44FMWCYvA6kzHC",
+      "repo": "LeifPS/nebelmeer",
+      "phase": "alpha",
+      "farbe": "#1b3a52",
+      "kategorien": [
+        "Abenteuer",
+        "Erkunden",
+        "Rätsel"
+      ],
+      "icon": "screens/nebelmeer-icon.webp",
+      "screenshots": [
+        "screens/shots/nebelmeer/1.webp",
+        "screens/shots/nebelmeer/2.webp",
+        "screens/shots/nebelmeer/3.webp",
+        "screens/shots/nebelmeer/4.webp"
+      ]
+    },
+    {
+      "id": "nebelmeertiefe",
       "name": "Nebelmeer: Tiefe",
       "text": "Fahre mit Boot und Laterne über ein riesiges Meer im Nebel, sammle, baue und tauche tiefer, zusammen mit anderen Spielern.",
       "url": "https://nebelmeer-tiefe.leifps.workers.dev",
+      "repo": "LeifPS/nebelmeertiefe",
       "farbe": "#1f4a6e",
       "kategorien": [
         "Abenteuer",
         "Sammeln",
         "Online"
       ],
-      "icon": "screens/nebelmeer-icon.webp",
-      "wallpaper": "screens/nebelmeer-wallpaper.webp",
+      "icon": "screens/nebelmeertiefe-icon.webp",
+      "wallpaper": "screens/nebelmeertiefe-wallpaper.webp",
       "schrift": {
         "familie": "cinzel",
         "versalien": true,
@@ -612,8 +634,8 @@
         "randbreite": 0.184
       },
       "screenshots": [
-        "screens/shots/nebelmeer/1.webp",
-        "screens/shots/nebelmeer/2.webp"
+        "screens/shots/nebelmeertiefe/1.webp",
+        "screens/shots/nebelmeertiefe/2.webp"
       ]
     }
   ]
