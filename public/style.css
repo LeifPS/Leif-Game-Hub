@@ -658,11 +658,11 @@ body.konto-offen { overflow: hidden; }
 .fr-at { margin-left: 8px; font-weight: 500; font-size: 13px; color: var(--muted); }
 
 /* ---------- Startbildschirm ---------- */
-#splash { position: fixed; inset: 0; z-index: 2147483000; background: #000; display: grid; place-items: center; --len: 6000; animation: sp-aus .4s ease-in 2.35s forwards; }
+#splash { position: fixed; inset: 0; z-index: 2147483000; background: #000; display: grid; place-items: center; --len: 6000; animation: sp-aus .55s ease-in 3.35s forwards; }
 #splash.schnell { transition: opacity .25s; opacity: 0; pointer-events: none; animation: none; }
 #splash .sp-logo { width: min(54vw, 40vh, 280px); min-width: 110px; height: auto; overflow: visible; filter: drop-shadow(0 0 10px rgba(255, 196, 80, .35)); }
-#splash #logo-linie { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: sp-zeichnen 1.75s cubic-bezier(.4, .05, .55, 1) .25s forwards; }
-#splash .sp-voll { opacity: 0; animation: sp-voll .3s ease-out 1.95s forwards; }
+#splash #logo-linie { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: sp-zeichnen 2.5s cubic-bezier(.4, .05, .55, 1) .25s forwards; }
+#splash .sp-voll { opacity: 0; animation: sp-voll .5s ease-out 2.6s forwards; }
 #splash.ohne-strich #logo-linie { stroke-dasharray: none; stroke-dashoffset: 0; animation: none; }
 @keyframes sp-zeichnen { to { stroke-dashoffset: 0; } }
 @keyframes sp-voll { to { opacity: 1; } }
