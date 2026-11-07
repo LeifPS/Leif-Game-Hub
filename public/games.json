@@ -468,8 +468,21 @@
         "randbreite": 0.194
       },
       "screenshots": [
-        "screens/cookierng2-wide.webp"
-      ]
+        "screens/shots/cookierng2/1.webp",
+        "screens/shots/cookierng2/2.webp",
+        "screens/shots/cookierng2/3.webp",
+        "screens/shots/cookierng2/4.webp",
+        "screens/shots/cookierng2/5.webp",
+        "screens/shots/cookierng2/6.webp",
+        "screens/shots/cookierng2/7.webp",
+        "screens/shots/cookierng2/8.webp",
+        "screens/shots/cookierng2/9.webp",
+        "screens/shots/cookierng2/10.webp"
+      ],
+      "trailer": {
+        "video": "screens/shots/cookierng2/trailer.mp4",
+        "poster": "screens/shots/cookierng2/trailer-poster.webp"
+      }
     },
     {
       "id": "cookierng",
