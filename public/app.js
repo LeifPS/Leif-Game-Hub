@@ -331,12 +331,28 @@
 
   /* ---------- Spieleansicht ---------- */
   // Der iframe wird jedes Mal komplett ersetzt, damit er keine eigenen Einträge im Browser-Verlauf anlegt.
-  function neuerRahmen(url, beiLaden) {
-    var n = rahmen.cloneNode(false);
+  /* Ein verlassenes Spiel bleibt noch kurz (versteckt) am Leben: Das Spiel meldet Änderungen mit bis zu 0,8 s Verzögerung an den Hub.
+     Würde der Rahmen sofort entfernt, ginge die letzte Änderung verloren. Die Meldungen der abgehenden Rahmen nimmt der Hub weiter an. */
+  var ABGANG_MS = 1300;
+  var abgehende = [];   // { fenster, id, url }
+  function neuerRahmen(url, beiLaden, sp) {
+    var alt = rahmen, n = alt.cloneNode(false);
     n.removeAttribute('src');
+    if (sp) { n.setAttribute('data-sid', sp.id); n.setAttribute('data-surl', sp.url); }
+    else { n.removeAttribute('data-sid'); n.removeAttribute('data-surl'); }
     if (beiLaden) n.addEventListener('load', beiLaden);
     if (url) n.src = url;
-    rahmen.parentNode.replaceChild(n, rahmen);
+    var sid = alt.getAttribute('data-sid'), fenster = alt.contentWindow;
+    if (sid && fenster && alt.getAttribute('src')) {
+      var eintrag = { fenster: fenster, id: sid, url: alt.getAttribute('data-surl') };
+      abgehende.push(eintrag);
+      alt.removeAttribute('id'); alt.style.display = 'none'; alt.setAttribute('aria-hidden', 'true'); alt.setAttribute('tabindex', '-1');
+      alt.parentNode.insertBefore(n, alt);
+      setTimeout(function () {
+        abgehende = abgehende.filter(function (x) { return x !== eintrag; });
+        if (alt.parentNode) alt.parentNode.removeChild(alt);
+      }, ABGANG_MS);
+    } else alt.parentNode.replaceChild(n, alt);
     rahmen = n;
   }
   /* Spielstand im Hub: Spiele laufen hier eingebettet, und manche Browser (vor allem die installierte App auf dem iPhone) behalten den Speicher
@@ -352,19 +368,37 @@
       return h.length < 1500000 ? '#lgh=' + h : '';
     } catch (e) { return ''; }
   }
+  function absender(e) {
+    if (aktuell && rahmen.contentWindow && e.source === rahmen.contentWindow) return { id: aktuell.id, url: aktuell.url, abgang: false };
+    for (var i = 0; i < abgehende.length; i++) if (e.source === abgehende[i].fenster) return { id: abgehende[i].id, url: abgehende[i].url, abgang: true };
+    return null;
+  }
+  // Die Anbindung ans Konto darf nie das Speichern oder Spielen stören
+  function ausKonto(f) { try { if (window.LghKonto) f(window.LghKonto); } catch (x) { } }
   window.addEventListener('message', function (e) {
     var d = e.data;
-    if (!aktuell || !d || d.spiel !== aktuell.id || (d.lgh !== 'stand' && d.lgh !== 'status')) return;
-    try { if (e.origin !== new URL(aktuell.url).origin) return; } catch (x) { return; }
-    if (!rahmen.contentWindow || e.source !== rahmen.contentWindow) return;
+    if (!d || (d.lgh !== 'stand' && d.lgh !== 'status')) return;
+    var q = absender(e);
+    if (!q || d.spiel !== q.id) return;
+    try { if (e.origin !== new URL(q.url).origin) return; } catch (x) { return; }
     // Optional: ein Spiel kann einen Raumcode melden ({lgh:'status', spiel, raum:'ABC123'}), den Freunde dann sehen
-    if (d.lgh === 'status') { if (window.LghKonto) LghKonto.raum(d.raum); return; }
+    if (d.lgh === 'status') { if (!q.abgang) ausKonto(function (k) { k.raum(d.raum); }); return; }
     if (!d.d || typeof d.d !== 'object' || !Object.keys(d.d).length) return;
-    try { localStorage.setItem(STAND + aktuell.id, JSON.stringify({ t: d.t || Date.now(), d: d.d })); } catch (x) { return; }
-    if (window.LghKonto) LghKonto.stand(aktuell.id, d.d);   // nur still mitschreiben, das Spiel hängt nicht davon ab
+    try { localStorage.setItem(STAND + q.id, JSON.stringify({ t: d.t || Date.now(), d: d.d })); } catch (x) { return; }
+    ausKonto(function (k) { k.stand(q.id, d.d); if (q.abgang) k.beimVerlassen(q.id); });   // nur still mitschreiben, das Spiel hängt nicht davon ab
     try { e.source.postMessage({ lgh: 'ok', t: Date.now() }, e.origin); } catch (x) { }
   });
   var startZaehler = 0;
+  // Startet den Rahmen mit dem Stand aus dem Hub. Läuft dasselbe Spiel gerade noch als abgehender Rahmen, wird gewartet, bis seine letzte Meldung da ist.
+  function ladeRahmen(sp, zaehler) {
+    var warte = abgehende.some(function (a) { return a.id === sp.id; }) ? ABGANG_MS + 150 : 0;
+    setTimeout(function () {
+      if (aktuell !== sp || zaehler !== startZaehler) return;
+      clearTimeout(hinweisTimer);
+      hinweisTimer = setTimeout(function () { hinweis.classList.add('sichtbar'); }, 7000);
+      neuerRahmen(sp.url + standHash(sp.id), function () { clearTimeout(hinweisTimer); hinweis.classList.remove('sichtbar'); }, sp);
+    }, warte);
+  }
   function starteSpiel(sp) {
     aktuell = sp;
     document.getElementById('spieltitel').textContent = sp.name;
@@ -373,19 +407,20 @@
     hinweis.classList.remove('sichtbar');
     clearTimeout(hinweisTimer);
     var zaehler = ++startZaehler;
-    // Ohne Anmeldung startet nichts (auch nicht über einen direkten Link)
-    (window.LghKonto ? LghKonto.bereit() : Promise.resolve()).then(function () {
+    // Ohne Anmeldung startet nichts (auch nicht über einen direkten Link). Ist das Konto-Modul nicht da, geht es trotzdem los.
+    var bereit; try { bereit = window.LghKonto ? window.LghKonto.bereit() : Promise.resolve(); } catch (x) { bereit = Promise.resolve(); }
+    bereit.then(function () {
       if (aktuell !== sp || zaehler !== startZaehler) return;
-      if (window.LghKonto) LghKonto.spiel(sp.id);
-      hinweisTimer = setTimeout(function () { hinweis.classList.add('sichtbar'); }, 7000);
-      neuerRahmen(sp.url + standHash(sp.id), function () { clearTimeout(hinweisTimer); hinweis.classList.remove('sichtbar'); });
+      ausKonto(function (k) { k.spiel(sp.id); });
+      ladeRahmen(sp, zaehler);
     });
   }
   function stoppeSpiel() {
     clearTimeout(hinweisTimer);
     hinweis.classList.remove('sichtbar');
+    var id = aktuell && aktuell.id;
     neuerRahmen(null);
-    if (window.LghKonto && aktuell) { LghKonto.beimVerlassen(aktuell.id); LghKonto.spiel(null); }
+    if (id) ausKonto(function (k) { k.beimVerlassen(id); k.spiel(null); });
     aktuell = null;
     startZaehler++;
     if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
@@ -568,7 +603,12 @@
   document.getElementById('zurueck').addEventListener('click', function () {
     if (aktuell) location.replace('#spiel/' + encodeURIComponent(aktuell.id)); else location.replace('#');
   });
-  document.getElementById('neuladen').addEventListener('click', function () { if (aktuell) neuerRahmen(aktuell.url + standHash(aktuell.id)); });
+  document.getElementById('neuladen').addEventListener('click', function () {
+    if (!aktuell) return;
+    var sp = aktuell, zaehler = ++startZaehler;
+    neuerRahmen(null);        // der laufende Rahmen meldet noch seinen letzten Stand
+    ladeRahmen(sp, zaehler);
+  });
   document.getElementById('vollbild').addEventListener('click', function () {
     var voll = document.fullscreenElement || document.webkitFullscreenElement;
     if (voll) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
