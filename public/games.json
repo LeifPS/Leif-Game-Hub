@@ -601,7 +601,21 @@
       "kategorien": [
         "Karten",
         "Strategie"
-      ]
+      ],
+      "icon": "screens/svvonline-icon.webp"
+    },
+    {
+      "id": "nebelmeer",
+      "name": "Nebelmeer Tiefe",
+      "text": "Fahre mit Boot und Laterne über ein riesiges Meer im Nebel, sammle, baue und tauche tiefer, zusammen mit anderen Spielern.",
+      "url": "https://nebelmeer-tiefe.leifps.workers.dev",
+      "farbe": "#1f4a6e",
+      "kategorien": [
+        "Abenteuer",
+        "Sammeln",
+        "Online"
+      ],
+      "icon": "screens/nebelmeer-icon.webp"
     }
   ]
 }

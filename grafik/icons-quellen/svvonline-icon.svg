@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#14220a"/><stop offset="1" stop-color="#2d3f10"/></linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7dc8a"/><stop offset=".55" stop-color="#d9a441"/><stop offset="1" stop-color="#a8691f"/></linearGradient>
+    <linearGradient id="karte" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a2a14"/><stop offset="1" stop-color="#1f160a"/></linearGradient>
+    <radialGradient id="schein" cx="256" cy="250" r="260" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#e8b64f" stop-opacity=".35"/><stop offset="1" stop-color="#e8b64f" stop-opacity="0"/></radialGradient>
+    <filter id="schatten" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity=".55"/></filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <rect width="512" height="512" fill="url(#schein)"/>
+  <!-- hintere Karten -->
+  <g filter="url(#schatten)">
+    <g transform="rotate(-16 256 270)"><rect x="132" y="92" width="170" height="250" rx="18" fill="#2a3a12" stroke="url(#gold)" stroke-width="7"/><rect x="150" y="110" width="134" height="214" rx="10" fill="none" stroke="#d9a441" stroke-opacity=".35" stroke-width="3"/></g>
+    <g transform="rotate(15 256 270)"><rect x="212" y="92" width="170" height="250" rx="18" fill="#2a3a12" stroke="url(#gold)" stroke-width="7"/><rect x="230" y="110" width="134" height="214" rx="10" fill="none" stroke="#d9a441" stroke-opacity=".35" stroke-width="3"/></g>
+  </g>
+  <!-- vordere Karte -->
+  <g filter="url(#schatten)">
+    <rect x="156" y="112" width="200" height="296" rx="20" fill="url(#karte)" stroke="url(#gold)" stroke-width="8"/>
+    <rect x="174" y="130" width="164" height="260" rx="11" fill="none" stroke="#d9a441" stroke-opacity=".4" stroke-width="3"/>
+    <!-- Kosten -->
+    <circle cx="186" cy="160" r="23" fill="#2d5fa8" stroke="url(#gold)" stroke-width="5"/>
+    <path d="M186 146l7 11-7 3-7-3z" fill="#e8f2ff"/><path d="M186 175l-7-12 7 3 7-3z" fill="#bcd6f7"/>
+    <!-- Krone -->
+    <path d="M206 276l10-52 40 32 40-32 10 52z" fill="url(#gold)" stroke="#7a4a12" stroke-width="4" stroke-linejoin="round"/>
+    <rect x="206" y="276" width="100" height="18" rx="4" fill="url(#gold)" stroke="#7a4a12" stroke-width="4"/>
+    <circle cx="216" cy="220" r="7" fill="#f7dc8a" stroke="#7a4a12" stroke-width="3"/><circle cx="256" cy="204" r="8" fill="#f7dc8a" stroke="#7a4a12" stroke-width="3"/><circle cx="296" cy="220" r="7" fill="#f7dc8a" stroke="#7a4a12" stroke-width="3"/>
+    <circle cx="256" cy="268" r="6" fill="#c8362f" stroke="#7a1a16" stroke-width="2"/>
+    <!-- Angriff und Leben -->
+    <circle cx="190" cy="372" r="24" fill="#b8322c" stroke="url(#gold)" stroke-width="5"/>
+    <path d="M190 358v22M181 369h18" stroke="#fff1e8" stroke-width="5" stroke-linecap="round" transform="rotate(45 190 369)"/>
+    <circle cx="322" cy="372" r="24" fill="#2f8a47" stroke="url(#gold)" stroke-width="5"/>
+    <path d="M322 384c-14-9-14-23-6-23 4 0 6 3 6 5 0-2 2-5 6-5 8 0 8 14-6 23z" fill="#eaffe9"/>
+  </g>
+</svg>
