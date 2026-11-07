@@ -544,7 +544,7 @@
   function spielName(id) { var sp = spiele.filter(function (x) { return x.id === id; })[0]; return sp ? sp.name : id; }
   function anz(f) { return f.anzeige || f.name; }
   function frItem(av, f, status, akt) {
-    return '<div class="fr-item"><a class="fr-hl" href="#profil/' + encodeURIComponent(f.name) + '" aria-label="Profil von ' + esc(anz(f)) + '">' + LghKonto.avatar('avatar', f.name, anz(f), f.av) +
+    return '<div class="fr-item"><a class="fr-hl" href="#profil/' + encodeURIComponent(f.name) + '"' + (f.spiel ? ' data-fr="' + esc(f.name) + '"' : '') + ' aria-label="Profil von ' + esc(anz(f)) + '">' + LghKonto.avatar('avatar', f.name, anz(f), f.av) +
       '<div class="fr-text"><div class="fr-name">' + esc(anz(f)) + '<span class="fr-at">@' + esc(f.name) + '</span></div><div class="fr-status">' + status + '</div></div></a><div class="fr-akt">' + akt + '</div></div>';
   }
   function zeichneFreunde(z, d) {
@@ -620,12 +620,54 @@
         if (spielbar().some(function (s) { return s.id === f.spiel; })) ziel = '#spiel/' + encodeURIComponent(f.spiel);
         status = esc(spielName(f.spiel));
       } else if (f.online) status = 'Im Hub';
-      h += '<a class="fr-karte' + (f.spiel || f.online ? '' : ' aus') + '" href="' + ziel + '" title="' + n(anz(f)) + ' (@' + n(f.name) + ')' + (f.spiel ? ' spielt ' + n(spielName(f.spiel)) : f.online ? ' ist im Hub' : '') + '">' +
+      h += '<a class="fr-karte' + (f.spiel || f.online ? '' : ' aus') + '" href="' + ziel + '"' + (f.spiel ? ' data-fr="' + n(f.name) + '"' : '') + ' title="' + n(anz(f)) + ' (@' + n(f.name) + ')' + (f.spiel ? ' spielt ' + n(spielName(f.spiel)) : f.online ? ' ist im Hub' : '') + '">' +
         LghKonto.avatar('fr-kreis', f.name, anz(f), f.av, f.spiel || f.online ? '<span class="fr-punkt"></span>' : '') +
         '<span class="fr-n">' + n(anz(f)) + '</span><span class="fr-s">' + status + '</span></a>';
     });
     z.innerHTML = h + '</div>';
   }
+  /* Freund im Spiel angeklickt: Profil ansehen, beitreten oder das Spiel ansehen */
+  function frAuswahl(f) {
+    var offen = spielbar().some(function (s) { return s.id === f.spiel; }), sid = encodeURIComponent(f.spiel);
+    var pfeil = '<svg class="pfeil" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6.5L15 12l-5.5 5.5"/></svg>';
+    var zeile = function (a, t, h) { return '<button type="button" class="dlg-zeile" data-fa="' + a + '"><span class="dlg-ztext"><b>' + t + '</b>' + (h ? '<small>' + h + '</small>' : '') + '</span>' + pfeil + '</button>'; };
+    var hinter = document.createElement('div');
+    hinter.className = 'dlg-hinter';
+    hinter.innerHTML = '<div class="dlg" role="dialog" aria-modal="true"><div class="dlg-kopf">' + LghKonto.avatar('avatar gross', f.name, anz(f), f.av) +
+      '<div class="dlg-kopftext"><div class="dlg-titel">' + esc(anz(f)) + '</div><div class="dlg-sub">Spielt ' + esc(spielName(f.spiel)) + (f.raum ? ' · Raum ' + esc(f.raum) : '') + '</div></div>' +
+      '<button type="button" class="dlg-x" data-zu aria-label="Schließen"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
+      '<div class="dlg-gruppe" style="margin-top:14px">' + zeile('profil', 'Profil ansehen') +
+      (offen ? zeile('beitreten', 'Beitreten', f.raum ? 'Raumcode ' + esc(f.raum) + ' wird kopiert' : 'Spiel öffnen') : '') +
+      zeile('spiel', 'Spiel ansehen', esc(spielName(f.spiel))) + '</div></div>';
+    function zu() { hinter.remove(); document.removeEventListener('keydown', taste); }
+    function taste(e) { if (e.key === 'Escape') zu(); }
+    hinter.addEventListener('click', function (e) {
+      if (e.target === hinter || (e.target.closest && e.target.closest('[data-zu]'))) return zu();
+      var b = e.target.closest ? e.target.closest('[data-fa]') : null;
+      if (!b) return;
+      var a = b.getAttribute('data-fa');
+      zu();
+      if (a === 'profil') location.hash = '#profil/' + encodeURIComponent(f.name);
+      else if (a === 'spiel') location.hash = '#spiel/' + sid;
+      else if (a === 'beitreten') {
+        if (f.raum) { try { navigator.clipboard.writeText(f.raum); } catch (x) { } }
+        location.hash = '#spiel/' + sid + '/play';
+      }
+    });
+    document.addEventListener('keydown', taste);
+    document.body.appendChild(hinter);
+    var erst = hinter.querySelector('[data-fa]'); if (erst) erst.focus();
+  }
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest ? e.target.closest('a[data-fr]') : null;
+    if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+    var nm = a.getAttribute('data-fr');
+    var d = [leisteDaten, freundeDaten].filter(Boolean), f = null;
+    d.forEach(function (x) { x.freunde.forEach(function (y) { if (y.name === nm && y.spiel) f = y; }); });
+    if (!f) return;   // Freund spielt nicht mehr: normaler Link
+    e.preventDefault();
+    frAuswahl(f);
+  });
   function ladeLeiste() {
     if (document.hidden || !window.LghKonto || !LghKonto.angemeldet()) return;
     if (body.getAttribute('data-view') !== 'home') return;
