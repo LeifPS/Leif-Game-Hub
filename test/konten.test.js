@@ -244,7 +244,9 @@ test('Freunde: Anfrage, Annehmen, Liste mit Präsenz, Entfernen', async () => {
   // Abmelden vom Hub setzt sofort auf offline
   await call(env, 'POST', '/api/praesenz', { spiel: 'zahlenwerk' }, b);
   await call(env, 'POST', '/api/praesenz', { offline: true }, b);
-  assert.equal((await call(env, 'GET', '/api/freunde', undefined, a)).j.freunde[0].online, false);
+  f = (await call(env, 'GET', '/api/freunde', undefined, a)).j.freunde[0];
+  assert.equal(f.online, false);
+  assert.ok(f.zuletzt > 0, 'Abmelden darf "zuletzt online" nicht löschen');
   // Entfernen
   assert.equal((await call(env, 'POST', '/api/freunde/entfernen', { name: 'Ben' }, a)).status, 200);
   assert.deepEqual((await call(env, 'GET', '/api/freunde', undefined, b)).j.freunde, []);

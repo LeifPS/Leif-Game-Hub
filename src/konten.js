@@ -300,7 +300,8 @@ async function praesenz(request, db, s, jetzt) {
   const { b } = await lies(request);
   if (!b) return fehler(400, 'eingabe');
   let spiel = null, raum = null, seen = jetzt;
-  if (b.offline) seen = 0;
+  // Abmelden: sofort offline, aber der Zeitpunkt bleibt als "zuletzt online" erhalten (knapp außerhalb des Online-Fensters)
+  if (b.offline) seen = jetzt - ONLINE_SEKUNDEN;
   else {
     if (b.spiel != null) { if (typeof b.spiel !== 'string' || !SPIEL_RE.test(b.spiel)) return fehler(400, 'spiel'); spiel = b.spiel; }
     if (b.raum != null) {
