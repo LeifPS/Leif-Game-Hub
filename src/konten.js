@@ -34,6 +34,12 @@ export const VERSIONEN = 6;            // so viele Stände pro Spiel bleiben hö
 export const MAX_ZEILEN = 40;         // so viele Stände pro Spiel höchstens (inklusive Tagesstände und geschützter Stände)
 export const TAGE = 14;               // so viele Kalendertage zurück bleibt je Tag der letzte Stand erhalten
 const SCHRUMPF = 0.4, SCHRUMPF_AB = 3000;   // ein Stand über 3000 Byte ist geschützt, wenn danach einer unter 40 % seiner Größe kam
+// Solange die Spielstände nicht zwischen Geräten abgeglichen werden, gilt ein Konto nur auf dem Gerät, auf dem es erstellt wurde
+// (sonst loggt man sich woanders ein und hat dort keine Stände). Zum Aufheben später auf false setzen.
+// Ein einzelnes Konto wieder freigeben: node tools/lgh-geraet.mjs <Name>
+export const EIN_GERAET = true;
+const GID_RE = /^[0-9a-f]{32}$/;
+const gidVon = (v) => (typeof v === 'string' && GID_RE.test(v) ? v : null);
 export const ABSTAND = 1800;           // ältere Stände werden höchstens alle 30 Minuten festgehalten, sonst gäbe es nach wenigen Minuten Spielzeit nur noch ganz junge
 const SITZUNG_TAGE = 400;
 
@@ -50,6 +56,10 @@ function schemaSichern(db) {
     const spalten = await db.prepare('PRAGMA table_info(users)').all();
     if (!spalten.results.some((c) => c.name === 'display')) {
       try { await db.prepare('ALTER TABLE users ADD COLUMN display TEXT').run(); } catch (e) { /* parallel schon angelegt */ }
+    }
+    // Kennung des Geräts, auf dem das Konto erstellt wurde (solange EIN_GERAET gilt)
+    if (!spalten.results.some((c) => c.name === 'device_id')) {
+      try { await db.prepare('ALTER TABLE users ADD COLUMN device_id TEXT').run(); } catch (e) { /* parallel schon angelegt */ }
     }
   })().catch((e) => { schemaFertig.delete(db); throw e; }));
   return schemaFertig.get(db);
@@ -84,10 +94,15 @@ async function sitzung(request, db, jetzt) {
   const m = /^Bearer ([0-9a-f]{64})$/.exec(request.headers.get('authorization') || '');
   if (!m) return null;
   const th = await sha256(m[1]);
-  const s = await db.prepare('SELECT s.user_id AS id, s.last AS last, u.name AS name, u.display AS display FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?').bind(th).first();
+  const s = await db.prepare('SELECT s.user_id AS id, s.last AS last, u.name AS name, u.display AS display, u.device_id AS gid FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?').bind(th).first();
   if (!s) return null;
   if (jetzt - s.last > SITZUNG_TAGE * 86400) { await db.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(th).run(); return null; }
   if (jetzt - s.last > 3600) await db.prepare('UPDATE sessions SET last = ? WHERE token_hash = ?').bind(jetzt, th).run();
+  // Konten ohne Gerätekennung (vor dieser Funktion erstellt) werden an das Gerät gebunden, das sich als erstes meldet. Bestehende Anmeldungen bleiben.
+  if (EIN_GERAET && !s.gid) {
+    const g = gidVon(request.headers.get('x-geraet'));
+    if (g) await db.prepare('UPDATE users SET device_id = ? WHERE id = ? AND device_id IS NULL').bind(g, s.id).run();
+  }
   return { id: s.id, name: s.name, anzeige: s.display || s.name, th };
 }
 async function neueSitzung(db, userId, geraet, jetzt) {
@@ -116,7 +131,7 @@ async function registrieren(request, db, jetzt) {
   const hash = await sha256(salt + ':' + b.key);
   let id;
   try {
-    const r = await db.prepare('INSERT INTO users (name, name_lc, salt, hash, created, display) VALUES (?, ?, ?, ?, ?, ?)').bind(name, lc, salt, hash, jetzt, az.wert).run();
+    const r = await db.prepare('INSERT INTO users (name, name_lc, salt, hash, created, display, device_id) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(name, lc, salt, hash, jetzt, az.wert, gidVon(b.gid)).run();
     id = r.meta && r.meta.last_row_id;
     if (!id) id = (await db.prepare('SELECT id FROM users WHERE name_lc = ?').bind(lc).first()).id;
   } catch (e) { return fehler(409, 'name_vergeben'); }
@@ -129,7 +144,7 @@ async function pruefeSchluessel(db, userName, key, jetzt, request) {
   const kn = 'l:' + lc, ki = 'i:' + ip(request);
   const warte = Math.max(await gesperrt(db, kn, jetzt), await gesperrt(db, ki, jetzt));
   if (warte) return { fehler: fehler(429, 'zu_viele', { warte }) };
-  const u = await db.prepare('SELECT id, name, display, salt, hash FROM users WHERE name_lc = ?').bind(lc).first();
+  const u = await db.prepare('SELECT id, name, display, salt, hash, device_id FROM users WHERE name_lc = ?').bind(lc).first();
   // Auch bei unbekanntem Namen gleich viel rechnen, damit man nicht erkennt, welche Namen es gibt
   const h = await sha256((u ? u.salt : 'x'.repeat(32)) + ':' + key);
   if (!u || !gleich(h, u.hash)) {
@@ -146,6 +161,12 @@ async function anmelden(request, db, jetzt) {
   if (!b || typeof b.name !== 'string' || typeof b.key !== 'string' || !KEY_RE.test(b.key)) return fehler(400, 'eingabe');
   const r = await pruefeSchluessel(db, b.name.normalize('NFC'), b.key, jetzt, request);
   if (r.fehler) return r.fehler;
+  if (EIN_GERAET) {
+    // Das Passwort stimmt: Das Konto gehört nur zu dem Gerät, auf dem es erstellt wurde
+    const g = gidVon(b.gid);
+    if (r.user.device_id && g !== r.user.device_id) return fehler(403, 'anderes_geraet');
+    if (!r.user.device_id && g) await db.prepare('UPDATE users SET device_id = ? WHERE id = ? AND device_id IS NULL').bind(g, r.user.id).run();
+  }
   const token = await neueSitzung(db, r.user.id, geraetName(b.geraet), jetzt);
   return antwort({ token, name: r.user.name, anzeige: r.user.display || r.user.name });
 }

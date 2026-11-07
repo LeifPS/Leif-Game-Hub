@@ -32,6 +32,20 @@
     return 'Browser';
   }
 
+  // Zufällige Kennung dieses Geräts (Browser-Speicher). Ein Konto gilt vorerst nur auf dem Gerät, auf dem es erstellt wurde (siehe src/konten.js, EIN_GERAET).
+  var gidMerk = null;
+  function geraetId() {
+    if (gidMerk) return gidMerk;
+    var g = null;
+    try { g = localStorage.getItem('lgh.geraet'); } catch (e) { }
+    if (!g || !/^[0-9a-f]{32}$/.test(g)) {
+      try { g = hex(crypto.getRandomValues(new Uint8Array(16))); } catch (e) { g = null; }
+      if (g) { try { localStorage.setItem('lgh.geraet', g); } catch (e2) { } }
+    }
+    gidMerk = g;
+    return g;
+  }
+
   // Schlüssel aus Name und Passwort (PBKDF2). Nur er geht an den Server, nie das Passwort selbst (siehe src/konten.js).
   function schluessel(name, pw) {
     var enc = new TextEncoder();
@@ -45,6 +59,7 @@
     opt = opt || {};
     var kopf = { 'content-type': 'application/json' };
     if (konto && !opt.ohneToken) kopf.authorization = 'Bearer ' + konto.token;
+    var gid = geraetId(); if (gid) kopf['x-geraet'] = gid;
     var abbruch = typeof AbortController === 'function' ? new AbortController() : null;
     var timer = abbruch ? setTimeout(function () { abbruch.abort(); }, opt.timeout || 12000) : null;
     return fetch(pfad, {
@@ -65,6 +80,7 @@
     name_vergeben: 'Diesen Benutzernamen gibt es schon. Nimm einen anderen.',
     anzeige: 'Der Anzeigename darf höchstens 24 Zeichen haben und keine Sonderzeichen wie < oder > enthalten.',
     login: 'Benutzername oder Passwort stimmt nicht.',
+    anderes_geraet: 'Dieses Konto wurde auf einem anderen Gerät erstellt. Anmelden auf mehreren Geräten geht noch nicht, weil die Spielstände noch nicht zwischen Geräten abgeglichen werden. Das kommt später. Erstelle hier ein neues Konto oder frag Leif, wenn du das Gerät wechseln musst.',
     netz: 'Keine Verbindung zum Server. Bitte später noch einmal versuchen.',
     eingabe: 'Bitte alle Felder ausfüllen.',
     schluessel: 'Das Passwort konnte nicht verarbeitet werden.',
@@ -107,7 +123,7 @@
       '<div class="konto-karte">' +
       '<svg class="brand-mark" aria-hidden="true"><use href="#logo"/></svg>' +
       '<h1>Leif Game Hub</h1>' +
-      '<p class="konto-sub">Mit einem Konto spielst du auf jedem Gerät als du selbst und siehst, was deine Freunde gerade spielen.</p>' +
+      '<p class="konto-sub">Mit einem Konto siehst du, was deine Freunde gerade spielen, und kannst Freunde hinzufügen.</p>' +
       '<div class="konto-tabs" role="tablist"><button type="button" class="aktiv" data-m="an" role="tab">Anmelden</button><button type="button" data-m="neu" role="tab">Konto erstellen</button></div>' +
       '<form id="konto-form" novalidate>' +
       '<label>Benutzername<input name="username" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="20" placeholder="@benutzername" required></label>' +
@@ -117,6 +133,7 @@
       '<label>Passwort<input name="password" type="password" autocomplete="current-password" required></label>' +
       '<label class="nur-neu">Passwort wiederholen<input name="password2" type="password" autocomplete="new-password"></label>' +
       '<div class="konto-regel nur-neu">Mindestens 6 Zeichen. Merk es dir gut: Es gibt keine E-Mail zum Zurücksetzen.</div>' +
+      '<div class="konto-regel nur-neu"><b>Wichtig:</b> Ein Konto gilt vorerst nur auf diesem Gerät. Anmelden auf mehreren Geräten kommt später, wenn die Spielstände zwischen Geräten abgeglichen werden.</div>' +
       '<div class="konto-fehler" id="konto-fehler" role="alert"></div>' +
       '<button class="btn btn-primary konto-los" type="submit">Anmelden</button>' +
       '</form>' +
@@ -150,7 +167,7 @@
       }
       los.disabled = true; los.textContent = 'Einen Moment …';
       schluessel(name, pw).then(function (key) {
-        return api('POST', modus === 'neu' ? '/api/registrieren' : '/api/anmelden', { name: name, anzeige: anz || undefined, key: key, geraet: geraet() }, { ohneToken: true });
+        return api('POST', modus === 'neu' ? '/api/registrieren' : '/api/anmelden', { name: name, anzeige: anz || undefined, key: key, geraet: geraet(), gid: geraetId() || undefined }, { ohneToken: true });
       }).then(function (res) {
         if (!res.ok) { fehler.textContent = fehlerText(res); los.disabled = false; los.textContent = modus === 'neu' ? 'Konto erstellen' : 'Anmelden'; return; }
         speichereKonto({ name: res.j.name, anzeige: res.j.anzeige || res.j.name, token: res.j.token });

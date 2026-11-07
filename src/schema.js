@@ -8,7 +8,8 @@ export const SCHEMA = [
     salt TEXT NOT NULL,
     hash TEXT NOT NULL,
     created INTEGER NOT NULL,
-    display TEXT
+    display TEXT,
+    device_id TEXT
   )`,
   `CREATE TABLE IF NOT EXISTS sessions (
     token_hash TEXT PRIMARY KEY,

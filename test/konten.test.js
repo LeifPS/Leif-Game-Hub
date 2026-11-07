@@ -405,3 +405,41 @@ test('Spielzeit und Profil: eigene Zeiten, Freunde sehen sie, Fremde nicht', asy
   assert.equal((await call(env, 'GET', '/api/profil/unbekannt', undefined, a)).status, 404);
   uhr = start;
 });
+
+test('Ein Konto gilt nur auf dem Gerät, auf dem es erstellt wurde', async () => {
+  const env = umgebung();
+  const G1 = 'a'.repeat(32), G2 = 'b'.repeat(32);
+  const key = await schluessel('Nele', 'geheim123');
+  const reg = await call(env, 'POST', '/api/registrieren', { name: 'Nele', key, geraet: 'iPhone', gid: G1 });
+  assert.equal(reg.status, 200);
+  // gleiches Gerät: ok
+  assert.equal((await call(env, 'POST', '/api/anmelden', { name: 'Nele', key, gid: G1 })).status, 200);
+  // anderes Gerät oder keine Kennung: abgelehnt, mit klarer Meldung
+  for (const gid of [G2, undefined, 'kaputt']) {
+    const r = await call(env, 'POST', '/api/anmelden', { name: 'Nele', key, gid });
+    assert.deepEqual([r.status, r.j.fehler], [403, 'anderes_geraet']);
+  }
+  // falsches Passwort verrät nichts über das Gerät
+  const falsch = await call(env, 'POST', '/api/anmelden', { name: 'Nele', key: await schluessel('Nele', 'falsch'), gid: G2 });
+  assert.deepEqual([falsch.status, falsch.j.fehler], [401, 'login']);
+  // Freigabe durch den Betreiber (tools/lgh-geraet.mjs): danach bindet sich das nächste Gerät
+  env.DB.raw.prepare("UPDATE users SET device_id = NULL WHERE name_lc = 'nele'").run();
+  assert.equal((await call(env, 'POST', '/api/anmelden', { name: 'Nele', key, gid: G2 })).status, 200);
+  assert.equal((await call(env, 'POST', '/api/anmelden', { name: 'Nele', key, gid: G1 })).j.fehler, 'anderes_geraet');
+});
+
+test('Ältere Konten ohne Gerätekennung: erstes meldendes Gerät wird gebunden, bestehende Anmeldungen bleiben', async () => {
+  const env = umgebung();
+  const G1 = 'c'.repeat(32), G2 = 'd'.repeat(32);
+  const t1 = await neuesKonto(env, 'Alt');     // ohne gid, wie vor der Änderung
+  const t2 = (await call(env, 'POST', '/api/anmelden', { name: 'Alt', key: await schluessel('Alt', 'geheim123') })).j.token;
+  assert.ok(t2);
+  // Das Gerät mit t1 meldet sich mit Kennung: das Konto wird gebunden
+  assert.equal((await call(env, 'GET', '/api/ich', undefined, t1, { 'x-geraet': G1 })).status, 200);
+  assert.equal(env.DB.raw.prepare("SELECT device_id AS d FROM users WHERE name_lc='alt'").get().d, G1);
+  // eine bereits bestehende Anmeldung auf einem zweiten Gerät läuft weiter
+  assert.equal((await call(env, 'GET', '/api/ich', undefined, t2, { 'x-geraet': G2 })).status, 200);
+  assert.equal(env.DB.raw.prepare("SELECT device_id AS d FROM users WHERE name_lc='alt'").get().d, G1);
+  // aber ein neues Anmelden auf dem zweiten Gerät geht nicht mehr
+  assert.equal((await call(env, 'POST', '/api/anmelden', { name: 'Alt', key: await schluessel('Alt', 'geheim123'), gid: G2 })).j.fehler, 'anderes_geraet');
+});
