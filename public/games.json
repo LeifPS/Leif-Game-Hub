@@ -589,6 +589,19 @@
       "screenshots": [
         "screens/chessrng-wide.webp"
       ]
+    },
+    {
+      "id": "svvonline",
+      "name": "SVV Online",
+      "text": "Strategisches Kartenspiel mit Decks wie dem Königreich: Spiele Karten mit Kosten, Angriff und Leben und nutze ihre Fähigkeiten.",
+      "url": "https://svv-online.de",
+      "farbe": "#b5733a",
+      "phase": "alpha",
+      "erschienen": "2026-05-07",
+      "kategorien": [
+        "Karten",
+        "Strategie"
+      ]
     }
   ]
 }

@@ -97,6 +97,7 @@
     s += detail ? '<a class="tile-link" href="#spiel/' + id + '" aria-label="' + esc(sp.name) + '">' : '<div class="tile-link">';
     s += '<div class="tile-art">' + art(sp, 400, 400);
     if (!offen) s += '<span class="badge">' + (sp.wartung ? 'Wartung' : 'Bald') + '</span>';
+    else if (!v && sp.phase === 'alpha') s += '<span class="ver-tag">Alpha</span>';
     else if (v) s += '<span class="ver-tag">' + (v.offiziell ? '' : phaseName(sp, v) + ' ') + esc(vz(v.version)) + '</span>';
     s += '</div>';
     s += '<div class="tile-text"><strong>' + esc(sp.name) + '</strong><span>' + esc(kategorien(sp).join(', ')) + '</span></div>';
@@ -328,11 +329,13 @@
     var text = (sp.beschreibung && sp.beschreibung !== sp.text) ? '<section class="shop-text"><h2>Über dieses Spiel</h2><p>' + esc(sp.beschreibung) + '</p></section>' : '';
     h += '<div class="shop-oben' + (gal ? '' : ' ohne-galerie') + '">' + (gal ? '<div class="shop-haupt">' + gal + text + '</div>' : '');
     h += '<aside class="shop-info"><div class="shop-kopf"><div class="shop-icon">' + art(sp, 300, 300) + '</div><p class="kurz">' + esc(sp.text) + '</p></div><dl class="fakten">';
-    if (v && v.erste) h += faktZeile('Erschienen', esc(datumText(v.erste)));
+    var erschienen = v && v.erste ? v.erste : (sp.erschienen ? sp.erschienen + 'T12:00:00+02:00' : null);   // ohne Repo: Datum von Hand (games.json: "erschienen")
+    if (erschienen) h += faktZeile('Erschienen', esc(datumText(erschienen)));
     if (sp.offiziell_ab) {
       var vorbei = sp.offiziell_ab <= new Date().toISOString().slice(0, 10);
       h += faktZeile(vorbei ? 'Offiziell seit' : 'Offiziell ab', esc(datumText(sp.offiziell_ab + 'T12:00:00+02:00')));
     }
+    if (!v && sp.phase) h += faktZeile('Status', '<span class="ver-pill' + (sp.phase === 'alpha' ? ' alpha' : '') + '">' + phaseName(sp, null) + '</span>');
     if (v) h += faktZeile('Status', '<span class="ver-pill' + (v.offiziell ? ' offiziell' : sp.phase === 'alpha' ? ' alpha' : '') + '">' + phaseName(sp, v) + '</span> Version ' + esc(vz(v.version)));
     if (v && v.datum) h += faktZeile('Zuletzt aktualisiert', esc(datumText(v.datum)));
     h += faktZeile('Entwickler', 'Leif (LeifPS)');

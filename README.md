@@ -26,6 +26,7 @@ Pflicht sind `id` (kurz, klein, ohne Leerzeichen), `name`, `text`, `url` und `fa
 | `repo` | GitHub-Repo (`Besitzer/name`); ohne Repo gibt es keine Version und keinen Update-Log |
 | `privat: true` | Repo ist privat: Commit-Links werden im Hub nicht angezeigt (die Commit-Texte selbst sind trotzdem öffentlich sichtbar!) |
 | `offiziell_ab` | Datum (`2026-12-01`): der erste Commit ab diesem Tag wird Version `1.0.0.0` (Offiziell statt Beta) |
+| `erschienen` | Datum (`2026-05-07`) für „Erschienen“ auf der Spielseite, wenn es kein `repo` gibt (mit Repo kommt das Datum vom ersten Commit) |
 | `phase: "alpha"` | Spiel gilt als Alpha (Kachel „Alpha 0.x“, roter Status auf der Spielseite); ohne Angabe Beta, ab `1.0.0.0` Offiziell |
 | `kategorien` | Filter-Chips und Suche |
 | `featured: true` | Spiel steht groß oben auf der Startseite |
