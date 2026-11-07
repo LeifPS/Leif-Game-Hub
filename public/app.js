@@ -381,8 +381,15 @@
   var abgehende = [];   // { fenster, id, url }
   function neuerRahmen(url, beiLaden, sp, uebergabe) {
     var alt = rahmen, n = alt.cloneNode(false);
-    n._uebergabe = uebergabe ? { json: uebergabe, fertig: false } : null;   // große Stände gehen per postMessage ins Spiel (siehe standHash)
+    // Große Stände gehen nicht durch die Adresse (siehe standUebergabe): entweder als window.name des Rahmens oder per postMessage ins Spiel
+    n._uebergabe = uebergabe && uebergabe.json ? { json: uebergabe.json, art: uebergabe.art, fertig: false } : null;
     n.removeAttribute('src');
+    if (n._uebergabe && n._uebergabe.art === 'name') n.name = 'lgh:' + n._uebergabe.json; else n.removeAttribute('name');
+    if (n._uebergabe) {
+      // Meldet das Spiel nicht binnen 6 Sekunden nach dem Laden, dass es den Stand übernommen hat (z. B. ältere Spielversion), sagt der Hub das.
+      var u = n._uebergabe;
+      n.addEventListener('load', function () { setTimeout(function () { if (!u.fertig && n.parentNode && aktuell && rahmen === n) zeigeStandHinweis(); }, 6000); });
+    }
     if (sp) { n.setAttribute('data-sid', sp.id); n.setAttribute('data-surl', sp.url); }
     else { n.removeAttribute('data-sid'); n.removeAttribute('data-surl'); }
     if (beiLaden) n.addEventListener('load', beiLaden);
@@ -410,15 +417,26 @@
      postMessage und meldet {lgh:'fertig'}. Bis dahin nimmt der Hub keine Stände von diesem Rahmen an, damit ein Spiel, das den Stand nicht
      bekommen hat (etwa eine ältere Version ohne diese Funktion), den gesicherten Stand nie mit einem leeren überschreibt. */
   var HASH_MAX = 100000;
-  function standUebergabe(id) {
+  /* Spiele, die ihren Start abwarten (games.json: "uebergabe": "msg", bisher nur das Tierspiel) holen große Stände per postMessage.
+     Alle anderen bekommen sie als window.name ('lgh:' + JSON): Das Vorlade-Skript liest es sofort beim Start, ohne dass das Spiel etwas abwarten muss. */
+  function standUebergabe(id, sp) {
     try {
       var j = localStorage.getItem(STAND + id);
       if (!j) return { hash: '', json: null };
       var h = bytesZuB64(new TextEncoder().encode(j));
-      return h.length <= HASH_MAX ? { hash: '#lgh=' + h, json: null } : { hash: '#lgh=msg', json: j };
+      if (h.length <= HASH_MAX) return { hash: '#lgh=' + h, json: null };
+      return sp && sp.uebergabe === 'msg' ? { hash: '#lgh=msg', json: j, art: 'msg' } : { hash: '', json: j, art: 'name' };
     } catch (e) { return { hash: '', json: null }; }
   }
-  function standHash(id) { return standUebergabe(id).hash; }
+  function zeigeStandHinweis() {
+    var b = document.getElementById('stand-hinweis');
+    if (!b) {
+      b = document.createElement('div'); b.id = 'stand-hinweis'; b.className = 'stand-hinweis'; b.setAttribute('role', 'status');
+      b.innerHTML = '<span>Dein Spielstand liegt sicher im Hub, das Spiel hat ihn aber nicht übernommen. Lade das Spiel neu. Hilft das nicht, geht es über Konto → Spielstände.</span><button type="button" class="btn btn-ghost" data-zu>OK</button>';
+      b.querySelector('[data-zu]').addEventListener('click', function () { b.remove(); });
+      buehne.appendChild(b);
+    }
+  }
   function absender(e) {
     if (aktuell && rahmen.contentWindow && e.source === rahmen.contentWindow) return { id: aktuell.id, url: aktuell.url, abgang: false, el: rahmen };
     for (var i = 0; i < abgehende.length; i++) if (e.source === abgehende[i].fenster) return { id: abgehende[i].id, url: abgehende[i].url, abgang: true, el: abgehende[i].el };
@@ -433,7 +451,7 @@
     if (!q) return;
     try { if (e.origin !== new URL(q.url).origin) return; } catch (x) { return; }
     // Übergabe großer Stände: Spiel fragt nach dem Stand (hallo) und meldet, dass es ihn eingelesen hat (fertig)
-    if (d.lgh === 'hallo') { var u = q.el && q.el._uebergabe; if (u) { try { e.source.postMessage({ lgh: 'daten', json: u.json }, e.origin); } catch (x) { } } return; }
+    if (d.lgh === 'hallo') { var u = q.el && q.el._uebergabe; if (u && u.art === 'msg') { try { e.source.postMessage({ lgh: 'daten', json: u.json }, e.origin); } catch (x) { } } return; }
     if (d.lgh === 'fertig') { if (q.el && q.el._uebergabe) q.el._uebergabe.fertig = true; return; }
     if (d.spiel !== q.id) return;
     if (q.el && q.el._uebergabe && !q.el._uebergabe.fertig) return;   // Spiel hat den gesicherten Stand noch nicht übernommen: nichts überschreiben
@@ -458,8 +476,9 @@
       if (aktuell !== sp || zaehler !== startZaehler) return;
       clearTimeout(hinweisTimer);
       hinweisTimer = setTimeout(function () { hinweis.classList.add('sichtbar'); }, 7000);
-      var ue = standUebergabe(sp.id);
-      neuerRahmen(sp.url + ue.hash, function () { clearTimeout(hinweisTimer); hinweis.classList.remove('sichtbar'); }, sp, ue.json);
+      var ue = standUebergabe(sp.id, sp);
+      var alt = document.getElementById('stand-hinweis'); if (alt) alt.remove();
+      neuerRahmen(sp.url + ue.hash, function () { clearTimeout(hinweisTimer); hinweis.classList.remove('sichtbar'); }, sp, ue);
     }, warte);
   }
   function starteSpiel(sp) {

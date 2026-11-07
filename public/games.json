@@ -415,6 +415,7 @@
     },
     {
       "id": "tierspiel",
+      "uebergabe": "msg",
       "name": "Tierspiel",
       "text": "Kaufe Eier, brüte sie aus, sammle Tiere und verdiene damit Münzen, auch offline.",
       "url": "https://tierspiel.pages.dev",
