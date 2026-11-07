@@ -46,6 +46,14 @@ export const SCHEMA = [
     raum TEXT,
     seen INTEGER NOT NULL
   )`,
+  // Spielzeit pro Spiel (aus den Herzschlägen des Hubs), last = letzter Herzschlag in diesem Spiel
+  `CREATE TABLE IF NOT EXISTS playtime (
+    user_id INTEGER NOT NULL,
+    game TEXT NOT NULL,
+    seconds INTEGER NOT NULL DEFAULT 0,
+    last INTEGER NOT NULL,
+    PRIMARY KEY (user_id, game)
+  )`,
   // Zähler gegen Raten von Passwörtern und Massenanmeldungen
   `CREATE TABLE IF NOT EXISTS limits (
     k TEXT PRIMARY KEY,

@@ -31,6 +31,9 @@ export const KEY_RE = /^[0-9a-f]{64}$/;
 export const SPIEL_RE = /^[a-z0-9_-]{1,40}$/;
 export const MAX_BYTES = 1900000;      // D1 erlaubt pro Zeile 2 MB
 export const VERSIONEN = 6;            // so viele Stände pro Spiel bleiben höchstens erhalten (der aktuelle und bis zu 5 ältere)
+export const MAX_ZEILEN = 40;         // so viele Stände pro Spiel höchstens (inklusive Tagesstände und geschützter Stände)
+export const TAGE = 14;               // so viele Kalendertage zurück bleibt je Tag der letzte Stand erhalten
+const SCHRUMPF = 0.4, SCHRUMPF_AB = 3000;   // ein Stand über 3000 Byte ist geschützt, wenn danach einer unter 40 % seiner Größe kam
 export const ABSTAND = 1800;           // ältere Stände werden höchstens alle 30 Minuten festgehalten, sonst gäbe es nach wenigen Minuten Spielzeit nur noch ganz junge
 const SITZUNG_TAGE = 400;
 
@@ -179,6 +182,7 @@ async function kontoLoeschen(request, db, s, jetzt) {
     db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(s.id),
     db.prepare('DELETE FROM friends WHERE a = ? OR b = ?').bind(s.id, s.id),
     db.prepare('DELETE FROM presence WHERE user_id = ?').bind(s.id),
+    db.prepare('DELETE FROM playtime WHERE user_id = ?').bind(s.id),
     db.prepare('DELETE FROM users WHERE id = ?').bind(s.id),
   ]);
   return antwort({ ok: true });
@@ -207,15 +211,28 @@ async function versionen(db, s, spiel) {
   return antwort({ versionen: r.results.map(meta) });
 }
 
-// Der vorherige Stand bleibt als Sicherung erhalten, wenn der neue in einem späteren 30-Minuten-Fenster liegt (er war dann der letzte seines Fensters).
-// So hebt minütliches Speichern etwa alle 30 Minuten einen Stand auf und jede Spielrunde hinterlässt ihren letzten.
+// Welche Stände bleiben erhalten (neuester zuerst):
+//  - der aktuelle und bis zu 5 ältere; ein älterer wird höchstens alle 30 Minuten festgehalten (der letzte seines Fensters),
+//  - je Kalendertag (UTC) der letzte Stand der vergangenen 14 Tage (Tagesstände),
+//  - jeder Stand, nach dem ein plötzlich viel kleinerer kam (unter 40 %, etwa durch einen Fehler oder leeren Neustart des Spiels),
+//  - bei "behalten" (bewusstes Überschreiben) der verdrängte Stand.
+// Höchstens MAX_ZEILEN pro Spiel. Dadurch kann auch ein Fehler, der stundenlang leere Stände meldet, die guten nicht verdrängen.
 async function ausduennen(db, userId, spiel, behalten) {
-  const r = (await db.prepare('SELECT rev, updated FROM saves WHERE user_id = ? AND game = ? ORDER BY rev DESC').bind(userId, spiel).all()).results;
+  const r = (await db.prepare('SELECT rev, updated, size FROM saves WHERE user_id = ? AND game = ? ORDER BY rev DESC').bind(userId, spiel).all()).results;
   if (r.length < 2) return;
-  const weg = [];
-  // behalten: der verdrängte Stand bleibt auf jeden Fall als Sicherung erhalten (für spätere Konfliktabfragen)
-  if (!behalten && Math.floor(r[0].updated / ABSTAND) === Math.floor(r[1].updated / ABSTAND)) weg.push(r[1].rev);
-  for (let i = 0; i < r.length; i++) if (i >= VERSIONEN && !weg.includes(r[i].rev)) weg.push(r[i].rev);
+  const schutz = new Set();
+  const tag = (x) => Math.floor(x.updated / 86400), heute = tag(r[0]), tage = new Set();
+  for (const x of r) if (heute - tag(x) <= TAGE && !tage.has(tag(x))) { tage.add(tag(x)); schutz.add(x.rev); }
+  for (let i = 1; i < r.length; i++) if (r[i].size > SCHRUMPF_AB && r[i - 1].size < r[i].size * SCHRUMPF) schutz.add(r[i].rev);
+  const fenster = Math.floor(r[0].updated / ABSTAND) === Math.floor(r[1].updated / ABSTAND);
+  const behalte = [];
+  for (let i = 0; i < r.length; i++) {
+    const x = r[i];
+    let bleibt = i === 0 || schutz.has(x.rev);
+    if (!bleibt && i < VERSIONEN) bleibt = !(i === 1 && fenster && !behalten);
+    if (bleibt) behalte.push(x.rev);
+  }
+  const weg = r.map((x) => x.rev).filter((rev) => !behalte.includes(rev) || behalte.indexOf(rev) >= MAX_ZEILEN);
   if (weg.length) await db.batch(weg.map((rev) => db.prepare('DELETE FROM saves WHERE user_id = ? AND game = ? AND rev = ?').bind(userId, spiel, rev)));
 }
 
@@ -338,9 +355,49 @@ async function praesenz(request, db, s, jetzt) {
       raum = b.raum || null;
     }
   }
-  await db.prepare('INSERT INTO presence (user_id, game, raum, seen) VALUES (?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET game = excluded.game, raum = excluded.raum, seen = excluded.seen')
-    .bind(s.id, spiel, raum, seen).run();
+  // Spielzeit: Liegt der letzte Herzschlag im selben Spiel höchstens 150 Sekunden zurück, zählt der Abstand dazu (der Hub meldet etwa alle 45 Sekunden)
+  let dazu = 0;
+  if (spiel && !b.offline) {
+    const vor = await db.prepare('SELECT game, seen FROM presence WHERE user_id = ?').bind(s.id).first();
+    if (vor && vor.game === spiel && jetzt - vor.seen > 0 && jetzt - vor.seen <= 150) dazu = jetzt - vor.seen;
+  }
+  const stmts = [db.prepare('INSERT INTO presence (user_id, game, raum, seen) VALUES (?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET game = excluded.game, raum = excluded.raum, seen = excluded.seen')
+    .bind(s.id, spiel, raum, seen)];
+  if (spiel && !b.offline) stmts.push(db.prepare('INSERT INTO playtime (user_id, game, seconds, last) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, game) DO UPDATE SET seconds = seconds + excluded.seconds, last = excluded.last').bind(s.id, spiel, dazu, jetzt));
+  await db.batch(stmts);
   return antwort({ ok: true });
+}
+
+/* ---------- Profil ---------- */
+// Eigenes Profil und das von Freunden. Fremde ohne Freundschaft sehen nichts (404, wie bei unbekanntem Namen).
+async function profil(db, s, name, jetzt) {
+  let u;
+  name = name ? name.replace(/^@/, '') : name;
+  if (!name || name.toLowerCase() === s.name.toLowerCase()) u = { id: s.id, name: s.name, display: s.anzeige !== s.name ? s.anzeige : null };
+  else {
+    const z = await suche(db, name);
+    if (!z) return fehler(404, 'unbekannt');
+    const [x, y] = paar(s.id, z.id);
+    const f = await db.prepare('SELECT status FROM friends WHERE a = ? AND b = ?').bind(x, y).first();
+    if (!f || f.status !== 'accepted') return fehler(404, 'unbekannt');
+    u = z;
+  }
+  const row = await db.prepare('SELECT created FROM users WHERE id = ?').bind(u.id).first();
+  const zeit = (await db.prepare('SELECT game, seconds, last FROM playtime WHERE user_id = ? ORDER BY last DESC').bind(u.id).all()).results;
+  const fr = await db.prepare("SELECT COUNT(*) AS n FROM friends WHERE (a = ? OR b = ?) AND status = 'accepted'").bind(u.id, u.id).first();
+  const p = await db.prepare('SELECT game, seen FROM presence WHERE user_id = ?').bind(u.id).first();
+  const online = !!p && !!p.seen && jetzt - p.seen < ONLINE_SEKUNDEN;
+  const eigen = u.id === s.id;
+  const out = {
+    name: u.name, anzeige: u.display || u.name, seit: row ? row.created : null, eigen,
+    freunde: fr ? fr.n : 0, online, spiel: online ? p.game || null : null, zuletzt: p ? p.seen : null,
+    spiele: zeit.map((t) => ({ spiel: t.game, sekunden: t.seconds, zuletzt: t.last })),
+  };
+  if (eigen) {
+    const st = await db.prepare('SELECT game, COUNT(*) AS n, MAX(updated) AS neu FROM saves WHERE user_id = ? GROUP BY game').bind(u.id).all();
+    out.staende = st.results.map((t) => ({ spiel: t.game, versionen: t.n, aktualisiert: t.neu }));
+  }
+  return antwort(out);
 }
 
 /* ---------- Verteilung ---------- */
@@ -378,6 +435,9 @@ export async function handle(request, env, jetztMs = Date.now()) {
     if (pfad === '/api/freunde/ablehnen' && m === 'POST') return await freundLoeschen(request, db, s, true);
     if (pfad === '/api/freunde/entfernen' && m === 'POST') return await freundLoeschen(request, db, s, false);
     if (pfad === '/api/praesenz' && m === 'POST') return await praesenz(request, db, s, jetzt);
+    if (pfad === '/api/profil' && m === 'GET') return await profil(db, s, null, jetzt);
+    const pm = /^\/api\/profil\/([^/]+)$/.exec(pfad);
+    if (pm && m === 'GET') { let n; try { n = decodeURIComponent(pm[1]); } catch (e) { return fehler(400, 'eingabe'); } return await profil(db, s, n, jetzt); }
 
     const sp = /^\/api\/stand\/([^/]+)(?:\/(versionen))?$/.exec(pfad);
     if (sp) {

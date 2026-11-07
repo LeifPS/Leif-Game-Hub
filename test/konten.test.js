@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { handle, VERSIONEN, MAX_BYTES } from '../src/konten.js';
+import { handle, VERSIONEN, MAX_BYTES, TAGE, MAX_ZEILEN } from '../src/konten.js';
 import { makeD1 } from './helpers/d1.js';
 
 // Schlüssel wie im Browser: PBKDF2(Passwort, "lgh1:" + kleingeschriebener Name), SHA-256, 256 Bit
@@ -112,11 +112,12 @@ test('Ältere Stände: alle 30 Minuten einer, höchstens 5 neben dem aktuellen',
     basis = r.j.rev;
   }
   const v = (await call(env, 'GET', '/api/stand/spiel/versionen', undefined, a)).j.versionen;
-  assert.ok(v.length <= VERSIONEN, 'zu viele Versionen: ' + v.length);
+  // neben den 6 jüngsten höchstens noch ein Tagesstand für einen Tageswechsel innerhalb der 5 Stunden
+  assert.ok(v.length <= VERSIONEN + 1, 'zu viele Versionen: ' + v.length);
   assert.equal(v[0].rev, 300);
   assert.ok(v.length >= 5, 'zu wenige Versionen: ' + v.length);
   // Abstand der älteren Stände: mindestens ungefähr 30 Minuten
-  for (let i = 2; i < v.length; i++) assert.ok(v[i - 1].aktualisiert - v[i].aktualisiert >= 1800 - 60, 'Abstand zu klein');
+  for (let i = 2; i < Math.min(v.length, VERSIONEN); i++) assert.ok(v[i - 1].aktualisiert - v[i].aktualisiert >= 1800 - 60, 'Abstand zu klein');
   uhr = start;
 });
 
@@ -335,4 +336,72 @@ test('Bestehende Datenbank ohne Spalte "display" wird beim ersten Aufruf ergänz
   assert.deepEqual([an.j.name, an.j.anzeige], ['Altnutzer', 'Altnutzer']);
   const c = await call(env, 'POST', '/api/anzeige', { anzeige: 'Alti' }, an.j.token);
   assert.equal(c.j.anzeige, 'Alti');
+});
+
+test('Tagesstände: je Tag der letzte Stand der letzten 14 Tage bleibt erhalten, ältere nicht', async () => {
+  const env = umgebung();
+  const a = await neuesKonto(env);
+  const start = uhr; let basis = 0;
+  // 20 Tage lang jeden Tag drei Speicherungen im Abstand von einer Stunde
+  for (let tag = 0; tag < 20; tag++) for (let k = 0; k < 3; k++) {
+    uhr = start + tag * 86_400_000 + k * 3_600_000;
+    const r = await call(env, 'PUT', '/api/stand/spiel', { basis, daten: JSON.stringify({ tag, k }) }, a);
+    assert.equal(r.status, 200); basis = r.j.rev;
+  }
+  const v = (await call(env, 'GET', '/api/stand/spiel/versionen', undefined, a)).j.versionen;
+  assert.ok(v.length <= MAX_ZEILEN);
+  const tage = new Set(v.map((x) => Math.floor(x.aktualisiert / 86400)));
+  const heute = Math.floor((start + 19 * 86_400_000 + 2 * 3_600_000) / 1000 / 86400);
+  for (let d = 0; d <= TAGE; d++) assert.ok(tage.has(heute - d), 'Tag fehlt: vor ' + d + ' Tagen');
+  assert.ok(![...tage].some((d) => heute - d > TAGE), 'zu alter Stand vorhanden');
+  uhr = start;
+});
+
+test('Plötzlich winziger Stand (Fehler im Spiel) verdrängt den guten Stand nicht', async () => {
+  const env = umgebung();
+  const a = await neuesKonto(env);
+  const start = uhr;
+  const gut = JSON.stringify({ gut: 'x'.repeat(5000) });
+  const r1 = await call(env, 'PUT', '/api/stand/spiel', { basis: 0, daten: gut }, a);
+  let basis = r1.j.rev;
+  // danach 12 Stunden lang jede Minute ein (fast) leerer Stand
+  for (let m = 1; m <= 720; m++) {
+    uhr = start + m * 60_000;
+    const r = await call(env, 'PUT', '/api/stand/spiel', { basis, daten: JSON.stringify({ m }) }, a);
+    assert.equal(r.status, 200); basis = r.j.rev;
+  }
+  const v = (await call(env, 'GET', '/api/stand/spiel/versionen', undefined, a)).j.versionen;
+  assert.ok(v.some((x) => x.groesse > 4000), 'guter Stand wurde verdrängt');
+  const g = await call(env, 'GET', '/api/stand/spiel?rev=1', undefined, a);
+  assert.equal(g.j.daten, gut);
+  uhr = start;
+});
+
+test('Spielzeit und Profil: eigene Zeiten, Freunde sehen sie, Fremde nicht', async () => {
+  const env = umgebung();
+  const a = await neuesKonto(env, 'Anna'), b = await neuesKonto(env, 'Ben'), c = await neuesKonto(env, 'Cora');
+  const start = uhr;
+  for (let i = 0; i < 4; i++) { uhr = start + i * 45_000; assert.equal((await call(env, 'POST', '/api/praesenz', { spiel: 'zahlenwerk' }, a)).status, 200); }
+  // Pause (zu lang für Zählung), dann anderes Spiel
+  uhr = start + 1_000_000; await call(env, 'POST', '/api/praesenz', { spiel: 'zahlenwerk' }, a);
+  uhr += 45_000; await call(env, 'POST', '/api/praesenz', { spiel: 'zahlenwerk' }, a);
+  uhr += 45_000; await call(env, 'POST', '/api/praesenz', { spiel: 'tierspiel' }, a);
+  await call(env, 'PUT', '/api/stand/zahlenwerk', { basis: 0, daten: '{"x":1}' }, a);
+  const p = (await call(env, 'GET', '/api/profil', undefined, a)).j;
+  assert.equal(p.name, 'Anna'); assert.equal(p.eigen, true);
+  const z = Object.fromEntries(p.spiele.map((x) => [x.spiel, x.sekunden]));
+  assert.equal(z.zahlenwerk, 3 * 45 + 45);   // 3 Abstände vor der Pause, 1 danach; der Sprung über die Pause zählt nicht
+  assert.equal(z.tierspiel, 0);
+  assert.deepEqual(p.staende.map((x) => x.spiel), ['zahlenwerk']);
+  // Fremder ohne Freundschaft: unbekannt
+  assert.equal((await call(env, 'GET', '/api/profil/Anna', undefined, b)).status, 404);
+  // Freundschaft: Ben sieht Annas Zeiten, aber keine Spielstände
+  assert.equal((await call(env, 'POST', '/api/freunde/anfrage', { name: 'Ben' }, a)).status, 200);
+  assert.equal((await call(env, 'POST', '/api/freunde/annehmen', { name: 'Anna' }, b)).status, 200);
+  assert.equal((await call(env, 'GET', '/api/profil/%40anna', undefined, b)).status, 200);   // "@anna" und "anna" meinen dasselbe
+  const fb = (await call(env, 'GET', '/api/profil/anna', undefined, b)).j;
+  assert.equal(fb.eigen, false); assert.equal(fb.name, 'Anna'); assert.ok(fb.spiele.length === 2); assert.equal(fb.staende, undefined);
+  assert.equal((await call(env, 'GET', '/api/profil/Anna', undefined, c)).status, 404);
+  assert.equal((await call(env, 'GET', '/api/profil/unbekannt', undefined, a)).status, 404);
+  uhr = start;
 });
