@@ -604,6 +604,15 @@
         "Rätsel"
       ],
       "icon": "screens/nebelmeer-icon.webp",
+      "wallpaper": "screens/nebelmeer-wallpaper.webp",
+      "schrift": {
+        "familie": "cinzel",
+        "versalien": true,
+        "abstand": 0.035,
+        "fuell": "linear-gradient(180deg,#ffffff 0%,#cfeaf7 55%,#8fc3de 100%)",
+        "rand": "#06121c",
+        "randbreite": 0.184
+      },
       "screenshots": [
         "screens/shots/nebelmeer/1.webp",
         "screens/shots/nebelmeer/2.webp",
