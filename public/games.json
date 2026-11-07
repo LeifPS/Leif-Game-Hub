@@ -592,7 +592,7 @@
     },
     {
       "id": "nebelmeer",
-      "name": "Nebelmeer Tiefe",
+      "name": "Nebelmeer: Tiefe",
       "text": "Fahre mit Boot und Laterne über ein riesiges Meer im Nebel, sammle, baue und tauche tiefer, zusammen mit anderen Spielern.",
       "url": "https://nebelmeer-tiefe.leifps.workers.dev",
       "farbe": "#1f4a6e",
@@ -610,7 +610,11 @@
         "fuell": "linear-gradient(180deg,#ffffff 0%,#cfeaf7 55%,#8fc3de 100%)",
         "rand": "#06121c",
         "randbreite": 0.184
-      }
+      },
+      "screenshots": [
+        "screens/shots/nebelmeer/1.webp",
+        "screens/shots/nebelmeer/2.webp"
+      ]
     }
   ]
 }
