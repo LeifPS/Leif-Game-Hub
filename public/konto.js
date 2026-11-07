@@ -9,7 +9,7 @@
 
   var KEY = 'lgh.konto';
   var NAME_RE = /^[\p{L}\p{N}._-]{3,20}$/u;
-  var konto = null;            // { name, token }
+  var konto = null;            // { name (= @Benutzername, fest), anzeige (Anzeigename), token }
   var bereitFn = null, bereitP = null;
   var spielId = null, raum = null;
   var lauscher = [];
@@ -61,9 +61,10 @@
 
   /* ---------- Anmeldung ---------- */
   var FEHLER = {
-    name: 'Der Name braucht 3 bis 20 Zeichen: Buchstaben, Zahlen, Punkt, Unterstrich oder Bindestrich (keine Leerzeichen).',
-    name_vergeben: 'Diesen Namen gibt es schon. Nimm einen anderen.',
-    login: 'Name oder Passwort stimmt nicht.',
+    name: 'Der Benutzername braucht 3 bis 20 Zeichen: Buchstaben, Zahlen, Punkt, Unterstrich oder Bindestrich (keine Leerzeichen).',
+    name_vergeben: 'Diesen Benutzernamen gibt es schon. Nimm einen anderen.',
+    anzeige: 'Der Anzeigename darf höchstens 24 Zeichen haben und keine Sonderzeichen wie < oder > enthalten.',
+    login: 'Benutzername oder Passwort stimmt nicht.',
     netz: 'Keine Verbindung zum Server. Bitte später noch einmal versuchen.',
     eingabe: 'Bitte alle Felder ausfüllen.',
     schluessel: 'Das Passwort konnte nicht verarbeitet werden.',
@@ -79,6 +80,10 @@
 
   function speichereKonto(k) { konto = k; lsSet(KEY, JSON.stringify(k)); }
   function ladeKonto() { try { var k = JSON.parse(lsGet(KEY)); if (k && k.name && /^[0-9a-f]{64}$/.test(k.token)) return k; } catch (e) { } return null; }
+  // Name, wie andere dich sehen: der Anzeigename, sonst der Benutzername
+  function anzeigeName() { return konto ? (konto.anzeige || konto.name) : null; }
+  function bereinige(t) { return String(t || '').normalize('NFC').replace(/\s+/g, ' ').trim(); }
+  function anzeigeOk(t) { return t.length <= 24 && Array.from(t).length <= 24 && !/[\u0000-\u001f\u007f<>]/.test(t); }
 
   function meldeAn() { if (bereitFn) { var f = bereitFn; bereitFn = null; f(); } }
   function bereit() {
@@ -105,8 +110,10 @@
       '<p class="konto-sub">Mit einem Konto spielst du auf jedem Gerät als du selbst und siehst, was deine Freunde gerade spielen.</p>' +
       '<div class="konto-tabs" role="tablist"><button type="button" class="aktiv" data-m="an" role="tab">Anmelden</button><button type="button" data-m="neu" role="tab">Konto erstellen</button></div>' +
       '<form id="konto-form" novalidate>' +
-      '<label>Name<input name="username" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="20" required></label>' +
-      '<div class="konto-regel nur-neu">3 bis 20 Zeichen: Buchstaben, Zahlen, Punkt, Unterstrich, Bindestrich.</div>' +
+      '<label>Benutzername<input name="username" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="20" placeholder="@benutzername" required></label>' +
+      '<div class="konto-regel nur-neu">3 bis 20 Zeichen: Buchstaben, Zahlen, Punkt, Unterstrich, Bindestrich. Damit melden dich und deine Freunde an und finden dich. Er lässt sich später nicht ändern.</div>' +
+      '<label class="nur-neu">Anzeigename<input name="anzeige" autocomplete="nickname" autocapitalize="words" spellcheck="false" maxlength="24" placeholder="Wie andere dich sehen (optional)"></label>' +
+      '<div class="konto-regel nur-neu">So sehen dich andere. Du kannst ihn jederzeit ändern. Leer lassen = Benutzername.</div>' +
       '<label>Passwort<input name="password" type="password" autocomplete="current-password" required></label>' +
       '<label class="nur-neu">Passwort wiederholen<input name="password2" type="password" autocomplete="new-password"></label>' +
       '<div class="konto-regel nur-neu">Mindestens 6 Zeichen. Merk es dir gut: Es gibt keine E-Mail zum Zurücksetzen.</div>' +
@@ -131,8 +138,10 @@
     el.querySelector('.konto-tabs').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) setze(b.getAttribute('data-m')); });
     form.addEventListener('submit', function (e) {
       e.preventDefault();
-      var name = form.username.value.trim().normalize('NFC'), pw = form.password.value;
+      var name = form.username.value.trim().replace(/^@/, '').normalize('NFC'), pw = form.password.value;
+      var anz = modus === 'neu' ? bereinige(form.anzeige.value) : '';
       fehler.textContent = '';
+      if (anz && !anzeigeOk(anz)) { fehler.textContent = FEHLER.anzeige; return; }
       if (!NAME_RE.test(name)) { fehler.textContent = FEHLER.name; return; }
       if (!pw) { fehler.textContent = FEHLER.eingabe; return; }
       if (modus === 'neu') {
@@ -141,10 +150,10 @@
       }
       los.disabled = true; los.textContent = 'Einen Moment …';
       schluessel(name, pw).then(function (key) {
-        return api('POST', modus === 'neu' ? '/api/registrieren' : '/api/anmelden', { name: name, key: key, geraet: geraet() }, { ohneToken: true });
+        return api('POST', modus === 'neu' ? '/api/registrieren' : '/api/anmelden', { name: name, anzeige: anz || undefined, key: key, geraet: geraet() }, { ohneToken: true });
       }).then(function (res) {
         if (!res.ok) { fehler.textContent = fehlerText(res); los.disabled = false; los.textContent = modus === 'neu' ? 'Konto erstellen' : 'Anmelden'; return; }
-        speichereKonto({ name: res.j.name, token: res.j.token });
+        speichereKonto({ name: res.j.name, anzeige: res.j.anzeige || res.j.name, token: res.j.token });
         el.remove(); document.body.classList.remove('konto-offen');
         nachAnmeldung();
       }, function () { fehler.textContent = 'Die Anmeldung ist hier nicht möglich (Browser ohne Verschlüsselung).'; los.disabled = false; });
@@ -178,9 +187,10 @@
   function kontoDialog() {
     if (!konto) return;
     dialog(
-      '<div class="dlg-kopf"><span class="avatar gross" style="' + avatarStil(konto.name) + '">' + esc(konto.name.charAt(0).toUpperCase()) + '</span>' +
-      '<div><div class="dlg-titel">' + esc(konto.name) + '</div><div class="dlg-sub">Angemeldet auf diesem Gerät</div></div></div>' +
+      '<div class="dlg-kopf"><span class="avatar gross" id="dlg-av" style="' + avatarStil(konto.name) + '">' + esc(anzeigeName().charAt(0).toUpperCase()) + '</span>' +
+      '<div><div class="dlg-titel" id="dlg-titel">' + esc(anzeigeName()) + '</div><div class="dlg-sub">@' + esc(konto.name) + ' · Angemeldet auf diesem Gerät</div></div></div>' +
       '<div class="dlg-teil" id="dlg-menue">' +
+      '<button type="button" class="btn btn-ghost" data-a="anz">Anzeigename ändern</button>' +
       '<button type="button" class="btn btn-ghost" data-a="pw">Passwort ändern</button>' +
       '<button type="button" class="btn btn-ghost" data-a="aus">Abmelden</button>' +
       '<button type="button" class="btn btn-ghost gefahr" data-a="weg">Konto löschen</button>' +
@@ -198,6 +208,21 @@
         menue.addEventListener('click', function (e) {
           var a = e.target.getAttribute && e.target.getAttribute('data-a');
           if (a === 'aus') { zu(); abmelden(); }
+          if (a === 'anz') formular(
+            '<label>Anzeigename<input id="anz0" type="text" maxlength="24" autocomplete="nickname" spellcheck="false" value="' + esc(konto.anzeige && konto.anzeige !== konto.name ? konto.anzeige : '') + '" placeholder="' + esc(konto.name) + '"></label>' +
+            '<div class="konto-regel">So sehen dich andere (Freunde, Freundesleiste). Dein Benutzername @' + esc(konto.name) + ' bleibt gleich. Leer lassen = Benutzername.</div>',
+            function (fe, fertig) {
+              var neu = bereinige(form.querySelector('#anz0').value);
+              if (neu && !anzeigeOk(neu)) { fe.textContent = FEHLER.anzeige; return fertig(); }
+              api('POST', '/api/anzeige', { anzeige: neu || null }).then(function (res) {
+                if (!res.ok) { fe.textContent = fehlerText(res); return fertig(); }
+                speichereKonto({ name: konto.name, anzeige: res.j.anzeige || konto.name, token: konto.token });
+                aktualisiereKnopf(); benachrichtige();
+                var t = el.querySelector('#dlg-titel'), av = el.querySelector('#dlg-av');
+                if (t) t.textContent = anzeigeName(); if (av) av.textContent = anzeigeName().charAt(0).toUpperCase();
+                form.innerHTML = '<p>Gespeichert. Andere sehen dich jetzt als <b>' + esc(anzeigeName()) + '</b>.</p><div class="btn-row"><button class="btn btn-primary" data-zu type="button">Fertig</button></div>';
+              });
+            });
           if (a === 'pw') formular(
             '<label>Altes Passwort<input id="pw0" type="password" autocomplete="current-password"></label>' +
             '<label>Neues Passwort<input id="pw1" type="password" autocomplete="new-password"></label>' +
@@ -249,7 +274,7 @@
   function aktualisiereKnopf() {
     var b = document.getElementById('konto-knopf');
     if (!b) return;
-    if (konto) { b.hidden = false; b.textContent = konto.name.charAt(0).toUpperCase(); b.setAttribute('style', avatarStil(konto.name)); b.setAttribute('aria-label', 'Konto von ' + konto.name); }
+    if (konto) { b.hidden = false; b.textContent = anzeigeName().charAt(0).toUpperCase(); b.setAttribute('style', avatarStil(konto.name)); b.setAttribute('aria-label', 'Konto von ' + anzeigeName() + ' (@' + konto.name + ')'); }
     else b.hidden = true;
   }
 
@@ -359,13 +384,17 @@
     if (!konto) { zeigeAnmeldung(); return; }
     api('GET', '/api/ich').then(function (res) {
       // Nur bei eindeutiger Ablehnung abmelden; ohne Netz bleibt man angemeldet
-      if (res.ok) { nachAnmeldung(); }
+      if (res.ok) {
+        // Anzeigename kann auf einem anderen Gerät geändert worden sein
+        if (res.j.anzeige && res.j.anzeige !== konto.anzeige) speichereKonto({ name: konto.name, anzeige: res.j.anzeige, token: konto.token });
+        nachAnmeldung();
+      }
       else if (res.status === 0) { meldeAn(); }
     });
   }
 
   window.LghKonto = {
-    bereit: bereit, name: function () { return konto ? konto.name : null; }, angemeldet: function () { return !!konto; },
+    bereit: bereit, name: function () { return konto ? konto.name : null; }, anzeige: anzeigeName, angemeldet: function () { return !!konto; },
     stand: stand, beimVerlassen: beimVerlassen, spiel: setzeSpiel, raum: setzeRaum,
     freunde: freunde, setzeOffene: setzeOffene, avatarStil: avatarStil, dialog: dialog,
     kontoDialog: kontoDialog, abmelden: abmelden, abzeichen: benachrichtige, beiAenderung: function (f) { lauscher.push(f); },

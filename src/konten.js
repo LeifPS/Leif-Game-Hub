@@ -17,6 +17,16 @@ const gleich = (a, b) => { // zeitkonstanter Vergleich
 };
 
 export const NAME_RE = /^[\p{L}\p{N}._-]{3,20}$/u;
+export const ANZEIGE_MAX = 24;
+// Anzeigename: frei wählbar (nicht eindeutig), 1 bis 24 Zeichen, keine Steuerzeichen oder spitzen Klammern. Leer = Benutzernamen anzeigen.
+export function anzeigeBereinigen(v) {
+  if (v == null) return { wert: null };
+  if (typeof v !== 'string') return { fehler: true };
+  const t = v.normalize('NFC').replace(/\s+/g, ' ').trim();
+  if (!t) return { wert: null };
+  if ([...t].length > ANZEIGE_MAX || /[\u0000-\u001f\u007f<>]/.test(t)) return { fehler: true };
+  return { wert: t };
+}
 export const KEY_RE = /^[0-9a-f]{64}$/;
 export const SPIEL_RE = /^[a-z0-9_-]{1,40}$/;
 export const MAX_BYTES = 1900000;      // D1 erlaubt pro Zeile 2 MB
@@ -31,7 +41,14 @@ const fehler = (status, code, extra) => antwort({ fehler: code, ...(extra || {})
 
 const schemaFertig = new WeakMap();
 function schemaSichern(db) {
-  if (!schemaFertig.has(db)) schemaFertig.set(db, db.batch(SCHEMA.map((s) => db.prepare(s))).catch((e) => { schemaFertig.delete(db); throw e; }));
+  if (!schemaFertig.has(db)) schemaFertig.set(db, (async () => {
+    await db.batch(SCHEMA.map((s) => db.prepare(s)));
+    // Ältere Datenbanken haben noch keine Spalte für den Anzeigenamen (NULL = Benutzername wird angezeigt)
+    const spalten = await db.prepare('PRAGMA table_info(users)').all();
+    if (!spalten.results.some((c) => c.name === 'display')) {
+      try { await db.prepare('ALTER TABLE users ADD COLUMN display TEXT').run(); } catch (e) { /* parallel schon angelegt */ }
+    }
+  })().catch((e) => { schemaFertig.delete(db); throw e; }));
   return schemaFertig.get(db);
 }
 
@@ -64,11 +81,11 @@ async function sitzung(request, db, jetzt) {
   const m = /^Bearer ([0-9a-f]{64})$/.exec(request.headers.get('authorization') || '');
   if (!m) return null;
   const th = await sha256(m[1]);
-  const s = await db.prepare('SELECT s.user_id AS id, s.last AS last, u.name AS name FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?').bind(th).first();
+  const s = await db.prepare('SELECT s.user_id AS id, s.last AS last, u.name AS name, u.display AS display FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?').bind(th).first();
   if (!s) return null;
   if (jetzt - s.last > SITZUNG_TAGE * 86400) { await db.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(th).run(); return null; }
   if (jetzt - s.last > 3600) await db.prepare('UPDATE sessions SET last = ? WHERE token_hash = ?').bind(jetzt, th).run();
-  return { id: s.id, name: s.name, th };
+  return { id: s.id, name: s.name, anzeige: s.display || s.name, th };
 }
 async function neueSitzung(db, userId, geraet, jetzt) {
   const token = zufall(32);
@@ -83,6 +100,8 @@ async function registrieren(request, db, jetzt) {
   const { b } = await lies(request);
   if (!b || typeof b.name !== 'string' || !NAME_RE.test(b.name.normalize('NFC'))) return fehler(400, 'name');
   if (typeof b.key !== 'string' || !KEY_RE.test(b.key)) return fehler(400, 'schluessel');
+  const az = anzeigeBereinigen(b.anzeige);
+  if (az.fehler) return fehler(400, 'anzeige');
   const rk = 'r:' + ip(request);
   const warte = await gesperrt(db, rk, jetzt);
   if (warte) return fehler(429, 'zu_viele', { warte });
@@ -94,12 +113,12 @@ async function registrieren(request, db, jetzt) {
   const hash = await sha256(salt + ':' + b.key);
   let id;
   try {
-    const r = await db.prepare('INSERT INTO users (name, name_lc, salt, hash, created) VALUES (?, ?, ?, ?, ?)').bind(name, lc, salt, hash, jetzt).run();
+    const r = await db.prepare('INSERT INTO users (name, name_lc, salt, hash, created, display) VALUES (?, ?, ?, ?, ?, ?)').bind(name, lc, salt, hash, jetzt, az.wert).run();
     id = r.meta && r.meta.last_row_id;
     if (!id) id = (await db.prepare('SELECT id FROM users WHERE name_lc = ?').bind(lc).first()).id;
   } catch (e) { return fehler(409, 'name_vergeben'); }
   const token = await neueSitzung(db, id, geraetName(b.geraet), jetzt);
-  return antwort({ token, name });
+  return antwort({ token, name, anzeige: az.wert || name });
 }
 
 async function pruefeSchluessel(db, userName, key, jetzt, request) {
@@ -107,7 +126,7 @@ async function pruefeSchluessel(db, userName, key, jetzt, request) {
   const kn = 'l:' + lc, ki = 'i:' + ip(request);
   const warte = Math.max(await gesperrt(db, kn, jetzt), await gesperrt(db, ki, jetzt));
   if (warte) return { fehler: fehler(429, 'zu_viele', { warte }) };
-  const u = await db.prepare('SELECT id, name, salt, hash FROM users WHERE name_lc = ?').bind(lc).first();
+  const u = await db.prepare('SELECT id, name, display, salt, hash FROM users WHERE name_lc = ?').bind(lc).first();
   // Auch bei unbekanntem Namen gleich viel rechnen, damit man nicht erkennt, welche Namen es gibt
   const h = await sha256((u ? u.salt : 'x'.repeat(32)) + ':' + key);
   if (!u || !gleich(h, u.hash)) {
@@ -125,7 +144,7 @@ async function anmelden(request, db, jetzt) {
   const r = await pruefeSchluessel(db, b.name.normalize('NFC'), b.key, jetzt, request);
   if (r.fehler) return r.fehler;
   const token = await neueSitzung(db, r.user.id, geraetName(b.geraet), jetzt);
-  return antwort({ token, name: r.user.name });
+  return antwort({ token, name: r.user.name, anzeige: r.user.display || r.user.name });
 }
 
 async function passwortAendern(request, db, s, jetzt) {
@@ -139,6 +158,15 @@ async function passwortAendern(request, db, s, jetzt) {
     db.prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash != ?').bind(s.id, s.th), // andere Geräte müssen sich neu anmelden
   ]);
   return antwort({ ok: true });
+}
+
+async function anzeigeAendern(request, db, s) {
+  const { b } = await lies(request);
+  if (!b) return fehler(400, 'eingabe');
+  const az = anzeigeBereinigen(b.anzeige);
+  if (az.fehler) return fehler(400, 'anzeige');
+  await db.prepare('UPDATE users SET display = ? WHERE id = ?').bind(az.wert, s.id).run();
+  return antwort({ ok: true, name: s.name, anzeige: az.wert || s.name });
 }
 
 async function kontoLoeschen(request, db, s, jetzt) {
@@ -228,23 +256,24 @@ const paar = (x, y) => (x < y ? [x, y] : [y, x]);
 
 async function suche(db, name) {
   if (typeof name !== 'string') return null;
-  return db.prepare('SELECT id, name FROM users WHERE name_lc = ?').bind(name.normalize('NFC').toLowerCase()).first();
+  const n = name.normalize('NFC').trim().replace(/^@/, '');   // "@leif" und "leif" meinen denselben Benutzernamen
+  return db.prepare('SELECT id, name, display FROM users WHERE name_lc = ?').bind(n.toLowerCase()).first();
 }
 
 async function freundeListe(db, s, jetzt) {
   const r = await db.prepare(
-    `SELECT u.name AS name, f.status AS status, f.requester AS requester, p.game AS game, p.raum AS raum, p.seen AS seen
+    `SELECT u.name AS name, u.display AS display, f.status AS status, f.requester AS requester, p.game AS game, p.raum AS raum, p.seen AS seen
      FROM friends f JOIN users u ON u.id = CASE WHEN f.a = ? THEN f.b ELSE f.a END
      LEFT JOIN presence p ON p.user_id = u.id
-     WHERE f.a = ? OR f.b = ? ORDER BY u.name_lc`
+     WHERE f.a = ? OR f.b = ? ORDER BY lower(COALESCE(u.display, u.name))`
   ).bind(s.id, s.id, s.id).all();
   const freunde = [], eingehend = [], ausgehend = [];
   for (const x of r.results) {
     if (x.status === 'accepted') {
       const online = !!x.seen && jetzt - x.seen < ONLINE_SEKUNDEN;
-      freunde.push({ name: x.name, online, spiel: online ? x.game || null : null, raum: online && x.game ? x.raum || null : null, zuletzt: x.seen || null });
-    } else if (x.requester === s.id) ausgehend.push({ name: x.name });
-    else eingehend.push({ name: x.name });
+      freunde.push({ name: x.name, anzeige: x.display || x.name, online, spiel: online ? x.game || null : null, raum: online && x.game ? x.raum || null : null, zuletzt: x.seen || null });
+    } else if (x.requester === s.id) ausgehend.push({ name: x.name, anzeige: x.display || x.name });
+    else eingehend.push({ name: x.name, anzeige: x.display || x.name });
   }
   return antwort({ freunde, eingehend, ausgehend, jetzt });
 }
@@ -265,14 +294,14 @@ async function freundAnfrage(request, db, s, jetzt) {
     if (alt.status === 'accepted') return fehler(409, 'schon_freunde');
     if (alt.requester === s.id) return fehler(409, 'schon_angefragt');
     await db.prepare("UPDATE friends SET status = 'accepted' WHERE a = ? AND b = ?").bind(x, y).run(); // er hatte schon angefragt: gegenseitig
-    return antwort({ ok: true, freunde: true, name: ziel.name });
+    return antwort({ ok: true, freunde: true, name: ziel.name, anzeige: ziel.display || ziel.name });
   }
   const zaehl = await db.prepare("SELECT COUNT(*) AS n FROM friends WHERE (a = ? OR b = ?) AND (status = 'accepted' OR requester = ?)").bind(s.id, s.id, s.id).first();
   if (zaehl.n >= MAX_FREUNDE) return fehler(409, 'zu_viele_freunde');
   const offen = await db.prepare("SELECT COUNT(*) AS n FROM friends WHERE requester = ? AND status = 'pending'").bind(s.id).first();
   if (offen.n >= MAX_OFFEN) return fehler(409, 'zu_viele_offen');
   await db.prepare("INSERT INTO friends (a, b, requester, status, created) VALUES (?, ?, ?, 'pending', ?)").bind(x, y, s.id, jetzt).run();
-  return antwort({ ok: true, freunde: false, name: ziel.name });
+  return antwort({ ok: true, freunde: false, name: ziel.name, anzeige: ziel.display || ziel.name });
 }
 
 async function freundAnnehmen(request, db, s) {
@@ -337,7 +366,8 @@ export async function handle(request, env, jetztMs = Date.now()) {
     const s = await sitzung(request, db, jetzt);
     if (!s) return fehler(401, 'nicht_angemeldet');
 
-    if (pfad === '/api/ich' && m === 'GET') return antwort({ name: s.name });
+    if (pfad === '/api/ich' && m === 'GET') return antwort({ name: s.name, anzeige: s.anzeige });
+    if (pfad === '/api/anzeige' && m === 'POST') return await anzeigeAendern(request, db, s);
     if (pfad === '/api/abmelden' && m === 'POST') { await db.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(s.th).run(); return antwort({ ok: true }); }
     if (pfad === '/api/passwort' && m === 'POST') return await passwortAendern(request, db, s, jetzt);
     if (pfad === '/api/loeschen' && m === 'POST') return await kontoLoeschen(request, db, s, jetzt);

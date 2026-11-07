@@ -27,7 +27,7 @@ async function neuesKonto(env, name = 'Leif', pw = 'geheim123') {
 test('Registrieren, Abmelden, Anmelden', async () => {
   const env = umgebung();
   const t = await neuesKonto(env);
-  assert.deepEqual((await call(env, 'GET', '/api/ich', undefined, t)).j, { name: 'Leif' });
+  assert.deepEqual((await call(env, 'GET', '/api/ich', undefined, t)).j, { name: 'Leif', anzeige: 'Leif' });
   assert.equal((await call(env, 'POST', '/api/abmelden', {}, t)).status, 200);
   assert.equal((await call(env, 'GET', '/api/ich', undefined, t)).status, 401);
   // Name ohne Beachtung der Groß- und Kleinschreibung, falsches Passwort
@@ -221,8 +221,8 @@ test('Freunde: Anfrage, Annehmen, Liste mit Präsenz, Entfernen', async () => {
   assert.equal((await call(env, 'POST', '/api/freunde/anfrage', { name: 'BEN' }, a)).status, 200);
   assert.equal((await call(env, 'POST', '/api/freunde/anfrage', { name: 'Ben' }, a)).j.fehler, 'schon_angefragt');
   const la = (await call(env, 'GET', '/api/freunde', undefined, a)).j, lb = (await call(env, 'GET', '/api/freunde', undefined, b)).j;
-  assert.deepEqual([la.ausgehend, la.eingehend, la.freunde], [[{ name: 'Ben' }], [], []]);
-  assert.deepEqual([lb.eingehend, lb.ausgehend, lb.freunde], [[{ name: 'Anna' }], [], []]);
+  assert.deepEqual([la.ausgehend, la.eingehend, la.freunde], [[{ name: 'Ben', anzeige: 'Ben' }], [], []]);
+  assert.deepEqual([lb.eingehend, lb.ausgehend, lb.freunde], [[{ name: 'Anna', anzeige: 'Anna' }], [], []]);
   // Anna kann ihre eigene Anfrage nicht annehmen, Ben schon
   assert.equal((await call(env, 'POST', '/api/freunde/annehmen', { name: 'Ben' }, a)).status, 404);
   assert.equal((await call(env, 'POST', '/api/freunde/annehmen', { name: 'Anna' }, b)).status, 200);
@@ -285,4 +285,54 @@ test('Präsenz: ungültige Eingaben, Konto löschen entfernt Freunde und Präsen
   assert.equal(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM friends').get().n, 0);
   assert.equal(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM presence').get().n, 0);
   assert.deepEqual((await call(env, 'GET', '/api/freunde', undefined, b)).j.eingehend, []);
+});
+
+test('Benutzername und Anzeigename: festlegen, ändern, Freunde suchen per @username', async () => {
+  const env = umgebung();
+  // Anzeigename schon bei der Registrierung (nicht eindeutig), @ wird akzeptiert
+  const reg = async (name, anzeige) => (await call(env, 'POST', '/api/registrieren', { name, anzeige, key: await schluessel(name, 'geheim123') }));
+  const r1 = await reg('anna_k', '  Anna   die Große ');
+  assert.equal(r1.status, 200);
+  assert.deepEqual([r1.j.name, r1.j.anzeige], ['anna_k', 'Anna die Große']);
+  const r2 = await reg('ben', 'Anna die Große');            // gleicher Anzeigename ist erlaubt
+  assert.equal(r2.status, 200);
+  const r3 = await reg('carl', undefined);                   // ohne Anzeigenamen: Benutzername
+  assert.equal(r3.j.anzeige, 'carl');
+  assert.equal((await reg('dora', 'x'.repeat(25))).status, 400);
+  assert.equal((await reg('emil', '<b>')).status, 400);
+  assert.equal((await reg('Ben', 'Zweiter')).status, 409);   // @username bleibt eindeutig
+  const a = r1.j.token, b = r2.j.token;
+  assert.deepEqual((await call(env, 'GET', '/api/ich', undefined, a)).j, { name: 'anna_k', anzeige: 'Anna die Große' });
+  // Anmelden liefert den Anzeigenamen mit
+  const an = await call(env, 'POST', '/api/anmelden', { name: 'anna_k', key: await schluessel('anna_k', 'geheim123') });
+  assert.equal(an.j.anzeige, 'Anna die Große');
+  // Ändern; Benutzername bleibt gleich; leer = zurück auf Benutzername
+  let c = await call(env, 'POST', '/api/anzeige', { anzeige: 'Annchen' }, a);
+  assert.deepEqual([c.status, c.j.anzeige, c.j.name], [200, 'Annchen', 'anna_k']);
+  assert.equal((await call(env, 'POST', '/api/anzeige', { anzeige: 'a'.repeat(30) }, a)).status, 400);
+  assert.equal((await call(env, 'GET', '/api/ich', undefined, a)).j.anzeige, 'Annchen');
+  // Freunde: Anfrage per @username, Liste zeigt beides
+  const fa = await call(env, 'POST', '/api/freunde/anfrage', { name: '@Anna_K' }, b);
+  assert.deepEqual([fa.status, fa.j.name, fa.j.anzeige], [200, 'anna_k', 'Annchen']);
+  assert.deepEqual((await call(env, 'GET', '/api/freunde', undefined, a)).j.eingehend, [{ name: 'ben', anzeige: 'Anna die Große' }]);
+  // Anzeigename ist keine Suchadresse
+  assert.equal((await call(env, 'POST', '/api/freunde/anfrage', { name: 'Annchen' }, b)).status, 404);
+  await call(env, 'POST', '/api/freunde/annehmen', { name: 'ben' }, a);
+  const fl = (await call(env, 'GET', '/api/freunde', undefined, b)).j.freunde[0];
+  assert.deepEqual([fl.name, fl.anzeige], ['anna_k', 'Annchen']);
+  await call(env, 'POST', '/api/anzeige', { anzeige: '' }, a);
+  assert.equal((await call(env, 'GET', '/api/freunde', undefined, b)).j.freunde[0].anzeige, 'anna_k');
+});
+
+test('Bestehende Datenbank ohne Spalte "display" wird beim ersten Aufruf ergänzt, Name bleibt Anzeigename', async () => {
+  const env = umgebung();
+  const sha = async (t) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))].map((x) => x.toString(16).padStart(2, '0')).join('');
+  await env.DB.prepare(`CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, name_lc TEXT NOT NULL UNIQUE, salt TEXT NOT NULL, hash TEXT NOT NULL, created INTEGER NOT NULL)`).run();
+  const key = await schluessel('Altnutzer', 'geheim123');
+  await env.DB.prepare('INSERT INTO users (name, name_lc, salt, hash, created) VALUES (?, ?, ?, ?, ?)').bind('Altnutzer', 'altnutzer', 'ab'.repeat(16), await sha('ab'.repeat(16) + ':' + key), 1).run();
+  const an = await call(env, 'POST', '/api/anmelden', { name: 'Altnutzer', key });
+  assert.equal(an.status, 200, JSON.stringify(an.j));
+  assert.deepEqual([an.j.name, an.j.anzeige], ['Altnutzer', 'Altnutzer']);
+  const c = await call(env, 'POST', '/api/anzeige', { anzeige: 'Alti' }, an.j.token);
+  assert.equal(c.j.anzeige, 'Alti');
 });

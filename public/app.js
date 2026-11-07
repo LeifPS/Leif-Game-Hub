@@ -479,27 +479,28 @@
     var t = Math.round(sek / 86400); return t === 1 ? 'gestern' : 'vor ' + t + ' Tagen';
   }
   function spielName(id) { var sp = spiele.filter(function (x) { return x.id === id; })[0]; return sp ? sp.name : id; }
-  function frItem(av, name, status, akt) {
-    return '<div class="fr-item"><span class="avatar" style="' + LghKonto.avatarStil(name) + '">' + esc(name.charAt(0).toUpperCase()) + '</span>' +
-      '<div class="fr-text"><div class="fr-name">' + esc(name) + '</div><div class="fr-status">' + status + '</div></div><div class="fr-akt">' + akt + '</div></div>';
+  function anz(f) { return f.anzeige || f.name; }
+  function frItem(av, f, status, akt) {
+    return '<div class="fr-item"><span class="avatar" style="' + LghKonto.avatarStil(f.name) + '">' + esc(anz(f).charAt(0).toUpperCase()) + '</span>' +
+      '<div class="fr-text"><div class="fr-name">' + esc(anz(f)) + '<span class="fr-at">@' + esc(f.name) + '</span></div><div class="fr-status">' + status + '</div></div><div class="fr-akt">' + akt + '</div></div>';
   }
   function zeichneFreunde(z, d) {
     var h = '', n = esc;
     if (d.eingehend.length) {
       h += '<h2 class="fr-abschnitt">Anfragen <span class="fr-zahl">' + d.eingehend.length + '</span></h2><div class="fr-liste">';
       d.eingehend.forEach(function (x) {
-        h += frItem(0, x.name, 'möchte dein Freund sein',
+        h += frItem(0, x, 'möchte dein Freund sein',
           '<button type="button" class="btn btn-primary fr-btn" data-a="annehmen" data-n="' + n(x.name) + '">Annehmen</button>' +
           '<button type="button" class="btn btn-ghost fr-btn" data-a="ablehnen" data-n="' + n(x.name) + '">Ablehnen</button>');
       });
       h += '</div>';
     }
     h += '<h2 class="fr-abschnitt">Freunde <span class="fr-zahl">' + d.freunde.length + '</span></h2>';
-    if (!d.freunde.length) h += '<div class="fr-leer">Noch keine Freunde. Gib oben den Namen deines Freundes ein und schick ihm eine Anfrage.</div>';
+    if (!d.freunde.length) h += '<div class="fr-leer">Noch keine Freunde. Gib oben den @Benutzernamen deines Freundes ein und schick ihm eine Anfrage.</div>';
     else {
       var rang = function (f) { return f.spiel ? 0 : f.online ? 1 : 2; };
       h += '<div class="fr-liste">';
-      d.freunde.slice().sort(function (a, b) { return rang(a) - rang(b) || a.name.toLowerCase().localeCompare(b.name.toLowerCase()); }).forEach(function (f) {
+      d.freunde.slice().sort(function (a, b) { return rang(a) - rang(b) || anz(a).toLowerCase().localeCompare(anz(b).toLowerCase()); }).forEach(function (f) {
         var status, akt = '';
         if (f.spiel) {
           var offen = spielbar().some(function (s) { return s.id === f.spiel; });
@@ -510,15 +511,15 @@
         else status = '<span class="punkt"></span>' + (f.zuletzt ? 'Zuletzt online ' + relZeit(Math.max(0, d.jetzt - f.zuletzt)) : 'Noch nie online');
         akt += entfernenFrage === f.name
           ? '<button type="button" class="btn btn-ghost fr-btn gefahr" data-a="entfernen" data-n="' + n(f.name) + '">Wirklich entfernen?</button>'
-          : '<button type="button" class="btn btn-ghost fr-btn leise" data-a="frage" data-n="' + n(f.name) + '" aria-label="' + n(f.name) + ' entfernen">Entfernen</button>';
-        h += frItem(0, f.name, status, akt);
+          : '<button type="button" class="btn btn-ghost fr-btn leise" data-a="frage" data-n="' + n(f.name) + '" aria-label="' + n(anz(f)) + ' entfernen">Entfernen</button>';
+        h += frItem(0, f, status, akt);
       });
       h += '</div>';
     }
     if (d.ausgehend.length) {
       h += '<h2 class="fr-abschnitt">Gesendet <span class="fr-zahl">' + d.ausgehend.length + '</span></h2><div class="fr-liste">';
       d.ausgehend.forEach(function (x) {
-        h += frItem(0, x.name, 'wartet auf Antwort', '<button type="button" class="btn btn-ghost fr-btn leise" data-a="ablehnen" data-n="' + n(x.name) + '">Zurückziehen</button>');
+        h += frItem(0, x, 'wartet auf Antwort', '<button type="button" class="btn btn-ghost fr-btn leise" data-a="ablehnen" data-n="' + n(x.name) + '">Zurückziehen</button>');
       });
       h += '</div>';
     }
@@ -545,7 +546,7 @@
     if (!sichtbar) return;
     var d = leisteDaten, n = esc;
     var rang = function (f) { return f.spiel ? 0 : f.online ? 1 : 2; };
-    var liste = d.freunde.slice().sort(function (a, b) { return rang(a) - rang(b) || a.name.toLowerCase().localeCompare(b.name.toLowerCase()); });
+    var liste = d.freunde.slice().sort(function (a, b) { return rang(a) - rang(b) || anz(a).toLowerCase().localeCompare(anz(b).toLowerCase()); });
     var h = '<a class="fr-kopf" href="#freunde">Freunde (' + d.freunde.length + ')<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
       (d.eingehend.length ? '<span class="fr-neu">' + d.eingehend.length + (d.eingehend.length === 1 ? ' Anfrage' : ' Anfragen') + '</span>' : '') + '</a>';
     h += '<div class="fr-reihe">';
@@ -556,9 +557,9 @@
         if (spielbar().some(function (s) { return s.id === f.spiel; })) ziel = '#spiel/' + encodeURIComponent(f.spiel);
         status = esc(spielName(f.spiel));
       } else if (f.online) status = 'Im Hub';
-      h += '<a class="fr-karte' + (f.spiel || f.online ? '' : ' aus') + '" href="' + ziel + '" title="' + n(f.name) + (f.spiel ? ' spielt ' + n(spielName(f.spiel)) : f.online ? ' ist im Hub' : '') + '">' +
-        '<span class="fr-kreis" style="' + LghKonto.avatarStil(f.name) + '">' + n(f.name.charAt(0).toUpperCase()) + (f.spiel || f.online ? '<span class="fr-punkt"></span>' : '') + '</span>' +
-        '<span class="fr-n">' + n(f.name) + '</span><span class="fr-s">' + status + '</span></a>';
+      h += '<a class="fr-karte' + (f.spiel || f.online ? '' : ' aus') + '" href="' + ziel + '" title="' + n(anz(f)) + ' (@' + n(f.name) + ')' + (f.spiel ? ' spielt ' + n(spielName(f.spiel)) : f.online ? ' ist im Hub' : '') + '">' +
+        '<span class="fr-kreis" style="' + LghKonto.avatarStil(f.name) + '">' + n(anz(f).charAt(0).toUpperCase()) + (f.spiel || f.online ? '<span class="fr-punkt"></span>' : '') + '</span>' +
+        '<span class="fr-n">' + n(anz(f)) + '</span><span class="fr-s">' + status + '</span></a>';
     });
     z.innerHTML = h + '</div>';
   }
@@ -580,7 +581,7 @@
   document.addEventListener('visibilitychange', function () { if (!document.hidden) ladeLeiste(); });
 
   var FR_FEHLER = {
-    unbekannter_name: 'Es gibt kein Konto mit diesem Namen.', selbst: 'Das bist du selbst.', schon_freunde: 'Ihr seid schon Freunde.',
+    unbekannter_name: 'Es gibt kein Konto mit diesem Benutzernamen.', selbst: 'Das bist du selbst.', schon_freunde: 'Ihr seid schon Freunde.',
     schon_angefragt: 'Du hast dieser Person schon eine Anfrage geschickt.', zu_viele_freunde: 'Du hast schon die höchste Zahl an Freunden.',
     zu_viele_offen: 'Du hast schon sehr viele offene Anfragen. Warte, bis einige beantwortet sind.', netz: 'Keine Verbindung zum Server.',
   };
@@ -589,7 +590,7 @@
     freundeDaten = null; entfernenFrage = null;
     inhalt.innerHTML = '<div class="fr-wrap"><h1 class="fr-titel">Freunde</h1>' +
       '<p class="fr-sub">Sieh, wer gerade spielt, und spring direkt mit ins Spiel.</p>' +
-      '<form class="fr-form" id="fr-form" novalidate><input id="fr-name" type="text" placeholder="Name deines Freundes" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="20" aria-label="Name deines Freundes">' +
+      '<form class="fr-form" id="fr-form" novalidate><input id="fr-name" type="text" placeholder="@Benutzername deines Freundes" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="21" aria-label="Benutzername deines Freundes">' +
       '<button class="btn btn-primary" type="submit">Anfrage senden</button></form>' +
       '<div class="fr-meldung" id="fr-meldung" role="status"></div><div id="fr-liste"><div class="fr-leer">Lädt …</div></div></div>';
     ladeFreunde();
@@ -598,11 +599,11 @@
   inhalt.addEventListener('submit', function (e) {
     if (!e.target || e.target.id !== 'fr-form') return;
     e.preventDefault();
-    var feld = document.getElementById('fr-name'), name = feld.value.trim();
+    var feld = document.getElementById('fr-name'), name = feld.value.trim().replace(/^@/, '');
     if (!name) return;
     frMeldung('');
     LghKonto.freunde.anfrage(name).then(function (res) {
-      if (res.ok) { feld.value = ''; frMeldung(res.j.freunde ? 'Du und ' + res.j.name + ' seid jetzt Freunde.' : 'Anfrage an ' + res.j.name + ' gesendet.'); ladeFreunde(); }
+      if (res.ok) { feld.value = ''; frMeldung(res.j.freunde ? 'Du und ' + (res.j.anzeige || res.j.name) + ' (@' + res.j.name + ') seid jetzt Freunde.' : 'Anfrage an ' + (res.j.anzeige || res.j.name) + ' (@' + res.j.name + ') gesendet.'); ladeFreunde(); }
       else frMeldung(res.j.fehler === 'zu_viele' ? 'Zu viele Anfragen in kurzer Zeit. Bitte später noch einmal.' : (FR_FEHLER[res.j.fehler] || 'Das hat nicht geklappt.'), true);
     });
   });
