@@ -661,7 +661,7 @@
     else (buehne.requestFullscreen || buehne.webkitRequestFullscreen).call(buehne);
   });
 
-  var BILD_V = '3';
+  var BILD_V = '4';
   function json(url) { return fetch(url, { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); }
   Promise.all([json('games.json'), json('versions.json').catch(function () { return {}; })])
     .then(function (d) {
