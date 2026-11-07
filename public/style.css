@@ -658,18 +658,16 @@ body.konto-offen { overflow: hidden; }
 .fr-at { margin-left: 8px; font-weight: 500; font-size: 13px; color: var(--muted); }
 
 /* ---------- Startbildschirm ---------- */
-#splash { position: fixed; inset: 0; z-index: 2147483000; background: #000; display: grid; place-items: center; --len: 6000; animation: sp-aus .4s ease-in 2.0s forwards; }
+#splash { position: fixed; inset: 0; z-index: 2147483000; background: #000; display: grid; place-items: center; --len: 6000; animation: sp-aus .4s ease-in 2.35s forwards; }
 #splash.schnell { transition: opacity .25s; opacity: 0; pointer-events: none; animation: none; }
 #splash .sp-logo { width: min(54vw, 40vh, 280px); min-width: 110px; height: auto; overflow: visible; filter: drop-shadow(0 0 10px rgba(255, 196, 80, .35)); }
-#splash .sp-strich { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: sp-zeichnen 1.3s cubic-bezier(.5, .1, .35, 1) .15s forwards, sp-duenn .45s ease 1.4s forwards; }
-#splash .sp-fuell { opacity: 0; animation: sp-fuellen .5s ease-out 1.3s forwards; }
-#splash.ohne-strich .sp-strich { display: none; }
+#splash #logo-linie { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: sp-zeichnen 1.75s cubic-bezier(.4, .05, .55, 1) .25s forwards; }
+#splash .sp-voll { opacity: 0; animation: sp-voll .3s ease-out 1.95s forwards; }
+#splash.ohne-strich #logo-linie { stroke-dasharray: none; stroke-dashoffset: 0; animation: none; }
 @keyframes sp-zeichnen { to { stroke-dashoffset: 0; } }
-@keyframes sp-duenn { to { stroke-width: 0; opacity: .0; } }
-@keyframes sp-fuellen { to { opacity: 1; } }
+@keyframes sp-voll { to { opacity: 1; } }
 @keyframes sp-aus { to { opacity: 0; visibility: hidden; } }
 @media (prefers-reduced-motion: reduce) {
   #splash { animation-delay: .7s; animation-duration: .25s; }
-  #splash .sp-strich { animation: none; display: none; }
-  #splash .sp-fuell { animation-duration: .2s; animation-delay: 0s; }
+  #splash #logo-linie { animation: none; stroke-dasharray: none; stroke-dashoffset: 0; }
 }
