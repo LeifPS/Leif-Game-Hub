@@ -49,11 +49,11 @@
   "version": "0.30.5.0"
  },
  "fischerdock": {
-  "anzahl": 11,
-  "datum": "2026-11-07T14:10:37+01:00",
+  "anzahl": 12,
+  "datum": "2026-11-07T19:14:28+01:00",
   "erste": "2026-09-30T15:02:11+02:00",
   "offiziell": false,
-  "version": "0.6.2.0"
+  "version": "0.7.0.0"
  },
  "foilxi": {
   "anzahl": 875,
@@ -75,11 +75,11 @@
   "version": "0.1.0.0"
  },
  "papierhelden": {
-  "anzahl": 11,
-  "datum": "2026-11-07T14:10:39+01:00",
+  "anzahl": 12,
+  "datum": "2026-11-07T18:16:39+01:00",
   "erste": "2026-10-24T11:08:35+02:00",
   "offiziell": false,
-  "version": "0.6.3.0"
+  "version": "0.6.4.0"
  },
  "pizzafabrik": {
   "anzahl": 85,
@@ -117,11 +117,11 @@
   "version": "0.3.9.0"
  },
  "tonlinge": {
-  "anzahl": 285,
-  "datum": "2026-11-07T14:10:50+01:00",
+  "anzahl": 286,
+  "datum": "2026-11-07T17:32:05+01:00",
   "erste": "2026-10-17T13:34:56+02:00",
   "offiziell": false,
-  "version": "0.60.3.0"
+  "version": "0.60.4.0"
  },
  "wasserschlacht": {
   "anzahl": 14,
