@@ -56,6 +56,24 @@ export const SCHEMA = [
     last INTEGER NOT NULL,
     PRIMARY KEY (user_id, game)
   )`,
+  // Chat unter Freunden: ein Eintrag pro Nachricht, (a, b) ist das Freundespaar (a < b) wie in friends, sender ist einer von beiden.
+  // Es bleiben die letzten 500 Nachrichten pro Paar; beim Entfernen der Freundschaft und beim Löschen eines Kontos verschwinden sie.
+  `CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    a INTEGER NOT NULL,
+    b INTEGER NOT NULL,
+    sender INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    created INTEGER NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS messages_paar ON messages(a, b, id)`,
+  // Bis zu welcher Nachricht user_id den Chat mit other gelesen hat (alles danach von other zählt als ungelesen)
+  `CREATE TABLE IF NOT EXISTS chat_read (
+    user_id INTEGER NOT NULL,
+    other INTEGER NOT NULL,
+    last_id INTEGER NOT NULL,
+    PRIMARY KEY (user_id, other)
+  )`,
   // Zähler gegen Raten von Passwörtern und Massenanmeldungen
   `CREATE TABLE IF NOT EXISTS limits (
     k TEXT PRIMARY KEY,

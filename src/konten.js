@@ -279,6 +279,8 @@ async function kontoLoeschen(request, db, s, jetzt) {
     db.prepare('DELETE FROM saves WHERE user_id = ?').bind(s.id),
     db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(s.id),
     db.prepare('DELETE FROM friends WHERE a = ? OR b = ?').bind(s.id, s.id),
+    db.prepare('DELETE FROM messages WHERE a = ? OR b = ?').bind(s.id, s.id),
+    db.prepare('DELETE FROM chat_read WHERE user_id = ? OR other = ?').bind(s.id, s.id),
     db.prepare('DELETE FROM presence WHERE user_id = ?').bind(s.id),
     db.prepare('DELETE FROM playtime WHERE user_id = ?').bind(s.id),
     db.prepare('DELETE FROM users WHERE id = ?').bind(s.id),
@@ -377,22 +379,33 @@ async function suche(db, name) {
 
 async function freundeListe(db, s, jetzt) {
   const r = await db.prepare(
-    `SELECT u.name AS name, u.display AS display, u.avatar AS avatar, f.status AS status, f.requester AS requester, p.game AS game, p.raum AS raum, p.seen AS seen, u.vis_online AS vo, u.vis_spiele AS vs
+    `SELECT u.id AS uid, u.name AS name, u.display AS display, u.avatar AS avatar, f.status AS status, f.requester AS requester, p.game AS game, p.raum AS raum, p.seen AS seen, u.vis_online AS vo, u.vis_spiele AS vs
      FROM friends f JOIN users u ON u.id = CASE WHEN f.a = ? THEN f.b ELSE f.a END
      LEFT JOIN presence p ON p.user_id = u.id
      WHERE f.a = ? OR f.b = ? ORDER BY lower(COALESCE(u.display, u.name))`
   ).bind(s.id, s.id, s.id).all();
   const freunde = [], eingehend = [], ausgehend = [];
+  // Ungelesene Chatnachrichten je Freund (Zahl und Vorschau der neuesten), nur von bestätigten Freunden
+  const ung = await db.prepare(
+    `SELECT m.sender AS von, COUNT(*) AS n, MAX(m.id) AS neu, m.text AS text FROM messages m
+     JOIN friends f ON f.a = m.a AND f.b = m.b AND f.status = 'accepted'
+     WHERE (m.a = ? OR m.b = ?) AND m.sender <> ? AND m.id > COALESCE((SELECT last_id FROM chat_read r WHERE r.user_id = ? AND r.other = m.sender), 0)
+     GROUP BY m.sender`
+  ).bind(s.id, s.id, s.id, s.id).all();
+  const ungVon = new Map(ung.results.map((u) => [u.von, u]));
+  let chat = 0;
   for (const x of r.results) {
     if (x.status === 'accepted') {
+      const u = ungVon.get(x.uid) || null;
+      if (u) chat += u.n;
       // Was ein Freund verbergen will, verlässt den Server gar nicht erst: Online-Status (auch "zuletzt online") und gespielte Spiele (auch das aktuelle) sind getrennt einstellbar
       const privat = x.vo === 0, spielZeigen = x.vs !== 0;
       const online = !privat && !!x.seen && jetzt - x.seen < ONLINE_SEKUNDEN;
-      freunde.push({ name: x.name, anzeige: x.display || x.name, av: avParse(x.avatar), online, privat, spiel: online && spielZeigen ? x.game || null : null, raum: online && spielZeigen && x.game ? x.raum || null : null, zuletzt: privat ? null : x.seen || null });
+      freunde.push({ name: x.name, anzeige: x.display || x.name, av: avParse(x.avatar), online, privat, spiel: online && spielZeigen ? x.game || null : null, raum: online && spielZeigen && x.game ? x.raum || null : null, zuletzt: privat ? null : x.seen || null, ungelesen: u ? u.n : 0, vorschau: u ? chatVorschau(u.text) : null });
     } else if (x.requester === s.id) ausgehend.push({ name: x.name, anzeige: x.display || x.name, av: avParse(x.avatar) });
     else eingehend.push({ name: x.name, anzeige: x.display || x.name, av: avParse(x.avatar) });
   }
-  return antwort({ freunde, eingehend, ausgehend, jetzt });
+  return antwort({ freunde, eingehend, ausgehend, chat, jetzt });
 }
 
 async function freundAnfrage(request, db, s, jetzt) {
@@ -438,6 +451,84 @@ async function freundLoeschen(request, db, s, nurAnfrage) {
   if (!ziel) return fehler(404, 'unbekannter_name');
   const [x, y] = paar(s.id, ziel.id);
   const r = await db.prepare(`DELETE FROM friends WHERE a = ? AND b = ?${nurAnfrage ? " AND status = 'pending'" : ''}`).bind(x, y).run();
+  if (!r.meta || r.meta.changes !== 1) return fehler(404, 'nicht_gefunden');
+  if (!nurAnfrage) await db.batch([   // ohne Freundschaft kein Chatverlauf mehr
+    db.prepare('DELETE FROM messages WHERE a = ? AND b = ?').bind(x, y),
+    db.prepare('DELETE FROM chat_read WHERE (user_id = ? AND other = ?) OR (user_id = ? AND other = ?)').bind(x, y, y, x),
+  ]);
+  return antwort({ ok: true });
+}
+
+/* ---------- Chat ---------- */
+// Nachrichten gehen nur zwischen bestätigten Freunden (sonst 404 wie bei unbekanntem Namen), nur als Text, höchstens 500 Zeichen.
+export const CHAT_MAX = 500, CHAT_BEHALTEN = 500, CHAT_SEITE = 50;
+const chatVorschau = (t) => { const z = String(t || '').split('\n')[0]; const c = [...z]; return c.length > 80 ? c.slice(0, 79).join('') + '…' : z; };
+function chatText(v) {
+  if (typeof v !== 'string') return { fehler: 'eingabe' };
+  const t = v.normalize('NFC').replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  if (!t) return { fehler: 'leer' };
+  if ([...t].length > CHAT_MAX) return { fehler: 'zu_lang' };
+  if (/[\u0000-\u0009\u000b-\u001f\u007f]/.test(t)) return { fehler: 'zeichen' };
+  return { wert: t };
+}
+async function chatPartner(db, s, name) {
+  const z = await suche(db, name);
+  if (!z || z.id === s.id) return null;
+  const [x, y] = paar(s.id, z.id);
+  const f = await db.prepare("SELECT status FROM friends WHERE a = ? AND b = ?").bind(x, y).first();
+  return f && f.status === 'accepted' ? { id: z.id, a: x, b: y } : null;
+}
+const chatNachricht = (s, r) => ({ id: r.id, von: r.sender === s.id ? 'ich' : 'er', text: r.text, zeit: r.created });
+
+// Ohne Parameter die neuesten 50; nach=<id> nur Neueres (zum Nachladen); vor=<id> Älteres (zum Weiterblättern).
+// Mit gelesen=1 gilt der Chat bis zur neuesten gelieferten Nachricht als gelesen.
+async function chatLesen(db, s, name, url, jetzt) {
+  const p = await chatPartner(db, s, name);
+  if (!p) return fehler(404, 'unbekannt');
+  const nach = parseInt(url.searchParams.get('nach') || '0', 10) || 0, vor = parseInt(url.searchParams.get('vor') || '0', 10) || 0;
+  let rows, mehr = false;
+  if (nach > 0) rows = (await db.prepare('SELECT id, sender, text, created FROM messages WHERE a = ? AND b = ? AND id > ? ORDER BY id LIMIT 100').bind(p.a, p.b, nach).all()).results;
+  else {
+    rows = (await db.prepare(`SELECT id, sender, text, created FROM messages WHERE a = ? AND b = ?${vor > 0 ? ' AND id < ?' : ''} ORDER BY id DESC LIMIT ?`)
+      .bind(...(vor > 0 ? [p.a, p.b, vor, CHAT_SEITE] : [p.a, p.b, CHAT_SEITE])).all()).results.reverse();
+    mehr = rows.length === CHAT_SEITE;
+  }
+  if (url.searchParams.get('gelesen') === '1' && !vor && rows.some((r) => r.sender === p.id)) {
+    await db.prepare('INSERT INTO chat_read (user_id, other, last_id) VALUES (?, ?, ?) ON CONFLICT(user_id, other) DO UPDATE SET last_id = MAX(last_id, excluded.last_id)')
+      .bind(s.id, p.id, rows[rows.length - 1].id).run();
+  }
+  return antwort({ nachrichten: rows.map((r) => chatNachricht(s, r)), mehr, jetzt });
+}
+
+async function chatSenden(request, db, s, name, jetzt) {
+  const { b } = await lies(request);
+  if (!b) return fehler(400, 'eingabe');
+  const t = chatText(b.text);
+  if (t.fehler) return fehler(400, t.fehler);
+  const k = 'c:' + s.id;
+  const warte = await gesperrt(db, k, jetzt);
+  if (warte) return fehler(429, 'zu_viele', { warte });
+  const p = await chatPartner(db, s, name);
+  if (!p) return fehler(404, 'unbekannt');
+  await zaehle(db, k, jetzt, 30, 30, 60);   // höchstens 30 Nachrichten pro Minute, danach kurze Pause
+  const neu = await db.prepare('INSERT INTO messages (a, b, sender, text, created) VALUES (?, ?, ?, ?, ?) RETURNING id').bind(p.a, p.b, s.id, t.wert, jetzt).first();
+  await db.batch([
+    // Wer antwortet, hat den Chat gelesen
+    db.prepare('INSERT INTO chat_read (user_id, other, last_id) VALUES (?, ?, ?) ON CONFLICT(user_id, other) DO UPDATE SET last_id = MAX(last_id, excluded.last_id)').bind(s.id, p.id, neu.id),
+    // Nur die neuesten 500 Nachrichten pro Paar bleiben
+    db.prepare('DELETE FROM messages WHERE a = ? AND b = ? AND id < (SELECT id FROM messages WHERE a = ? AND b = ? ORDER BY id DESC LIMIT 1 OFFSET ?)').bind(p.a, p.b, p.a, p.b, CHAT_BEHALTEN - 1),
+  ]);
+  return antwort({ ok: true, nachricht: { id: neu.id, von: 'ich', text: t.wert, zeit: jetzt } });
+}
+
+// Eigene Nachricht löschen (verschwindet bei beiden)
+async function chatLoeschen(request, db, s, name) {
+  const { b } = await lies(request);
+  const id = b && Number.isInteger(b.id) ? b.id : 0;
+  if (!id) return fehler(400, 'eingabe');
+  const p = await chatPartner(db, s, name);
+  if (!p) return fehler(404, 'unbekannt');
+  const r = await db.prepare('DELETE FROM messages WHERE id = ? AND a = ? AND b = ? AND sender = ?').bind(id, p.a, p.b, s.id).run();
   if (!r.meta || r.meta.changes !== 1) return fehler(404, 'nicht_gefunden');
   return antwort({ ok: true });
 }
@@ -545,6 +636,13 @@ export async function handle(request, env, jetztMs = Date.now()) {
     if (pfad === '/api/freunde/annehmen' && m === 'POST') return await freundAnnehmen(request, db, s);
     if (pfad === '/api/freunde/ablehnen' && m === 'POST') return await freundLoeschen(request, db, s, true);
     if (pfad === '/api/freunde/entfernen' && m === 'POST') return await freundLoeschen(request, db, s, false);
+    const cm = /^\/api\/chat\/([^/]+)(?:\/(loeschen))?$/.exec(pfad);
+    if (cm) {
+      let n; try { n = decodeURIComponent(cm[1]); } catch (e) { return fehler(400, 'eingabe'); }
+      if (cm[2] === 'loeschen' && m === 'POST') return await chatLoeschen(request, db, s, n);
+      if (!cm[2] && m === 'GET') return await chatLesen(db, s, n, url, jetzt);
+      if (!cm[2] && m === 'POST') return await chatSenden(request, db, s, n, jetzt);
+    }
     if (pfad === '/api/praesenz' && m === 'POST') return await praesenz(request, db, s, jetzt);
     if (pfad === '/api/profil' && m === 'GET') return await profil(db, s, null, jetzt);
     const pm = /^\/api\/profil\/([^/]+)$/.exec(pfad);

@@ -257,7 +257,7 @@ test('Freunde: Präsenz nur für Freunde sichtbar; gegenseitige Anfrage wird zur
   const env = umgebung();
   const a = await neuesKonto(env, 'Anna'), b = await neuesKonto(env, 'Ben'), c = await neuesKonto(env, 'Carl');
   await call(env, 'POST', '/api/praesenz', { spiel: 'spells' }, a);
-  assert.deepEqual((await call(env, 'GET', '/api/freunde', undefined, b)).j, { freunde: [], eingehend: [], ausgehend: [], jetzt: Math.floor(uhr / 1000) });
+  assert.deepEqual((await call(env, 'GET', '/api/freunde', undefined, b)).j, { freunde: [], eingehend: [], ausgehend: [], chat: 0, jetzt: Math.floor(uhr / 1000) });
   // Ben und Carl fragen sich gegenseitig an
   await call(env, 'POST', '/api/freunde/anfrage', { name: 'Carl' }, b);
   const g = await call(env, 'POST', '/api/freunde/anfrage', { name: 'Ben' }, c);
@@ -539,4 +539,166 @@ test('Sichtbarkeit: Online-Status und Spiele getrennt verbergbar, serverseitig d
   // Das eigene Profil bleibt vollständig und zeigt die Einstellung
   const ich = (await call(env, 'GET', '/api/profil', undefined, b)).j;
   assert.equal(ich.online, true); assert.equal(ich.spiel, 'spells'); assert.deepEqual(ich.sicht, { online: 0, spiele: 1 });
+});
+
+async function freunde2(env, n1 = 'Anna', n2 = 'Ben') {
+  const a = await neuesKonto(env, n1), b = await neuesKonto(env, n2);
+  await call(env, 'POST', '/api/freunde/anfrage', { name: n2 }, a);
+  await call(env, 'POST', '/api/freunde/annehmen', { name: n1 }, b);
+  return [a, b];
+}
+
+test('Chat: nur unter Freunden, Senden, Lesen, Nachladen, ungelesen und Gelesen-Markierung', async () => {
+  const env = umgebung();
+  const a = await neuesKonto(env, 'Anna'), b = await neuesKonto(env, 'Ben');
+  // Ohne Freundschaft (auch bei offener Anfrage) weder Senden noch Lesen
+  assert.equal((await call(env, 'POST', '/api/chat/Ben', { text: 'Hallo' }, a)).status, 404);
+  await call(env, 'POST', '/api/freunde/anfrage', { name: 'Ben' }, a);
+  assert.equal((await call(env, 'POST', '/api/chat/Ben', { text: 'Hallo' }, a)).status, 404);
+  assert.equal((await call(env, 'GET', '/api/chat/Anna', undefined, b)).status, 404);
+  await call(env, 'POST', '/api/freunde/annehmen', { name: 'Anna' }, b);
+  // Nicht angemeldet, an sich selbst, unbekannter Name
+  assert.equal((await call(env, 'GET', '/api/chat/Ben')).status, 401);
+  assert.equal((await call(env, 'POST', '/api/chat/Anna', { text: 'x' }, a)).status, 404);
+  assert.equal((await call(env, 'POST', '/api/chat/Niemand', { text: 'x' }, a)).status, 404);
+  // Senden: Name ohne Beachtung der Schreibweise, auch mit @
+  const s1 = await call(env, 'POST', '/api/chat/ben', { text: '  Hallo Ben!  ' }, a);
+  assert.equal(s1.status, 200);
+  assert.deepEqual([s1.j.nachricht.von, s1.j.nachricht.text], ['ich', 'Hallo Ben!']);
+  await call(env, 'POST', '/api/chat/%40Ben', { text: 'Zweite\nZeile' }, a);
+  // Ben sieht 2 ungelesene, mit Vorschau der neuesten
+  let l = (await call(env, 'GET', '/api/freunde', undefined, b)).j;
+  assert.equal(l.chat, 2);
+  assert.deepEqual([l.freunde[0].ungelesen, l.freunde[0].vorschau], [2, 'Zweite']);
+  // Anna hat nichts Ungelesenes (eigene Nachrichten zählen nicht)
+  assert.equal((await call(env, 'GET', '/api/freunde', undefined, a)).j.chat, 0);
+  // Lesen ohne gelesen=1 markiert nichts
+  const r1 = await call(env, 'GET', '/api/chat/Anna', undefined, b);
+  assert.deepEqual(r1.j.nachrichten.map((m) => [m.von, m.text]), [['er', 'Hallo Ben!'], ['er', 'Zweite\nZeile']]);
+  assert.equal(r1.j.mehr, false);
+  assert.equal((await call(env, 'GET', '/api/freunde', undefined, b)).j.chat, 2);
+  // Mit gelesen=1 gilt es als gelesen
+  await call(env, 'GET', '/api/chat/Anna?gelesen=1', undefined, b);
+  l = (await call(env, 'GET', '/api/freunde', undefined, b)).j;
+  assert.deepEqual([l.chat, l.freunde[0].ungelesen, l.freunde[0].vorschau], [0, 0, null]);
+  // Antwort und Nachladen mit nach=<id>
+  const letzte = r1.j.nachrichten[1].id;
+  uhr += 5000;
+  await call(env, 'POST', '/api/chat/Anna', { text: 'Hi Anna' }, b);
+  const nl = await call(env, 'GET', `/api/chat/Ben?nach=${letzte}&gelesen=1`, undefined, a);
+  assert.deepEqual(nl.j.nachrichten.map((m) => [m.von, m.text]), [['er', 'Hi Anna']]);
+  assert.equal((await call(env, 'GET', `/api/chat/Ben?nach=${nl.j.nachrichten[0].id}`, undefined, a)).j.nachrichten.length, 0);
+  assert.equal((await call(env, 'GET', '/api/freunde', undefined, a)).j.chat, 0);
+});
+
+test('Chat: Antworten markiert den Chat als gelesen; Eingaben werden geprüft', async () => {
+  const env = umgebung();
+  const [a, b] = await freunde2(env);
+  await call(env, 'POST', '/api/chat/Ben', { text: 'eins' }, a);
+  await call(env, 'POST', '/api/chat/Ben', { text: 'zwei' }, a);
+  assert.equal((await call(env, 'GET', '/api/freunde', undefined, b)).j.chat, 2);
+  await call(env, 'POST', '/api/chat/Anna', { text: 'Antwort' }, b);
+  assert.equal((await call(env, 'GET', '/api/freunde', undefined, b)).j.chat, 0);
+  const f = (t) => call(env, 'POST', '/api/chat/Ben', { text: t }, a);
+  assert.equal((await f('')).j.fehler, 'leer');
+  assert.equal((await f('   \n  ')).j.fehler, 'leer');
+  assert.equal((await f(42)).j.fehler, 'eingabe');
+  assert.equal((await f('x'.repeat(501))).j.fehler, 'zu_lang');
+  assert.equal((await f('x'.repeat(500))).status, 200);
+  assert.equal((await f('😀'.repeat(500))).status, 200, 'Emojis zählen als ein Zeichen');
+  assert.equal((await f('a\u0007b')).j.fehler, 'zeichen');
+  // HTML bleibt Text (die Oberfläche maskiert es), mehrere Leerzeilen werden zusammengezogen
+  const h = await f('<b>fett</b> :-<\n\n\n\nEnde');
+  assert.equal(h.j.nachricht.text, '<b>fett</b> :-<\n\nEnde');
+  assert.equal((await call(env, 'POST', '/api/chat/Ben', undefined, a)).status, 400);
+});
+
+test('Chat: Nachrichten löschen (nur eigene), ältere nachladen, nur 500 bleiben', async () => {
+  const env = umgebung();
+  const [a, b] = await freunde2(env);
+  const m = (await call(env, 'POST', '/api/chat/Ben', { text: 'weg damit' }, a)).j.nachricht;
+  assert.equal((await call(env, 'POST', '/api/chat/Anna/loeschen', { id: m.id }, b)).status, 404, 'fremde Nachricht');
+  assert.equal((await call(env, 'POST', '/api/chat/Ben/loeschen', { id: m.id }, a)).status, 200);
+  assert.equal((await call(env, 'POST', '/api/chat/Ben/loeschen', { id: m.id }, a)).status, 404, 'schon weg');
+  assert.equal((await call(env, 'POST', '/api/chat/Ben/loeschen', { id: 'x' }, a)).status, 400);
+  assert.equal((await call(env, 'GET', '/api/chat/Ben', undefined, a)).j.nachrichten.length, 0);
+  // Viele Nachrichten: die neuesten 50 zuerst, mit vor=<id> blättert man weiter zurück
+  for (let i = 1; i <= 120; i++) { await call(env, 'POST', '/api/chat/Ben', { text: 'n' + i }, a); if (i % 25 === 0) uhr += 61_000; }
+  const neu = (await call(env, 'GET', '/api/chat/Ben', undefined, a)).j;
+  assert.equal(neu.nachrichten.length, 50);
+  assert.equal(neu.mehr, true);
+  assert.equal(neu.nachrichten[49].text, 'n120');
+  const alt = (await call(env, 'GET', `/api/chat/Ben?vor=${neu.nachrichten[0].id}`, undefined, a)).j;
+  assert.equal(alt.nachrichten.length, 50);
+  assert.equal(alt.nachrichten[49].text, 'n70');
+  const rest = (await call(env, 'GET', `/api/chat/Ben?vor=${alt.nachrichten[0].id}`, undefined, a)).j;
+  assert.deepEqual([rest.nachrichten.length, rest.mehr], [20, false]);
+});
+
+test('Chat: höchstens 500 Nachrichten pro Paar bleiben erhalten', async () => {
+  const env = umgebung();
+  const [a] = await freunde2(env);
+  for (let i = 1; i <= 505; i++) { await call(env, 'POST', '/api/chat/Ben', { text: 'n' + i }, a); if (i % 28 === 0) uhr += 61_000; }
+  const ids = [];
+  let vor = '';
+  for (;;) {
+    const r = (await call(env, 'GET', '/api/chat/Ben' + vor, undefined, a)).j;
+    ids.push(...r.nachrichten.map((m) => m.text));
+    if (!r.mehr) break;
+    vor = '?vor=' + r.nachrichten[0].id;
+  }
+  assert.equal(ids.length, 500);
+  assert.ok(ids.includes('n505') && ids.includes('n6') && !ids.includes('n5'));
+});
+
+test('Chat: Bremse bei zu vielen Nachrichten, getrennt pro Absender', async () => {
+  const env = umgebung();
+  const [a, b] = await freunde2(env);
+  for (let i = 0; i < 30; i++) assert.equal((await call(env, 'POST', '/api/chat/Ben', { text: 'spam' + i }, a)).status, 200);
+  const g = await call(env, 'POST', '/api/chat/Ben', { text: 'noch eine' }, a);
+  assert.equal(g.status, 429);
+  assert.ok(g.j.warte > 0 && g.j.warte <= 30);
+  assert.equal((await call(env, 'POST', '/api/chat/Anna', { text: 'ich darf noch' }, b)).status, 200);
+  uhr += 31_000;
+  assert.equal((await call(env, 'POST', '/api/chat/Ben', { text: 'wieder' }, a)).status, 200);
+  uhr += 61_000;
+});
+
+test('Chat: Freundschaft entfernen löscht den Verlauf, Konto löschen ebenfalls', async () => {
+  const env = umgebung();
+  const [a, b] = await freunde2(env);
+  const c = await neuesKonto(env, 'Carl');
+  await call(env, 'POST', '/api/freunde/anfrage', { name: 'Carl' }, a);
+  await call(env, 'POST', '/api/freunde/annehmen', { name: 'Anna' }, c);
+  await call(env, 'POST', '/api/chat/Ben', { text: 'an Ben' }, a);
+  await call(env, 'POST', '/api/chat/Anna', { text: 'von Ben' }, b);
+  await call(env, 'POST', '/api/chat/Carl', { text: 'an Carl' }, a);
+  assert.equal((await call(env, 'GET', '/api/freunde', undefined, a)).j.chat, 1);
+  await call(env, 'POST', '/api/freunde/entfernen', { name: 'Ben' }, a);
+  assert.equal((await call(env, 'GET', '/api/chat/Ben', undefined, a)).status, 404);
+  assert.equal((await call(env, 'GET', '/api/freunde', undefined, a)).j.chat, 0);
+  // Wieder befreundet: der alte Verlauf ist weg, der mit Carl bleibt
+  await call(env, 'POST', '/api/freunde/anfrage', { name: 'Ben' }, a);
+  await call(env, 'POST', '/api/freunde/annehmen', { name: 'Anna' }, b);
+  assert.equal((await call(env, 'GET', '/api/chat/Ben', undefined, a)).j.nachrichten.length, 0);
+  assert.equal((await call(env, 'GET', '/api/chat/Carl', undefined, a)).j.nachrichten.length, 1);
+  // Konto löschen: Carl verliert den Verlauf mit Anna, Freunde-Liste ist leer
+  const key = await schluessel('Anna', 'geheim123');
+  assert.equal((await call(env, 'POST', '/api/loeschen', { key }, a)).status, 200);
+  assert.equal((await call(env, 'GET', '/api/freunde', undefined, c)).j.chat, 0);
+  const rest = await env.DB.prepare('SELECT COUNT(*) AS n FROM messages').first();
+  assert.equal(rest.n, 0);
+  const lesen = await env.DB.prepare('SELECT COUNT(*) AS n FROM chat_read').first();
+  assert.equal(lesen.n, 0);
+});
+
+test('Chat: Ungelesenes zählt nur von Freunden und nur für den Empfänger', async () => {
+  const env = umgebung();
+  const [a, b] = await freunde2(env);
+  const c = await neuesKonto(env, 'Carl');
+  await call(env, 'POST', '/api/chat/Ben', { text: 'nur für Ben' }, a);
+  assert.equal((await call(env, 'GET', '/api/freunde', undefined, c)).j.chat, 0);
+  assert.equal((await call(env, 'GET', '/api/chat/Anna', undefined, c)).status, 404);
+  assert.equal((await call(env, 'GET', '/api/chat/Ben', undefined, c)).status, 404);
+  assert.equal((await call(env, 'GET', '/api/freunde', undefined, b)).j.chat, 1);
 });
