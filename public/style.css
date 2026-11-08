@@ -905,3 +905,10 @@ body[data-view="chat"] { overflow: hidden; }
 .sp-meld.ok { color: #6fd9a6; }
 .sp-meld.fehler { color: #ff8aa0; }
 @media (prefers-reduced-motion: reduce) { .sp-karte { animation: none; } }
+
+/* Vollbild-Ersatz (iPhone): Leiste weg, kleiner Knopf zum Zurückholen */
+.voll-aus { display: none; position: absolute; z-index: 7; left: max(8px, env(safe-area-inset-left)); top: max(8px, env(safe-area-inset-top)); width: 36px; height: 36px; padding: 0; border: 0; border-radius: 10px; cursor: pointer; align-items: center; justify-content: center; background: rgba(12, 15, 22, .55); color: #fff; opacity: .55; backdrop-filter: blur(6px); }
+.voll-aus:hover, .voll-aus:focus-visible { opacity: 1; }
+.voll-aus svg { width: 18px; height: 18px; }
+body.pseudo-voll .leiste { display: none; }
+body.pseudo-voll .voll-aus { display: flex; }

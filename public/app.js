@@ -576,7 +576,8 @@
     aktuell = sp;
     document.getElementById('spieltitel').textContent = sp.name;
     document.getElementById('hinweis-link').href = sp.url;
-    document.getElementById('vollbild').hidden = !(buehne.requestFullscreen || buehne.webkitRequestFullscreen);
+    document.getElementById('vollbild').hidden = false;   // ohne Fullscreen-API (iPhone) gibt es einen Ersatz: Leiste ausblenden
+    body.classList.remove('pseudo-voll');
     hinweis.classList.remove('sichtbar');
     clearTimeout(hinweisTimer);
     var zaehler = ++startZaehler;
@@ -597,6 +598,7 @@
     aktuell = null;
     startZaehler++;
     if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
+    body.classList.remove('pseudo-voll');
   }
 
   /* ---------- Freunde ---------- */
@@ -1283,11 +1285,16 @@
     neuerRahmen(null);        // der laufende Rahmen meldet noch seinen letzten Stand
     ladeRahmen(sp, zaehler);
   });
+  /* Vollbild: echtes Vollbild, wo der Browser es erlaubt (Desktop, Android, iPad). Das iPhone kennt die Fullscreen-API nur für Videos,
+     dort blendet der Knopf stattdessen die Leiste aus ("pseudo-voll"): das Spiel füllt die ganze Seite, ein kleiner Knopf holt die Leiste zurück. */
   document.getElementById('vollbild').addEventListener('click', function () {
     var voll = document.fullscreenElement || document.webkitFullscreenElement;
+    var an = buehne.requestFullscreen || buehne.webkitRequestFullscreen;
     if (voll) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
-    else (buehne.requestFullscreen || buehne.webkitRequestFullscreen).call(buehne);
+    else if (an) { try { var pr = an.call(buehne); if (pr && pr.catch) pr.catch(function () { body.classList.add('pseudo-voll'); }); } catch (e) { body.classList.add('pseudo-voll'); } }
+    else body.classList.add('pseudo-voll');
   });
+  document.getElementById('voll-aus').addEventListener('click', function () { body.classList.remove('pseudo-voll'); });
 
   window.LghStand = { spielName: function (id) { return spielName(id); }, anwenden: standAnwenden, lokal: standLokal, sicherungen: standSicherungen };
 

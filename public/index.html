@@ -12,7 +12,7 @@
 <link rel="shortcut icon" href="favicon.ico?v=3">
 <link rel="apple-touch-icon" href="logo/apple-touch-icon.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="style.css?v=11">
+<link rel="stylesheet" href="style.css?v=12">
 </head>
 <body data-view="home">
 <!-- Startbildschirm: schwarz, das Logo wird in Gold nachgezeichnet (siehe style.css und das Skript am Ende) -->
@@ -96,6 +96,7 @@
     <iframe id="rahmen" title="Spiel"
       allow="fullscreen; autoplay; clipboard-write; gamepad; accelerometer; gyroscope"
       sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-pointer-lock allow-modals allow-downloads allow-orientation-lock"></iframe>
+    <button class="voll-aus" id="voll-aus" type="button" aria-label="Vollbild beenden"><svg aria-hidden="true"><use href="#i-full"/></svg></button>
     <div class="lade-hinweis" id="hinweis">Das Spiel lädt nicht? <a id="hinweis-link" target="_blank" rel="noopener">In neuem Tab öffnen</a></div>
   </div>
 </div>
