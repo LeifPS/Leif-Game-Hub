@@ -133,6 +133,44 @@
     if (!offen && releaseTimer) { clearInterval(releaseTimer); releaseTimer = null; }
   }
   var releaseFertig = false;
+  /* Bewertungen: 1 bis 5 Sterne pro Konto (nur Sterne, keine Texte). Durchschnitt und Anzahl sehen alle, die eigene Wahl nur man selbst. */
+  var bewDaten = {};
+  function bewHtml(sp) { return '<div class="bew" data-bew="' + esc(sp.id) + '"' + (bewDaten[sp.id] ? '' : ' hidden') + '>' + (bewDaten[sp.id] ? bewInnen(bewDaten[sp.id], sp) : '') + '</div>'; }
+  function bewInnen(d, sp) {
+    var kopf = d.anzahl
+      ? '<span class="sterne" style="--p:' + Math.round(d.schnitt / 5 * 100) + '%" role="img" aria-label="Durchschnitt ' + String(d.schnitt).replace('.', ',') + ' von 5 Sternen"></span><span class="bew-zahl">' + d.schnitt.toFixed(1).replace('.', ',') + '</span><span class="bew-anz">' + d.anzahl + (d.anzahl === 1 ? ' Bewertung' : ' Bewertungen') + '</span>'
+      : '<span class="bew-anz">Noch keine Bewertungen</span>';
+    var wahl = '';
+    for (var n = 5; n >= 1; n--) wahl += '<button type="button" role="radio" class="' + (n <= d.meine ? 'an' : '') + '" data-s="' + n + '" aria-checked="' + (n === d.meine) + '" aria-label="' + n + (n === 1 ? ' Stern' : ' Sterne') + '">★</button>';
+    return '<div class="bew-kopf">' + kopf + '</div><div class="bew-meine"><span class="bew-lab">' + (d.meine ? 'Deine Bewertung' : 'Bewerte dieses Spiel') + '</span><span class="bew-wahl" role="radiogroup" aria-label="Deine Bewertung für ' + esc(sp.name) + '">' + wahl + '</span></div>';
+  }
+  function bewZeichne(id) {
+    var d = bewDaten[id], sp = spiele.filter(function (g) { return g.id === id; })[0];
+    if (!d || !sp) return;
+    [].forEach.call(document.querySelectorAll('.bew[data-bew="' + id.replace(/"/g, '') + '"]'), function (el) { el.innerHTML = bewInnen(d, sp); el.hidden = false; });
+  }
+  function bewLaden(id) {
+    if (!window.LghKonto) return;
+    LghKonto.bereit().then(function () { return LghKonto.bewertung.laden(id); }).then(function (res) {
+      if (res && res.ok && res.j && typeof res.j.anzahl === 'number') { bewDaten[id] = res.j; bewZeichne(id); }
+    });
+  }
+  function bewSetzen(id, n) {
+    var d = bewDaten[id]; if (!d || !window.LghKonto) return;
+    var neu = n === d.meine ? 0 : n, alt = d;   // dieselbe Zahl nochmal: Bewertung zurücknehmen
+    var anz = d.anzahl + (neu && !d.meine ? 1 : !neu && d.meine ? -1 : 0), summe = (d.schnitt || 0) * d.anzahl - d.meine + neu;
+    bewDaten[id] = { spiel: id, anzahl: anz, schnitt: anz ? Math.round(summe / anz * 10) / 10 : null, meine: neu };   // sofort anzeigen, der Server liefert gleich den genauen Stand
+    bewZeichne(id);
+    LghKonto.bewertung.setzen(id, neu).then(function (res) {
+      if (res && res.ok && typeof res.j.anzahl === 'number') bewDaten[id] = res.j; else bewDaten[id] = alt;
+      bewZeichne(id);
+    });
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('.bew-wahl button') : null;
+    if (!b) return;
+    var el = b.closest('.bew'); if (el) bewSetzen(el.getAttribute('data-bew'), +b.getAttribute('data-s'));
+  });
   function favKnopf(sp, klasse) {
     var an = favIst(sp.id);
     return '<button type="button" class="' + klasse + (an ? ' an' : '') + '" data-fav="' + esc(sp.id) + '" aria-pressed="' + an + '" aria-label="' + esc(sp.name) + (an ? ' aus den Favoriten entfernen' : ' zu den Favoriten hinzufügen') + '"><svg aria-hidden="true"><use href="#i-star"/></svg>' + (klasse === 'btn btn-ghost fav-btn' ? '<span>Favorit</span>' : '') + '</button>';
@@ -439,7 +477,7 @@
     var gal = galerieHtml(sp);
     var text = (sp.beschreibung && sp.beschreibung !== sp.text) ? '<section class="shop-text"><h2>Über dieses Spiel</h2><p>' + esc(sp.beschreibung) + '</p></section>' : '';
     h += '<div class="shop-oben' + (gal ? '' : ' ohne-galerie') + '">' + (gal ? '<div class="shop-haupt">' + gal + text + '</div>' : '');
-    h += '<aside class="shop-info"><div class="shop-kopf"><div class="shop-icon">' + art(sp, 300, 300) + '</div><p class="kurz">' + esc(sp.text) + '</p></div><dl class="fakten">';
+    h += '<aside class="shop-info"><div class="shop-kopf"><div class="shop-icon">' + art(sp, 300, 300) + '</div><p class="kurz">' + esc(sp.text) + '</p></div>' + (sp.url ? bewHtml(sp) : '') + '<dl class="fakten">';
     var erschienen = sp.release ? sp.release : v && v.erste ? v.erste : (sp.erschienen ? sp.erschienen + 'T12:00:00+02:00' : null);   // ohne Repo: Datum von Hand (games.json: "erschienen"); mit "release" gilt dessen Zeitpunkt
     if (sp.cd) h += faktZeile('Wird veröffentlicht', esc(datumZeitText(sp.release)));   // noch nicht freigegeben: Zeitpunkt statt "Erschienen"
     else if (erschienen) h += faktZeile('Erschienen', esc(datumText(erschienen)));
@@ -1340,6 +1378,7 @@
       body.setAttribute('data-view', 'detail');
       zeigeAnsicht('detail|' + sp.id, function () { renderDetail(sp); }); renderSide(sp.id);
       spielInfoLaden(sp.id);
+      if (sp.url) bewLaden(sp.id);
       document.title = sp.name + ' – Leif Game Hub';
       window.scrollTo(0, 0);
       return;

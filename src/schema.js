@@ -81,6 +81,15 @@ export const SCHEMA = [
     created INTEGER NOT NULL,
     PRIMARY KEY (user_id, game)
   )`,
+  // Bewertungen: ein Konto gibt einem Spiel 1 bis 5 Sterne (nur Sterne, keine Texte); Antippen derselben Zahl nimmt sie zurück
+  `CREATE TABLE IF NOT EXISTS ratings (
+    user_id INTEGER NOT NULL,
+    game TEXT NOT NULL,
+    stars INTEGER NOT NULL,
+    updated INTEGER NOT NULL,
+    PRIMARY KEY (user_id, game)
+  )`,
+  `CREATE INDEX IF NOT EXISTS ratings_game ON ratings(game)`,
   // Zähler gegen Raten von Passwörtern und Massenanmeldungen
   `CREATE TABLE IF NOT EXISTS limits (
     k TEXT PRIMARY KEY,

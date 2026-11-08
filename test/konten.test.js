@@ -740,6 +740,35 @@ test('Chat: Freundschaft entfernen löscht den Verlauf, Konto löschen ebenfalls
   assert.equal(lesen.n, 0);
 });
 
+test('Bewertungen: 1 bis 5 Sterne je Konto, Durchschnitt für alle, nur bekannte Spiele, mit dem Konto gelöscht', async () => {
+  const env = umgebung();
+  env.ASSETS = { fetch: async () => new Response(JSON.stringify({ games: [{ id: 'spells' }, { id: 'tierspiel' }] })) };
+  const a = await neuesKonto(env, 'Anna'), b = await neuesKonto(env, 'Ben'), c = await neuesKonto(env, 'Carl');
+  assert.equal((await call(env, 'GET', '/api/bewertung/spells')).status, 401);
+  assert.deepEqual((await call(env, 'GET', '/api/bewertung/spells', undefined, a)).j, { spiel: 'spells', anzahl: 0, schnitt: null, meine: 0 });
+  assert.deepEqual((await call(env, 'POST', '/api/bewertung/spells', { sterne: 5 }, a)).j, { spiel: 'spells', anzahl: 1, schnitt: 5, meine: 5 });
+  assert.deepEqual((await call(env, 'POST', '/api/bewertung/spells', { sterne: 2 }, b)).j, { spiel: 'spells', anzahl: 2, schnitt: 3.5, meine: 2 });
+  // Fremde sehen Durchschnitt und Anzahl, aber nicht, wer was vergeben hat; die eigene Bewertung ist nur für einen selbst
+  assert.deepEqual((await call(env, 'GET', '/api/bewertung/spells', undefined, c)).j, { spiel: 'spells', anzahl: 2, schnitt: 3.5, meine: 0 });
+  // Ändern zählt nicht doppelt, Runden auf eine Nachkommastelle
+  assert.deepEqual((await call(env, 'POST', '/api/bewertung/spells', { sterne: 4 }, b)).j, { spiel: 'spells', anzahl: 2, schnitt: 4.5, meine: 4 });
+  await call(env, 'POST', '/api/bewertung/spells', { sterne: 1 }, c);
+  assert.equal((await call(env, 'GET', '/api/bewertung/spells', undefined, a)).j.schnitt, 3.3);   // (5+4+1)/3
+  // Zurücknehmen mit 0
+  assert.deepEqual((await call(env, 'POST', '/api/bewertung/spells', { sterne: 0 }, c)).j, { spiel: 'spells', anzahl: 2, schnitt: 4.5, meine: 0 });
+  // Spiele sind unabhängig
+  assert.equal((await call(env, 'GET', '/api/bewertung/tierspiel', undefined, a)).j.anzahl, 0);
+  // Eingaben und unbekannte Spiele
+  for (const body of [{ sterne: 6 }, { sterne: -1 }, { sterne: 3.5 }, { sterne: '4' }, { sterne: null }, {}]) {
+    assert.equal((await call(env, 'POST', '/api/bewertung/spells', body, a)).status, 400, JSON.stringify(body));
+  }
+  assert.equal((await call(env, 'POST', '/api/bewertung/gibtsnicht', { sterne: 3 }, a)).status, 404);
+  assert.equal((await call(env, 'GET', '/api/bewertung/B%C3%B6se', undefined, a)).status, 400);
+  // Konto löschen nimmt die Bewertungen mit
+  assert.equal((await call(env, 'POST', '/api/loeschen', { key: await schluessel('Ben', 'geheim123') }, b)).status, 200);
+  assert.deepEqual((await call(env, 'GET', '/api/bewertung/spells', undefined, a)).j, { spiel: 'spells', anzahl: 1, schnitt: 5, meine: 5 });
+});
+
 test('Favoriten: je Konto, setzen und entfernen, Eingaben geprüft, mit dem Konto gelöscht', async () => {
   const env = umgebung();
   const a = await neuesKonto(env, 'Anna'), b = await neuesKonto(env, 'Ben');

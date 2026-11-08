@@ -940,3 +940,22 @@ body.pseudo-voll .voll-aus { display: flex; }
 .fav-btn { gap: 7px; }
 .fav-btn svg { flex: none; }
 .spiel-aktion { flex-wrap: wrap; }
+
+/* Bewertung (Detailseite): nur Sterne */
+.bew { margin: 0 0 14px; padding: 12px 14px; border-radius: 12px; background: rgba(255, 255, 255, .04); border: 1px solid var(--line); }
+.bew[hidden] { display: none; }
+.bew-kopf { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
+.sterne { position: relative; display: inline-block; font-size: 19px; line-height: 1; letter-spacing: 1px; color: #3a4256; }
+.sterne::before { content: '★★★★★'; }
+.sterne::after { content: '★★★★★'; position: absolute; left: 0; top: 0; width: var(--p, 0%); overflow: hidden; white-space: nowrap; color: #ffd36b; }
+.bew-zahl { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bew-anz { font-size: 13px; color: var(--muted); }
+.bew-meine { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.bew-lab { font-size: 13px; color: var(--muted); }
+.bew-wahl { display: inline-flex; flex-direction: row-reverse; }
+.bew-wahl button { all: unset; box-sizing: border-box; width: 34px; height: 34px; display: grid; place-items: center; cursor: pointer; font-size: 22px; line-height: 1; color: #3a4256; border-radius: 8px; transition: transform .1s; }
+.bew-wahl button.an { color: #ffd36b; }
+.bew-wahl button:hover, .bew-wahl button:hover ~ button { color: #ffe08a; }
+.bew-wahl button:active { transform: scale(.9); }
+.bew-wahl button:focus-visible { outline: 2px solid var(--accent-hi); outline-offset: 1px; }
+@media (hover: none) { .bew-wahl button:hover, .bew-wahl button:hover ~ button { color: #3a4256; } .bew-wahl button.an, .bew-wahl button.an:hover { color: #ffd36b; } }

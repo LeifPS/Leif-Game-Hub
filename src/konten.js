@@ -288,6 +288,7 @@ async function kontoLoeschen(request, db, s, jetzt) {
     db.prepare('DELETE FROM presence WHERE user_id = ?').bind(s.id),
     db.prepare('DELETE FROM playtime WHERE user_id = ?').bind(s.id),
     db.prepare('DELETE FROM favorites WHERE user_id = ?').bind(s.id),
+    db.prepare('DELETE FROM ratings WHERE user_id = ?').bind(s.id),
     db.prepare('DELETE FROM users WHERE id = ?').bind(s.id),
   ]);
   return antwort({ ok: true });
@@ -537,6 +538,24 @@ async function favoritSetzen(request, db, s, jetzt) {
   return favoritenListe(db, s);
 }
 
+/* ---------- Bewertungen ---------- */
+// 1 bis 5 Sterne pro Konto und Spiel, nur Zahlen, keine Texte. Jeder angemeldete Mensch sieht Durchschnitt und Anzahl, die eigene Bewertung nur man selbst.
+async function bewertungStand(db, s, spiel) {
+  const g = await db.prepare('SELECT COUNT(*) AS n, AVG(stars) AS m FROM ratings WHERE game = ?').bind(spiel).first();
+  const me = await db.prepare('SELECT stars FROM ratings WHERE user_id = ? AND game = ?').bind(s.id, spiel).first();
+  return { spiel, anzahl: g.n, schnitt: g.n ? Math.round(g.m * 10) / 10 : null, meine: me ? me.stars : 0 };
+}
+async function bewertungSetzen(request, env, db, s, spiel, jetzt) {
+  const { b } = await lies(request);
+  if (!b || !Number.isInteger(b.sterne) || b.sterne < 0 || b.sterne > 5) return fehler(400, 'eingabe');
+  // Nur Spiele, die es im Hub gibt (sobald games.json lesbar ist), damit keine erfundenen Einträge entstehen
+  const ids = (await gamesDaten(env, request)).ids;
+  if (ids.size && !ids.has(spiel)) return fehler(404, 'unbekannt');
+  if (b.sterne === 0) await db.prepare('DELETE FROM ratings WHERE user_id = ? AND game = ?').bind(s.id, spiel).run();
+  else await db.prepare('INSERT INTO ratings (user_id, game, stars, updated) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, game) DO UPDATE SET stars = excluded.stars, updated = excluded.updated').bind(s.id, spiel, b.sterne, jetzt).run();
+  return antwort(await bewertungStand(db, s, spiel));
+}
+
 async function chatSenden(request, db, s, name, jetzt) {
   const { b } = await lies(request);
   if (!b) return fehler(400, 'eingabe');
@@ -601,23 +620,26 @@ async function praesenz(request, db, s, jetzt) {
 // Konten, die in games.json als Entwickler stehen (ohne Eintrag gilt "leif"). Ihr Profil darf jeder angemeldete Mensch öffnen,
 // allerdings nur mit den öffentlichen Angaben (Name, Bild, seit wann dabei). Die Datei kommt aus den Assets und wird 5 Minuten gemerkt.
 const entwCache = new WeakMap();
-async function entwickler(env, request) {
+async function gamesDaten(env, request) {
   const quelle = env && env.ASSETS;
-  if (!quelle) return new Set();
+  if (!quelle) return { set: new Set(), ids: new Set() };
   const z = entwCache.get(quelle);
-  if (z && Date.now() - z.t < 300000) return z.set;
-  const set = new Set();
+  if (z && Date.now() - z.t < 300000) return z;
+  const set = new Set(), ids = new Set();
   try {
     const r = await quelle.fetch(new Request(new URL('/games.json', request.url)));
     const j = await r.json();
     (j.games || []).forEach((g) => {
+      if (typeof g.id === 'string') ids.add(g.id);
       if (Array.isArray(g.entwickler) && g.entwickler.length) g.entwickler.forEach((n) => set.add(String(n).toLowerCase()));
       else set.add('leif');
     });
-  } catch (e) { return z ? z.set : set; }
-  entwCache.set(quelle, { t: Date.now(), set });
-  return set;
+  } catch (e) { return z || { set, ids }; }
+  const neu = { t: Date.now(), set, ids };
+  entwCache.set(quelle, neu);
+  return neu;
 }
+async function entwickler(env, request) { return (await gamesDaten(env, request)).set; }
 
 // Anzeigenamen der Entwickler-Konten (für die Spielseiten im Hub)
 async function entwicklerNamen(db, env, request) {
@@ -722,6 +744,12 @@ export async function handle(request, env, jetztMs = Date.now()) {
     if (pfad === '/api/freunde/annehmen' && m === 'POST') return await freundAnnehmen(request, db, s);
     if (pfad === '/api/freunde/ablehnen' && m === 'POST') return await freundLoeschen(request, db, s, true);
     if (pfad === '/api/freunde/entfernen' && m === 'POST') return await freundLoeschen(request, db, s, false);
+    const bm = /^\/api\/bewertung\/([^/]+)$/.exec(pfad);
+    if (bm) {
+      if (!SPIEL_RE.test(bm[1])) return fehler(400, 'spiel');
+      if (m === 'GET') return antwort(await bewertungStand(db, s, bm[1]));
+      if (m === 'POST') return await bewertungSetzen(request, env, db, s, bm[1], jetzt);
+    }
     if (pfad === '/api/favoriten' && m === 'GET') return await favoritenListe(db, s);
     if (pfad === '/api/favoriten' && m === 'POST') return await favoritSetzen(request, db, s, jetzt);
     if (pfad === '/api/ungelesen' && m === 'GET') return await chatUngelesen(db, s, jetzt);
