@@ -1084,3 +1084,18 @@ test('Zusatzinhalte: ohne Guthaben nichts kaufbar, mit Guthaben einmal, Konto lÃ
   assert.equal((await env.DB.prepare('SELECT COUNT(*) AS n FROM dlc_owned WHERE user_id = ?').bind(uid).first()).n, 0);
   assert.equal((await env.DB.prepare('SELECT COUNT(*) AS n FROM wallet WHERE user_id = ?').bind(uid).first()).n, 0);
 });
+
+test('DLC-Bewertung: nur Besitzer, Spielzeit zÃ¤hlt im Spiel', async () => {
+  const env = umgebung();
+  const t = await neuesKonto(env, 'Bew');
+  const uid = (await env.DB.prepare('SELECT id FROM users WHERE name_lc = ?').bind('bew').first()).id;
+  const id = 'schleimmerge-runen';
+  assert.equal((await call(env, 'GET', '/api/bewertung/' + id, undefined, t)).j.anzahl, 0);
+  assert.equal((await call(env, 'POST', '/api/bewertung/' + id, { sterne: 5 }, t)).j.fehler, 'nicht_gekauft');
+  await env.DB.prepare('INSERT INTO dlc_owned (user_id, dlc, price, bought) VALUES (?, ?, 1, 1)').bind(uid, id).run();
+  assert.equal((await call(env, 'POST', '/api/bewertung/' + id, { sterne: 5 }, t)).j.fehler, 'zu_wenig_spielzeit');
+  await env.DB.prepare('INSERT INTO playtime (user_id, game, seconds, last) VALUES (?, ?, 99999, 1)').bind(uid, 'schleimmerge').run();
+  const ok = await call(env, 'POST', '/api/bewertung/' + id, { sterne: 4 }, t);
+  assert.equal(ok.status, 200, JSON.stringify(ok.j));
+  assert.equal(ok.j.anzahl, 1); assert.equal(ok.j.meine, 4);
+});

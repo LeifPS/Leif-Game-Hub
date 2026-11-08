@@ -311,6 +311,19 @@
       "name": "Schleimmerge",
       "text": "Kaufe Schleime, verschmelze zwei gleiche zu einem besseren und schicke sie mit Waffen gegen Monster.",
       "url": "https://schleimmerge.leifps.workers.dev",
+      "dlcs": [
+        {
+          "id": "schleimmerge-runen",
+          "icon": "screens/schleimmerge-runen-icon.webp",
+          "erschienen": "2026-11-08",
+          "beschreibung": "Die Runenschmiede macht aus deinen Schleimen Kämpfer mit Zauberkraft. Alle 84 Waffen gibt es jetzt als Runenwaffen: dunkler Stein mit leuchtenden Runen, dazu 15 % mehr Schaden. Außerdem schaltest du das System Verzauberungen frei: Flamme erhöht den Schaden, Frost friert Monster ein und lässt den nächsten Schlag dreifach treffen, Glück bringt mehr Münzen und Blitz springt auf alle Bahnen. Jede Verzauberung wertest du mit Münzen bis Stufe 10 auf und legst fest, welche Bahn sie trägt. Der Zusatzinhalt gilt für dein Konto, den Spielstand und alle deine Geräte.",
+          "screenshots": [
+            "screens/shots/schleimmerge-runen/1.webp",
+            "screens/shots/schleimmerge-runen/2.webp",
+            "screens/shots/schleimmerge-runen/3.webp"
+          ]
+        }
+      ],
       "repo": "LeifPS/schleimmerge",
       "farbe": "#86c45f",
       "kategorien": [

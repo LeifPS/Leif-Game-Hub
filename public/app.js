@@ -136,6 +136,7 @@
   /* Bewertungen: 1 bis 5 Sterne pro Konto (nur Sterne, keine Texte). Durchschnitt und Anzahl sehen alle, die eigene Wahl nur man selbst. */
   var bewDaten = {};
   var BEW_MIN = 900;   // mindestens 15 Minuten Spielzeit (der Server prüft das auch)
+  var dlcReg = {};   // DLC-Seiten, die gerade oder zuletzt angezeigt wurden (Bewertung braucht den Namen)
   function bewHtml(sp) { return '<section class="bew" data-bew="' + esc(sp.id) + '"' + (bewDaten[sp.id] ? '' : ' hidden') + '>' + (bewDaten[sp.id] ? bewInnen(bewDaten[sp.id], sp) : '') + '</section>'; }
   function bewFakt(sp) {
     var d = bewDaten[sp.id];
@@ -152,7 +153,7 @@
       '<span class="bew-hinweis">' + (frei ? (d.meine ? 'Tippe dieselbe Zahl nochmal, um die Bewertung zurückzunehmen.' : 'Nur Sterne, keine Texte.') : 'Bewerten geht ab 15 Minuten Spielzeit. Dir fehlen noch ' + fehlt + (fehlt === 1 ? ' Minute.' : ' Minuten.')) + '</span></div>';
   }
   function bewZeichne(id) {
-    var d = bewDaten[id], sp = spiele.filter(function (g) { return g.id === id; })[0];
+    var d = bewDaten[id], sp = spiele.filter(function (g) { return g.id === id; })[0] || dlcReg[id];
     if (!d || !sp) return;
     var q = id.replace(/"/g, '');
     [].forEach.call(document.querySelectorAll('.bew[data-bew="' + q + '"]'), function (el) { el.innerHTML = bewInnen(d, sp); el.hidden = false; });
@@ -1652,28 +1653,32 @@
   function wabeSvg() { return '<svg aria-hidden="true"><use href="#i-wabe"/></svg>'; }
   function betrag(n) { return '<span class="betrag">' + wabeSvg() + zahlText(n) + '</span>'; }   // Die Währung wird nirgends mit Namen genannt, nur mit dem Symbol
   function dlcChip(puls) {
-    var kn = document.getElementById('waehrung-knopf'), z = document.getElementById('waehrung-zahl');
-    if (!kn || !z) return;
-    if (!dlcDaten) { kn.hidden = true; return; }
-    z.textContent = zahlText(dlcDaten.guthaben);
-    kn.title = 'Guthaben: ' + zahlText(dlcDaten.guthaben);
-    kn.setAttribute('aria-label', 'Guthaben: ' + zahlText(dlcDaten.guthaben));
-    kn.hidden = false;
-    if (puls) { kn.classList.remove('puls'); void kn.offsetWidth; kn.classList.add('puls'); }
+    // Oben steht nur das Symbol, ohne Zahl: Das Hub soll ein Werkzeug bleiben. Den Stand zeigt erst der Klick darauf.
+    var kn = document.getElementById('waehrung-knopf');
+    if (kn) kn.hidden = !dlcDaten;
   }
   function dlcLaden() {
-    if (!window.LghKonto || !LghKonto.angemeldet()) return Promise.resolve(null);
-    return LghKonto.dlc.laden().then(function (res) {
-      if (res.ok && res.j && Array.isArray(res.j.katalog)) { dlcDaten = res.j; dlcChip(); dlcFuellen(); dlcAnSpiel(); }
-      return dlcDaten;
+    if (!window.LghKonto) return Promise.resolve(null);
+    return LghKonto.bereit().then(function () {
+      if (!LghKonto.angemeldet()) return null;
+      return LghKonto.dlc.laden().then(function (res) {
+        if (res.ok && res.j && Array.isArray(res.j.katalog)) { dlcDaten = res.j; dlcChip(); dlcFuellen(); dlcAnSpiel(); dlcSeiteNeu(); }
+        return dlcDaten;
+      });
     });
   }
   function dlcFuer(spielId) { return ((dlcDaten && dlcDaten.katalog) || []).filter(function (d) { return d.spiel === spielId; }); }
+  function dlcMedien(spielId, did) {
+    var sp = spiele.filter(function (g) { return g.id === spielId; })[0];
+    return (sp && (sp.dlcs || []).filter(function (x) { return x.id === did; })[0]) || {};
+  }
+  function dlcHref(d) { return '#spiel/' + encodeURIComponent(d.spiel) + '/dlc/' + encodeURIComponent(d.id); }
   function dlcKarteHtml(d) {
-    return '<article class="dlc-karte' + (d.besitz ? ' besitz' : '') + '"><div class="dlc-icon">' + wabeSvg() + '</div>' +
-      '<div class="dlc-text"><h3>' + esc(d.name) + '</h3><p>' + esc(d.text) + '</p></div>' +
+    var med = dlcMedien(d.spiel, d.id);
+    return '<article class="dlc-karte' + (d.besitz ? ' besitz' : '') + '"><a class="dlc-icon" href="' + dlcHref(d) + '" aria-label="' + esc(d.name) + '">' + (med.icon ? '<img src="' + esc(med.icon + '?v=' + BILD_V) + '" alt="" loading="lazy" decoding="async">' : wabeSvg()) + '</a>' +
+      '<div class="dlc-text"><h3><a href="' + dlcHref(d) + '">' + esc(d.name) + '</a></h3><p>' + esc(d.text) + '</p></div>' +
       '<div class="dlc-kauf">' + (d.besitz ? '<span class="dlc-besitz">Im Besitz</span>' :
-        '<span class="dlc-preis">' + betrag(d.preis) + '</span><button type="button" class="btn btn-gold" data-dlc="' + esc(d.id) + '">Kaufen</button>') + '</div></article>';
+        '<span class="dlc-preis">' + betrag(d.preis) + '</span><button type="button" class="btn btn-primary" data-dlc="' + esc(d.id) + '">Kaufen</button>') + '</div></article>';
   }
   function dlcFuellenIn(wurzel) {
     var l = wurzel.querySelectorAll ? wurzel.querySelectorAll('.dlc-bereich[data-spiel]') : [];
@@ -1703,13 +1708,13 @@
         '<div class="dlc-zeile"><span>Dein Guthaben</span><b>' + betrag(dlcDaten.guthaben) + '</b></div>' +
         (fehlt > 0 ? '<div class="dlc-zeile fett"><span>Dir fehlen</span><b>' + betrag(fehlt) + '</b></div>' : '<div class="dlc-zeile fett"><span>Danach</span><b>' + betrag(dlcDaten.guthaben - d.preis) + '</b></div>') + '</div>' +
         '<div class="fr-meldung fehler" id="dlc-meld" role="status"></div>' +
-        '<div class="dlg-fuss"><button type="button" class="btn btn-ghost" data-zu>Abbrechen</button><button type="button" class="btn btn-gold" data-dlc-ja="' + esc(d.id) + '" style="margin-left:10px"' + (fehlt > 0 ? ' disabled' : '') + '>Kaufen</button></div>', function (e, zu) {
+        '<div class="dlg-fuss"><button type="button" class="btn btn-ghost" data-zu>Abbrechen</button><button type="button" class="btn btn-primary" data-dlc-ja="' + esc(d.id) + '" style="margin-left:10px"' + (fehlt > 0 ? ' disabled' : '') + '>Kaufen</button></div>', function (e, zu) {
           var b = e.target.closest ? e.target.closest('[data-dlc-ja]') : null;
           if (!b || b.disabled) return;
           var m = document.getElementById('dlc-meld'); m.textContent = ''; b.disabled = true;
           LghKonto.dlc.kaufen(id).then(function (res) {
             if (res.ok && res.j && res.j.katalog) {
-              dlcDaten = res.j; dlcChip(true); dlcFuellen(); dlcAnSpiel();
+              dlcDaten = res.j; dlcChip(true); dlcFuellen(); dlcAnSpiel(); dlcSeiteNeu();
               var dlg = document.querySelector('.dlg-dlc .dlg');
               if (dlg) dlg.innerHTML = '<div class="dlg-titel">Gekauft</div><div class="dlg-sub" style="margin:4px 0 14px"><b>' + esc(d.name) + '</b> gehört dir jetzt. Es ist sofort im Spiel da.</div><div class="dlg-fuss"><button type="button" class="btn btn-primary" data-zu>Fertig</button></div>';
               return;
@@ -1726,7 +1731,7 @@
   function guthabenDialog() {
     if (!dlcDaten) return;
     var mein = ((dlcDaten.katalog) || []).filter(function (d) { return d.besitz; });
-    grDialog('dlg-dlc', '<div class="dlg-titel">Dein Guthaben</div><div class="dlc-gross">' + wabeSvg() + zahlText(dlcDaten.guthaben) + '</div><div class="dlg-sub" style="margin:0 0 10px">Wie du es verdienst, kommt später.</div>' +
+    grDialog('dlg-dlc', '<div class="dlg-titel">Dein Guthaben</div><div class="dlc-gross">' + wabeSvg() + zahlText(dlcDaten.guthaben) + '</div><div class="dlg-sub" style="margin:0 0 10px">Guthaben für Zusatzinhalte.</div>' +
       (mein.length ? '<div class="dlc-zeilen"><div class="dlc-zeile"><span>Deine Zusatzinhalte</span></div>' + mein.map(function (d) { return '<div class="dlc-zeile fett"><b>' + esc(d.name) + '</b><span>' + esc(spielName(d.spiel)) + '</span></div>'; }).join('') + '</div>' : '<div class="dlg-sub">Du hast noch keine Zusatzinhalte.</div>') +
       '<div class="dlg-fuss"><button type="button" class="btn btn-ghost" data-zu>Schließen</button></div>', function () { });
   }
@@ -1747,6 +1752,51 @@
     if (k) { e.preventDefault(); dlcKaufDialog(k.getAttribute('data-dlc')); return; }
     if (e.target.closest && e.target.closest('#waehrung-knopf')) guthabenDialog();
   });
+
+
+  /* ---------- Eigene Seite je Zusatzinhalt (#spiel/<id>/dlc/<dlc-id>) ----------
+     Name, Kurztext, Preis und Besitz kommen vom Server, alles Bildhafte (Icon, Banner "wallpaper", Screenshots, Trailer, Beschreibung, Erscheinungsdatum)
+     steht je DLC in games.json unter dem Spiel ("dlcs"). Bewertung wie bei Spielen, aber nur für Besitzer. */
+  function dlcObjekt(sp, did) {
+    var kat = ((dlcDaten && dlcDaten.katalog) || []).filter(function (x) { return x.id === did && x.spiel === sp.id; })[0];
+    if (!kat) return null;
+    var med = (sp.dlcs || []).filter(function (x) { return x.id === did; })[0] || {}, d = {}, k;
+    for (k in med) d[k] = med[k];
+    d.id = did; d.name = kat.name; d.text = kat.text; d.preis = kat.preis; d.besitz = kat.besitz; d.spiel = sp.id; d.farbe = sp.farbe; d.entwickler = sp.entwickler;
+    d.kategorien = med.kategorien || sp.kategorien; d.screenshots = med.screenshots || []; d.banner = null; d.url = sp.url;
+    return d;
+  }
+  function renderDlcSeite(sp, did) {
+    var d = dlcObjekt(sp, did);
+    if (!d) { inhalt.innerHTML = '<div class="leer" style="padding:80px 28px">' + (dlcDaten ? 'Diesen Zusatzinhalt gibt es nicht.' : 'Lädt …') + '</div>'; return; }
+    dlcReg[d.id] = d;
+    var titel = !!d.wallpaper, gal = galerieHtml(d);
+    var kauf = d.besitz ? '<span class="dlc-besitz gross">Im Besitz</span>' : '<span class="dlc-preis gross">' + betrag(d.preis) + '</span><button type="button" class="btn btn-primary" data-dlc="' + esc(d.id) + '">Kaufen</button>';
+    var h = '<div class="detail-banner' + (titel ? ' titel' : '') + '">' + (titel ? '<div class="titelrahmen"><img class="titelhg" src="' + esc(d.wallpaper) + '" alt="" aria-hidden="true" decoding="async"><img class="titelbild titelfg" src="' + esc(d.wallpaper) + '" alt="' + esc(d.name) + '" decoding="async"></div>' : d.screenshots.length ? '<img class="art" src="' + esc(d.screenshots[0]) + '" alt="" style="object-position:50% 38%" decoding="async">' : art(d, 1400, 420)) +
+      '<a class="zurueck-link" href="#spiel/' + encodeURIComponent(sp.id) + '"><svg aria-hidden="true"><use href="#i-back"/></svg>' + esc(sp.name) + '</a></div>';
+    h += '<div class="shop' + (titel ? ' titel' : '') + '"><div class="shop-titelzeile"><h1>' + esc(d.name) + '</h1><div class="spiel-aktion dlc-aktion">' + kauf + '</div></div>';
+    var lang = d.beschreibung && d.beschreibung !== d.text ? '<section class="shop-text"><h2>Über diesen Zusatzinhalt</h2><p>' + esc(d.beschreibung) + '</p></section>' : '';
+    h += '<div class="shop-oben' + (gal ? '' : ' ohne-galerie') + '">' + (gal ? '<div class="shop-haupt">' + gal + lang + '</div>' : '');
+    h += '<aside class="shop-info"><div class="shop-kopf"><div class="shop-icon">' + art(d, 300, 300) + '</div><p class="kurz">' + esc(d.text) + '</p></div><dl class="fakten">';
+    h += faktZeile('Zusatzinhalt für', '<a class="fakt-link" href="#spiel/' + encodeURIComponent(sp.id) + '">' + esc(sp.name) + '</a>');
+    h += faktZeile('Preis', d.besitz ? 'Im Besitz' : betrag(d.preis));
+    if (d.erschienen) h += faktZeile('Erschienen', esc(datumText(d.erschienen + 'T12:00:00+02:00')));
+    h += faktZeile('Bewertung', bewFakt(d));
+    h += faktZeile('Entwickler', entwicklerLinks(d));
+    if (kategorien(d).length) h += faktZeile('Tags', pills(d));
+    h += '</dl></aside></div>';
+    if (!gal && lang) h += lang;
+    if (d.besitz) h += bewHtml(d);
+    h += '</div>';
+    inhalt.innerHTML = h;
+    galerieBinden(d);
+  }
+  function dlcSeiteNeu() {   // nach einem Kauf: die offene DLC-Seite neu zeichnen (Scrollstand bleibt)
+    var m = /^#spiel\/([^\/]+)\/dlc\/([^\/]+)$/.exec(location.hash);
+    if (!m || body.getAttribute('data-view') !== 'detail') return;
+    var sp = spiele.filter(function (g) { return g.id === decodeURIComponent(m[1]); })[0];
+    if (sp) { renderDlcSeite(sp, decodeURIComponent(m[2])); bewLaden(decodeURIComponent(m[2])); }
+  }
 
   /* ---------- Navigation ---------- */
   /* Ansichten bleiben als fertige Knoten erhalten: beim Zurück- oder Weiterklicken werden sie nur wieder eingehängt,
@@ -1809,6 +1859,20 @@
       if (String(ansichtKey).indexOf('chat|') === 0) ansichtKey = null;   // Gruppenchat immer frisch aufbauen
       zeigeAnsicht('chat|#g' + grm[1], function () { renderChat('#g' + grm[1]); }); renderSide(null, true);
       document.title = 'Gruppe – Leif Game Hub';
+      window.scrollTo(0, 0);
+      return;
+    }
+    var dm = /^#spiel\/([^\/]+)\/dlc\/([^\/]+)$/.exec(location.hash);
+    if (dm) {
+      var dsp = null, did = '';
+      try { did = decodeURIComponent(dm[2]); var dsid = decodeURIComponent(dm[1]); dsp = spiele.filter(function (s) { return s.id === dsid && s.url; })[0] || null; } catch (x) { dsp = null; }
+      if (!dsp) { location.replace('#'); return; }
+      body.setAttribute('data-view', 'detail');
+      if (String(ansichtKey).indexOf('dlcseite|') === 0) ansichtKey = null;   // immer frisch: Besitz und Preis können sich geändert haben
+      zeigeAnsicht('dlcseite|' + dsp.id + '|' + did, function () { renderDlcSeite(dsp, did); }); renderSide(dsp.id);
+      dlcLaden().then(function () { bewLaden(did); });
+      var dd = dlcObjekt(dsp, did);
+      document.title = (dd ? dd.name : 'Zusatzinhalt') + ' – ' + dsp.name + ' – Leif Game Hub';
       window.scrollTo(0, 0);
       return;
     }

@@ -202,3 +202,14 @@ Der Hub läuft auf `https://hub.leifps.de` und `https://leifps.de` (eigene Domai
 ## Entwickler und Profile
 
 In `games.json` steht pro Spiel `"entwickler": ["Benutzername", …]` (Namen von Hub-Konten, genau so geschrieben wie das Konto). Fehlt das Feld, gilt `leif`. Die Detailseite zeigt den Anzeigenamen des Kontos (vom Server über `/api/entwickler`, solange er fehlt der Benutzername) als blauen Link auf das Profil; das Profil listet unter "Spiele von @name" alle Spiele, bei denen der Name als Entwickler steht. Profile sieht man sonst nur von Freunden; Konten, die in `games.json` als Entwickler stehen, darf jeder angemeldete Mensch öffnen, dann aber nur mit Name, Bild, "dabei seit" und ihren Spielen (kein Online-Status, keine Spielzeiten, keine Freundeszahl) und mit einem Knopf für die Freundschaftsanfrage. Der Worker liest die Entwicklernamen selbst aus `games.json` (5 Minuten zwischengespeichert).
+
+## Zusatzinhalte (DLCs) und Hexis
+
+Spiele können Zusatzinhalte anbieten, die man mit Hexis (dem Guthaben des Hubs) kauft. Das Hub bleibt ein Werkzeug: Oben steht nur das Sechseck-Symbol (ohne Zahl und ohne Namen), ein Klick darauf zeigt den Stand und die eigenen Zusatzinhalte.
+
+- **Server** (`src/dlc.js`): `KATALOG` (Kennung, Spiel, Name, Kurztext, Preis) ist die einzige Quelle für Preise. Tabellen `wallet` (Guthaben), `wallet_log`, `dlc_owned` (Besitz). `GET /api/dlc` liefert Guthaben, Katalog und Besitz, `POST /api/dlc/kaufen {id}` kauft atomar (Besitz nur, wenn das Guthaben reicht).
+- **Aussehen** je DLC steht in `games.json` unter dem Spiel (`dlcs`: `id`, `icon`, `wallpaper` (5:1), `screenshots`, `trailer`, `beschreibung`, `erschienen`). Jeder DLC hat eine eigene Seite `#spiel/<spiel>/dlc/<id>` mit Galerie, Beschreibung, Preis und Bewertung (nur Besitzer, Mindest-Spielzeit zählt im Spiel). Auf der Spieleseite stehen die DLCs unter „Zusatzinhalte“.
+- **Im Spiel**: Das Spiel fragt per `postMessage` `{lgh:'dlc', spiel, aktion:'frage'}` und bekommt `{lgh:'dlc', spiel, guthaben, katalog:[{id, name, text, preis, besitz}]}`. Mit `{lgh:'dlc', spiel, aktion:'kaufen', id}` öffnet das Spiel den Kaufdialog des Hubs; bezahlt wird immer im Hub. Das Spiel schaltet Inhalte nur frei, wenn `besitz` wahr ist.
+- **Guthaben vergeben** (Verdienen gibt es noch nicht), z. B. mit der Cloudflare-D1-Konsole:
+  `INSERT INTO wallet (user_id, amount) SELECT id, 500 FROM users WHERE name_lc = 'leif' ON CONFLICT(user_id) DO UPDATE SET amount = amount + 500;`
+- Erster DLC: **Runenschmiede** für Schleimmerge (Runenwaffen und Verzauberungen).
