@@ -1733,7 +1733,7 @@
   function geschenkDialog() {
     if (!dlcDaten || !dlcDaten.geschenk) return;
     var h = grDialog('dlg-dlc', '<div class="dlg-titel">Ein Geschenk für dich</div><div class="dlc-gross">' + wabeSvg() + '+' + zahlText(dlcDaten.geschenk) + '</div>' +
-      '<div class="dlg-sub" style="margin:0 0 14px">Du warst schon von Anfang an dabei. Dafür gibt es zum Start ein Guthaben, mit dem du Zusatzinhalte kaufen kannst, zum Beispiel für Schleimmerge.</div>' +
+      '<div class="dlg-sub" style="margin:0 0 14px">Du warst schon von Anfang an dabei. Dafür gibt es zum Start ein Guthaben, das du später für Kosmetik ausgeben kannst.</div>' +
       '<div class="dlg-fuss"><button type="button" class="btn btn-primary" data-zu>Danke</button></div>', function () { });
     if (!h) return;
     // Egal wie der Dialog geschlossen wird (Danke, Esc, daneben tippen): damit gilt das Geschenk als gesehen.
@@ -1748,8 +1748,8 @@
     if (!dlcDaten) return;
     if (dlcDaten.geschenk) return geschenkDialog();
     var mein = ((dlcDaten.katalog) || []).filter(function (d) { return d.besitz; });
-    grDialog('dlg-dlc', '<div class="dlg-titel">Dein Guthaben</div><div class="dlc-gross">' + wabeSvg() + zahlText(dlcDaten.guthaben) + '</div><div class="dlg-sub" style="margin:0 0 10px">Guthaben für Zusatzinhalte.</div>' +
-      (mein.length ? '<div class="dlc-zeilen"><div class="dlc-zeile"><span>Deine Zusatzinhalte</span></div>' + mein.map(function (d) { return '<div class="dlc-zeile fett"><b>' + esc(dlcTitel(d.name)) + '</b><span>' + esc(spielName(d.spiel)) + '</span></div>'; }).join('') + '</div>' : '<div class="dlg-sub">Du hast noch keine Zusatzinhalte.</div>') +
+    grDialog('dlg-dlc', '<div class="dlg-titel">Dein Guthaben</div><div class="dlc-gross">' + wabeSvg() + zahlText(dlcDaten.guthaben) + '</div><div class="dlg-sub" style="margin:0 0 10px">Guthaben für Kosmetik.</div>' +
+      (mein.length ? '<div class="dlc-zeilen"><div class="dlc-zeile"><span>Deine Zusatzinhalte</span></div>' + mein.map(function (d) { return '<div class="dlc-zeile fett"><b>' + esc(dlcTitel(d.name)) + '</b><span>' + esc(spielName(d.spiel)) + '</span></div>'; }).join('') + '</div>' : '') +
       '<div class="dlg-fuss"><button type="button" class="btn btn-ghost" data-zu>Schließen</button></div>', function () { });
   }
   /* Spiel im Rahmen: fragt per postMessage ({lgh:'dlc', spiel, aktion:'frage'|'kaufen', id}) nach Besitz und kann einen Kauf auslösen.

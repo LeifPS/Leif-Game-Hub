@@ -5,22 +5,9 @@
 // - Guthaben und Besitz liegen pro Konto in D1. Gekauft wird atomar: Guthaben abziehen und Besitz eintragen in einer Transaktion.
 // - Verdienen von Währung ist noch nicht eingebaut. Einmaliges Startgeschenk: jedes Konto, das bis einschließlich 8.11.2026 (Berliner Zeit)
 //   angelegt wurde, bekommt beim ersten Abruf 1000 (Tabelle wallet_gift sorgt dafür, dass es nur einmal passiert). Alle weiteren von Hand (README).
-export const KATALOG = [
-  {
-    id: 'schleimmerge-runen',
-    spiel: 'schleimmerge',
-    name: 'Runenschmiede',
-    text: 'Zwei neue ultrastarke Waffen (Level 88 und 89), Runenwaffen mit 50 % mehr Schaden, die zufällig dabei sind, und das neue Verzauberungs-System: Flamme, Frost, Glück und Blitz.',
-    preis: 500,
-  },
-  {
-    id: 'brutjagd-welt3',
-    spiel: 'brutjagd',
-    name: 'Welt 3: Das Jenseits',
-    text: 'Eine extrem schwere dritte Welt hinter dem Siegel von Welt 2: drei neue Gebiete mit neuen Bossen, Eiern und Haustieren und je einer eigenen Regel, die dich zum Planen zwingt.',
-    preis: 500,
-  },
-];
+// Zusatzinhalte gibt es nicht mehr: Runenschmiede (Schleimmerge) und Welt 3 (Brutjagd) wurden für alle Spieler freigeschaltet und alle Käufe erstattet.
+// Der Katalog bleibt als leere Liste bestehen. Hexis sollen künftig nur noch für Kosmetik ausgegeben werden.
+export const KATALOG = [];
 
 export const GESCHENK = 1000;
 export const GESCHENK_BIS = 1794178800;   // Sekunden: 9.11.2026, 00:00 Uhr Berliner Zeit; wer davor angelegt wurde, bekommt das Geschenk

@@ -118,13 +118,6 @@
       },
       "screenshots": [
         "screens/brutjagd-wide.webp"
-      ],
-      "dlcs": [
-        {
-          "id": "brutjagd-welt3",
-          "erschienen": "2026-11-08",
-          "beschreibung": "Hinter dem Siegel am Ende von Welt 2 öffnet sich das Jenseits: eine dritte Welt, die bewusst extrem schwer ist. Du bekommst drei neue Gebiete mit je einem eigenen Boss, einem eigenen Ei und fünf neuen Haustieren. In der Schleiergrenze machen dich getragene Eier langsamer, und der Schleierwächter springt dir aus dem Nebel hinterher. Im Seelenstrom schwillt der Strom in regelmäßigen Abständen an und bremst dich aus, den Fährmann aber kaum. In der Pforte des Nichts schlägt die Leere dort zu, wo du stehen bleibst, und der Torhüter wird mit jeder Sekunde wütender. Alle drei Gebiete sind mit Tempo allein nicht zu schaffen: Du musst Wege und Zeitpunkte planen. Das Tor zu Welt 3 steht am Ende von Welt 2, ohne den Zusatzinhalt bleibt es verschlossen, und alles andere im Spiel bleibt unverändert. Der Zusatzinhalt gilt für dein Konto und alle deine Geräte."
-        }
       ]
     },
     {
@@ -318,20 +311,6 @@
       "name": "Schleimmerge",
       "text": "Kaufe Schleime, verschmelze zwei gleiche zu einem besseren und schicke sie mit Waffen gegen Monster.",
       "url": "https://schleimmerge.leifps.workers.dev",
-      "dlcs": [
-        {
-          "id": "schleimmerge-runen",
-          "icon": "screens/schleimmerge-runen-icon.webp",
-          "wallpaper": "screens/schleimmerge-runen-wallpaper.webp",
-          "erschienen": "2026-11-08",
-          "beschreibung": "Die Runenschmiede macht aus deinen Schleimen Kämpfer mit Zauberkraft. Du schaltest zwei neue, ultrastarke Waffen frei: die Chronosichel (Level 88) und die Urknallklinge (Level 89). Sie entstehen, wenn du zwei Waffen der höchsten Stufe verschmilzt, und schlagen weit härter zu als alles bisher. Außerdem ist mit etwas Glück jede fünfte neue Waffe eine Runenwaffe: dunkler Stein mit leuchtenden Runen und 50 % mehr Schaden. Verschmilzt du zwei Runenwaffen, bekommst du wieder eine Runenwaffe, bei Rune plus normaler Waffe bleibt es eine normale. Außerdem schaltest du das System Verzauberungen frei: Flamme erhöht den Schaden, Frost friert Monster ein und lässt den nächsten Schlag dreifach treffen, Glück bringt mehr Münzen und Blitz springt auf alle Bahnen. Bezahlt wird mit Runensplittern: Du hast so viele, wie dein höchstes Waffenlevel ist, und jede Stufe kostet gleich viel. Jede Verzauberung trägt eine Bahn, und du kannst die Stufen jederzeit neu verteilen. Der Zusatzinhalt gilt für dein Konto, den Spielstand und alle deine Geräte.",
-          "screenshots": [
-            "screens/shots/schleimmerge-runen/1.webp",
-            "screens/shots/schleimmerge-runen/2.webp",
-            "screens/shots/schleimmerge-runen/3.webp"
-          ]
-        }
-      ],
       "repo": "LeifPS/schleimmerge",
       "farbe": "#86c45f",
       "kategorien": [

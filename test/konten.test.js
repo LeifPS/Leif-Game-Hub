@@ -2,6 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { handle, EIN_GERAET, VERSIONEN, MAX_BYTES, TAGE, MAX_ZEILEN, NAME_SPERRE } from '../src/konten.js';
 import { makeD1 } from './helpers/d1.js';
+import { KATALOG } from '../src/dlc.js';
+
+// Der echte Katalog ist leer (keine Zusatzinhalte mehr); die Kauf-Technik wird mit einem Test-Eintrag geprüft.
+KATALOG.push({ id: 'schleimmerge-runen', spiel: 'schleimmerge', name: 'Testinhalt', text: 'Nur für Tests.', preis: 500 });
 
 // Schlüssel wie im Browser: PBKDF2(Passwort, "lgh1:" + kleingeschriebener Name), SHA-256, 256 Bit
 export async function schluessel(name, pw, iter = 1000) { // im Test wenige Runden, im Browser 210000
