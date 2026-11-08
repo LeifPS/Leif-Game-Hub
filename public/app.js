@@ -42,7 +42,12 @@
   var tagFmt = new Intl.DateTimeFormat('de-DE', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Europe/Berlin' });
   function tagKey(iso) { return tagFmt.format(new Date(iso)); }
   function datumText(iso) { return datumFmt.format(new Date(iso)); }
-  function ver(sp) { return versionen[sp.id] || null; }
+  // Ohne Repo (kein Eintrag in versions.json) kann games.json Version und Datum von Hand liefern: "version": "0.1", "aktualisiert": "2026-11-08"
+  function ver(sp) {
+    if (versionen[sp.id]) return versionen[sp.id];
+    if (sp.version) return { version: String(sp.version), datum: sp.aktualisiert ? sp.aktualisiert + 'T12:00:00+01:00' : null, offiziell: false, manuell: true };
+    return null;
+  }
   function kategorien(sp) { return sp.kategorien || []; }
   function spielbar() { return spiele.filter(function (s) { return s.url; }); }
   function alphabetisch() { return sortiert().slice().sort(function (x, y) { return x.name.localeCompare(y.name, 'de', { numeric: true, sensitivity: 'base' }); }); }
@@ -313,8 +318,20 @@
     var l = Array.isArray(sp.entwickler) ? sp.entwickler : (sp.entwickler ? [sp.entwickler] : ['leif']);
     return l.map(function (n) { return String(n).replace(/^@/, ''); }).filter(Boolean);
   }
+  // Angezeigt wird der Anzeigename des Kontos (vom Server, solange er fehlt der Benutzername); Klick öffnet das Profil
+  var entwAnz = {}, entwGeladen = false;
+  function ladeEntwickler() {
+    if (entwGeladen || !window.LghKonto) return;
+    entwGeladen = true;
+    LghKonto.bereit().then(function () { return LghKonto.entwickler(); }).then(function (res) {
+      if (!res.ok) { entwGeladen = false; return; }
+      (res.j.entwickler || []).forEach(function (x) { entwAnz[String(x.name).toLowerCase()] = x.anzeige; });
+      [].forEach.call(document.querySelectorAll('.entw-link[data-n]'), function (a) { var t = entwAnz[a.getAttribute('data-n').toLowerCase()]; if (t) a.textContent = t; });
+    });
+  }
   function entwicklerLinks(sp) {
-    return entwicklerListe(sp).map(function (n) { return '<a class="entw-link" href="#profil/' + encodeURIComponent(n) + '">@' + esc(n) + '</a>'; }).join(', ');
+    ladeEntwickler();
+    return entwicklerListe(sp).map(function (n) { return '<a class="entw-link" data-n="' + esc(n) + '" href="#profil/' + encodeURIComponent(n) + '">' + esc(entwAnz[n.toLowerCase()] || n) + '</a>'; }).join(', ');
   }
   function spieleVon(name) {
     var lc = String(name).toLowerCase();
@@ -369,7 +386,7 @@
   /* ---------- Update-Log ---------- */
   function ladeLog(sp) {
     var ziel = document.getElementById('log-liste');
-    if (!ver(sp)) { ziel.innerHTML = '<div class="log-leer">Für dieses Spiel gibt es noch keinen Update-Log.</div>'; return; }
+    if (!versionen[sp.id]) { ziel.innerHTML = '<div class="log-leer">Für dieses Spiel gibt es noch keinen Update-Log.</div>'; return; }
     var fertig = function (d) { if (aktuell === null && document.getElementById('log-liste') === ziel) zeigeLog(sp, ziel, d.eintraege || [], LOG_SEITE); };
     if (logCache[sp.id]) return fertig(logCache[sp.id]);
     fetch('changelog/' + encodeURIComponent(sp.id) + '.json')

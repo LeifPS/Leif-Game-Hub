@@ -27,6 +27,7 @@ Pflicht sind `id` (kurz, klein, ohne Leerzeichen), `name`, `text`, `url` und `fa
 | `privat: true` | Repo ist privat: Commit-Links werden im Hub nicht angezeigt (die Commit-Texte selbst sind trotzdem öffentlich sichtbar!) |
 | `offiziell_ab` | Datum (`2026-12-01`): der erste Commit ab diesem Tag wird Version `1.0.0.0` (Offiziell statt Beta) |
 | `erschienen` | Datum (`2026-05-07`) für „Erschienen“ auf der Spielseite, wenn es kein `repo` gibt (mit Repo kommt das Datum vom ersten Commit) |
+| `version`, `aktualisiert` | Für Spiele ohne `repo`: Version (`"0.1"`) und Datum der letzten Aktualisierung (`2026-11-08`) von Hand; erscheinen auf Kachel und Spielseite wie sonst die Version aus dem Update-Log (der bleibt ohne Repo leer). Mit Repo gelten die Werte aus den Commits |
 | `phase: "alpha"` | Spiel gilt als Alpha (Kachel „Alpha 0.x“, roter Status auf der Spielseite); ohne Angabe Beta, ab `1.0.0.0` Offiziell |
 | `kategorien` | Filter-Chips und Suche |
 | `featured: true` | Spiel steht groß oben auf der Startseite |
@@ -160,4 +161,4 @@ Der Hub läuft auf `https://hub.leifps.de` und `https://leifps.de` (eigene Domai
 
 ## Entwickler und Profile
 
-In `games.json` steht pro Spiel `"entwickler": ["Benutzername", …]` (Namen von Hub-Konten, genau so geschrieben wie das Konto). Fehlt das Feld, gilt `leif`. Die Detailseite zeigt den Namen als `@benutzername` und verlinkt auf das Profil; das Profil listet unter "Spiele von @name" alle Spiele, bei denen der Name als Entwickler steht. Profile sieht man sonst nur von Freunden; Konten, die in `games.json` als Entwickler stehen, darf jeder angemeldete Mensch öffnen, dann aber nur mit Name, Bild, "dabei seit" und ihren Spielen (kein Online-Status, keine Spielzeiten, keine Freundeszahl) und mit einem Knopf für die Freundschaftsanfrage. Der Worker liest die Entwicklernamen selbst aus `games.json` (5 Minuten zwischengespeichert).
+In `games.json` steht pro Spiel `"entwickler": ["Benutzername", …]` (Namen von Hub-Konten, genau so geschrieben wie das Konto). Fehlt das Feld, gilt `leif`. Die Detailseite zeigt den Anzeigenamen des Kontos (vom Server über `/api/entwickler`, solange er fehlt der Benutzername) als blauen Link auf das Profil; das Profil listet unter "Spiele von @name" alle Spiele, bei denen der Name als Entwickler steht. Profile sieht man sonst nur von Freunden; Konten, die in `games.json` als Entwickler stehen, darf jeder angemeldete Mensch öffnen, dann aber nur mit Name, Bild, "dabei seit" und ihren Spielen (kein Online-Status, keine Spielzeiten, keine Freundeszahl) und mit einem Knopf für die Freundschaftsanfrage. Der Worker liest die Entwicklernamen selbst aus `games.json` (5 Minuten zwischengespeichert).

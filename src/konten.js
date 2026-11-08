@@ -583,6 +583,14 @@ async function entwickler(env, request) {
   return set;
 }
 
+// Anzeigenamen der Entwickler-Konten (für die Spielseiten im Hub)
+async function entwicklerNamen(db, env, request) {
+  const namen = [...(await entwickler(env, request))];
+  if (!namen.length) return antwort({ entwickler: [] });
+  const r = await db.prepare('SELECT name, display FROM users WHERE name_lc IN (' + namen.map(() => '?').join(',') + ')').bind(...namen).all();
+  return antwort({ entwickler: r.results.map((u) => ({ name: u.name, anzeige: u.display || u.name })) });
+}
+
 async function profil(db, s, name, jetzt, entw) {
   let u;
   name = name ? name.replace(/^@/, '') : name;
@@ -671,6 +679,7 @@ export async function handle(request, env, jetztMs = Date.now()) {
       if (!cm[2] && m === 'POST') return await chatSenden(request, db, s, n, jetzt);
     }
     if (pfad === '/api/praesenz' && m === 'POST') return await praesenz(request, db, s, jetzt);
+    if (pfad === '/api/entwickler' && m === 'GET') return await entwicklerNamen(db, env, request);
     if (pfad === '/api/profil' && m === 'GET') return await profil(db, s, null, jetzt, null);
     const pm = /^\/api\/profil\/([^/]+)$/.exec(pfad);
     if (pm && m === 'GET') { let n; try { n = decodeURIComponent(pm[1]); } catch (e) { return fehler(400, 'eingabe'); } return await profil(db, s, n, jetzt, await entwickler(env, request)); }

@@ -732,3 +732,17 @@ test('Profile von Entwicklern (games.json) sieht jeder, aber nur die öffentlich
   const env2 = umgebung(); await neuesKonto(env2, 'Dora'); const t2 = await neuesKonto(env2, 'Fremd');
   assert.equal((await call(env2, 'GET', '/api/profil/Dora', undefined, t2)).status, 404);
 });
+
+test('Anzeigenamen der Entwickler: nur für Entwickler-Konten aus games.json, ohne Assets leer', async () => {
+  const env = umgebung();
+  env.ASSETS = { fetch: async () => new Response(JSON.stringify({ games: [{ id: 'a', entwickler: ['Dora', 'Gibtsnicht'] }] })) };
+  const td = await neuesKonto(env, 'Dora'); await neuesKonto(env, 'Kai');
+  assert.equal((await call(env, 'POST', '/api/anzeige', { anzeige: 'Dora D.' }, td)).status, 200);
+  const r = await call(env, 'GET', '/api/entwickler', undefined, td);
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.j.entwickler.map((x) => [x.name, x.anzeige]), [['Dora', 'Dora D.']]);
+  assert.equal(r.j.entwickler.length, 1);   // Kai steht nicht in games.json, "Gibtsnicht" hat kein Konto
+  const env2 = umgebung(); const t2 = await neuesKonto(env2, 'Dora');
+  assert.deepEqual((await call(env2, 'GET', '/api/entwickler', undefined, t2)).j.entwickler, []);
+  assert.equal((await call(env, 'GET', '/api/entwickler')).status, 401);
+});
