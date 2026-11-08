@@ -1058,7 +1058,6 @@ test('Zusatzinhalte: ohne Guthaben nichts kaufbar, mit Guthaben einmal, Konto lÃ
   const st = await call(env, 'GET', '/api/dlc', undefined, t);
   assert.equal(st.status, 200);
   assert.equal(st.j.guthaben, 0);
-  assert.equal(typeof st.j.waehrung, 'string');
   const d = st.j.katalog.find((x) => x.id === 'schleimmerge-runen');
   assert.ok(d && d.preis > 0 && d.besitz === false && d.spiel === 'schleimmerge');
   assert.equal((await call(env, 'POST', '/api/dlc/kaufen', { id: 'gibtsnicht' }, t)).status, 404);

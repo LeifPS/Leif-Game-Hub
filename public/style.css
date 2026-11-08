@@ -1041,3 +1041,38 @@ body.pseudo-voll .voll-aus { display: flex; }
 .gr-wname small { font-size: 12px; color: var(--muted); }
 .dlg-gr .dlg-fuss { display: flex; align-items: center; margin-top: 12px; }
 .dlg-gr .gr-fuss { gap: 8px; flex-wrap: wrap; justify-content: flex-start; }
+
+/* ---------- Hub-Währung und Zusatzinhalte (DLCs) ---------- */
+.tbtn.waehrung { width: auto; padding: 0 12px 0 9px; gap: 6px; display: inline-flex; align-items: center; font-weight: 700; font-size: 14px; color: #ffd9a0; font-variant-numeric: tabular-nums; }
+.tbtn.waehrung svg { width: 20px; height: 20px; }
+.tbtn.waehrung.puls { animation: waehrungPuls .7s ease; }
+@keyframes waehrungPuls { 30% { transform: scale(1.12); background: rgba(255, 211, 107, .22); } }
+.dlc-bereich { margin: 30px 0 4px; }
+.dlc-bereich[hidden] { display: none; }
+.dlc-bereich h2 { margin: 0 0 12px; font-size: 19px; }
+.dlc-liste { display: grid; gap: 12px; }
+.dlc-karte { display: flex; align-items: center; gap: 18px; padding: 16px 18px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); }
+.dlc-karte.besitz { border-color: rgba(255, 211, 107, .35); }
+.dlc-icon { flex: none; width: 60px; height: 60px; border-radius: 15px; display: grid; place-items: center; background: linear-gradient(145deg, #2a2418, #171b24); border: 1px solid rgba(255, 211, 107, .3); }
+.dlc-icon svg { width: 34px; height: 34px; }
+.dlc-text { flex: 1; min-width: 0; }
+.dlc-text h3 { margin: 0 0 3px; font-size: 16px; }
+.dlc-text p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.dlc-kauf { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.dlc-preis { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: #ffd9a0; font-variant-numeric: tabular-nums; }
+.dlc-preis svg { width: 18px; height: 18px; }
+.dlc-besitz { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #ffd9a0; padding: 6px 12px; border-radius: 999px; background: rgba(255, 211, 107, .12); }
+.btn-gold { color: #3a2300; background: linear-gradient(135deg, #ffd36b, #ff8a4a); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 1px 2px rgba(0, 0, 0, .4); font-weight: 700; }
+.btn-gold:hover { filter: brightness(1.07); }
+.btn-gold[disabled] { opacity: .5; cursor: default; filter: none; }
+@media (max-width: 640px) { .dlc-karte { flex-wrap: wrap; } .dlc-kauf { flex-direction: row; align-items: center; justify-content: space-between; width: 100%; } }
+.dlg-dlc .dlc-zeilen { margin: 12px 0 4px; display: grid; gap: 6px; font-variant-numeric: tabular-nums; }
+.dlg-dlc .dlc-zeile { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--muted); }
+.dlg-dlc .dlc-zeile b { color: var(--text); font-weight: 600; }
+.dlg-dlc .dlc-zeile.fett { padding-top: 8px; border-top: 1px solid var(--line); }
+.dlg-dlc .dlc-gross { display: flex; align-items: center; gap: 10px; font-size: 30px; font-weight: 800; color: #ffd9a0; margin: 8px 0 2px; }
+.dlg-dlc .dlc-gross svg { width: 30px; height: 30px; }
+
+.betrag { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; }
+.betrag svg { width: 1.05em; height: 1.05em; }
+.dlc-preis .betrag { font-size: 16px; }

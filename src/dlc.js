@@ -1,11 +1,9 @@
-// Zusatzinhalte (DLCs) und Hub-Währung. Läuft im Konten-Worker (src/konten.js reicht die Helfer durch).
+// Zusatzinhalte (DLCs) und Hub-Währung („Hexis“, intern so genannt). Läuft im Konten-Worker (src/konten.js reicht die Helfer durch).
 //
-// - Die Währung hat genau einen Namen: WAEHRUNG.name (hier ändern, Hub und Spiele übernehmen ihn von der API).
+// - Die Währung heißt intern Hexis. Nach außen hat sie keinen Namen: Hub und Spiele zeigen immer nur das Sechseck-Symbol mit der Zahl.
 // - Der Katalog steht nur hier auf dem Server, damit Preise nicht vom Browser aus änderbar sind.
 // - Guthaben und Besitz liegen pro Konto in D1. Gekauft wird atomar: Guthaben abziehen und Besitz eintragen in einer Transaktion.
 // - Verdienen von Währung ist noch nicht eingebaut; Guthaben wird bisher nur von Hand vergeben (siehe README).
-export const WAEHRUNG = { name: 'Aurum' };
-
 export const KATALOG = [
   {
     id: 'schleimmerge-runen',
@@ -28,7 +26,6 @@ export function dlcModul(h) {
     const gekauft = {};
     for (const x of b.results) gekauft[x.dlc] = x.bought;
     return {
-      waehrung: WAEHRUNG.name,
       guthaben: g ? g.amount : 0,
       katalog: KATALOG.map((d) => ({ id: d.id, spiel: d.spiel, name: d.name, text: d.text, preis: d.preis, besitz: d.id in gekauft, gekauft: gekauft[d.id] || null })),
     };

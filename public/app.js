@@ -613,6 +613,7 @@
     h += '</dl>';
     h += '</aside></div>';
     if (!gal) h += text;
+    h += '<section class="dlc-bereich" data-spiel="' + esc(sp.id) + '" hidden></section>';   // Zusatzinhalte (füllt dlcFuellen)
     if (sp.url) h += bewHtml(sp);   // Bewertung abgeben: über den Neuigkeiten
     h += '<section class="log" id="log"><h2>Neuigkeiten und Updates</h2><div class="log-liste" id="log-liste"><div class="log-leer">Lädt …</div></div></section>';
     h += '<details class="sysreq"><summary>Systemanforderungen</summary><ul><li>Läuft direkt im Browser, ohne Download und ohne Installation.</li><li>Aktueller Browser (Chrome, Safari, Edge oder Firefox) auf PC, Handy oder Tablet.</li><li>Bedienung mit Maus oder Touch.</li>' + (online ? '<li>Internetverbindung erforderlich.</li>' : '') + '</ul></details>';
@@ -621,6 +622,7 @@
     inhalt.innerHTML = h + '</div>';
     galerieBinden(sp);
     ladeLog(sp);
+    dlcFuellen(); dlcLaden();
   }
 
   /* ---------- Update-Log ---------- */
@@ -723,13 +725,22 @@
   function ausKonto(f) { try { if (window.LghKonto) f(window.LghKonto); } catch (x) { } }
   window.addEventListener('message', function (e) {
     var d = e.data;
-    if (!d || (d.lgh !== 'stand' && d.lgh !== 'status' && d.lgh !== 'hallo' && d.lgh !== 'fertig')) return;
+    if (!d || (d.lgh !== 'stand' && d.lgh !== 'status' && d.lgh !== 'hallo' && d.lgh !== 'fertig' && d.lgh !== 'dlc')) return;
     var q = absender(e);
     if (!q) return;
     try { if (e.origin !== new URL(q.url).origin) return; } catch (x) { return; }
     // Übergabe großer Stände: Spiel fragt nach dem Stand (hallo) und meldet, dass es ihn eingelesen hat (fertig)
     if (d.lgh === 'hallo') { var u = q.el && q.el._uebergabe; if (u && u.art === 'msg') { try { e.source.postMessage({ lgh: 'daten', json: u.json }, e.origin); } catch (x) { } } return; }
     if (d.lgh === 'fertig') { if (q.el && q.el._uebergabe) q.el._uebergabe.fertig = true; return; }
+    if (d.lgh === 'dlc') {
+      if (d.spiel !== q.id || q.abgang) return;
+      var quelle = e.source, qurl = q.url, qid = q.id;
+      (dlcDaten ? Promise.resolve() : dlcLaden()).then(function () {
+        dlcAnFenster(quelle, qurl, qid);
+        if (d.aktion === 'kaufen' && typeof d.id === 'string' && dlcFuer(qid).some(function (x) { return x.id === d.id; })) dlcKaufDialog(d.id);
+      });
+      return;
+    }
     if (d.spiel !== q.id) return;
     if (q.el && q.el._ignorieren) return;   // Rahmen, dessen Stand gerade durch eine Wiederherstellung ersetzt wurde: sein letzter Stand darf ihn nicht überschreiben
     if (q.el && q.el._uebergabe && !q.el._uebergabe.fertig) return;   // Spiel hat den gesicherten Stand noch nicht übernommen: nichts überschreiben
@@ -1633,6 +1644,110 @@
     favUmschalten(b.getAttribute('data-fav'));
   });
 
+
+  /* ---------- Zusatzinhalte (DLCs) und Hub-Währung ---------- */
+  /* Alles Wichtige (Katalog, Preise, Guthaben in Hexis, Besitz) kommt vom Server (/api/dlc). Hexis ist nur der interne Name, in der Oberfläche steht immer das Symbol. */
+  var dlcDaten = null;
+  function zahlText(n) { return Number(n || 0).toLocaleString('de-DE'); }
+  function wabeSvg() { return '<svg aria-hidden="true"><use href="#i-wabe"/></svg>'; }
+  function betrag(n) { return '<span class="betrag">' + wabeSvg() + zahlText(n) + '</span>'; }   // Die Währung wird nirgends mit Namen genannt, nur mit dem Symbol
+  function dlcChip(puls) {
+    var kn = document.getElementById('waehrung-knopf'), z = document.getElementById('waehrung-zahl');
+    if (!kn || !z) return;
+    if (!dlcDaten) { kn.hidden = true; return; }
+    z.textContent = zahlText(dlcDaten.guthaben);
+    kn.title = 'Guthaben: ' + zahlText(dlcDaten.guthaben);
+    kn.setAttribute('aria-label', 'Guthaben: ' + zahlText(dlcDaten.guthaben));
+    kn.hidden = false;
+    if (puls) { kn.classList.remove('puls'); void kn.offsetWidth; kn.classList.add('puls'); }
+  }
+  function dlcLaden() {
+    if (!window.LghKonto || !LghKonto.angemeldet()) return Promise.resolve(null);
+    return LghKonto.dlc.laden().then(function (res) {
+      if (res.ok && res.j && Array.isArray(res.j.katalog)) { dlcDaten = res.j; dlcChip(); dlcFuellen(); dlcAnSpiel(); }
+      return dlcDaten;
+    });
+  }
+  function dlcFuer(spielId) { return ((dlcDaten && dlcDaten.katalog) || []).filter(function (d) { return d.spiel === spielId; }); }
+  function dlcKarteHtml(d) {
+    return '<article class="dlc-karte' + (d.besitz ? ' besitz' : '') + '"><div class="dlc-icon">' + wabeSvg() + '</div>' +
+      '<div class="dlc-text"><h3>' + esc(d.name) + '</h3><p>' + esc(d.text) + '</p></div>' +
+      '<div class="dlc-kauf">' + (d.besitz ? '<span class="dlc-besitz">Im Besitz</span>' :
+        '<span class="dlc-preis">' + betrag(d.preis) + '</span><button type="button" class="btn btn-gold" data-dlc="' + esc(d.id) + '">Kaufen</button>') + '</div></article>';
+  }
+  function dlcFuellenIn(wurzel) {
+    var l = wurzel.querySelectorAll ? wurzel.querySelectorAll('.dlc-bereich[data-spiel]') : [];
+    for (var i = 0; i < l.length; i++) {
+      var liste = dlcFuer(l[i].getAttribute('data-spiel'));
+      l[i].innerHTML = liste.length ? '<h2>Zusatzinhalte</h2><div class="dlc-liste">' + liste.map(dlcKarteHtml).join('') + '</div>' : '';
+      l[i].hidden = !liste.length;
+    }
+  }
+  function dlcFuellen() {   // sichtbare und zwischengespeicherte Ansichten
+    dlcFuellenIn(document);
+    Object.keys(ansichtSpeicher).forEach(function (k) { dlcFuellenIn(ansichtSpeicher[k]); });
+  }
+  function dlcFehler(res) {
+    var f = res.j && res.j.fehler;
+    return { zu_wenig: 'Dafür reicht dein Guthaben nicht.', schon_gekauft: 'Das besitzt du schon.', unbekannt: 'Diesen Zusatzinhalt gibt es nicht (mehr).', zu_viele: 'Zu viele Versuche. Bitte warte kurz.', netz: 'Keine Verbindung zum Server.', server: 'Der Server hatte ein Problem. Bitte gleich noch einmal versuchen.' }[f] || 'Das hat nicht geklappt.';
+  }
+  function dlcKaufDialog(id) {
+    var los = function () {
+      var d = ((dlcDaten && dlcDaten.katalog) || []).filter(function (x) { return x.id === id; })[0];
+      if (!d) return;
+      var fehlt = d.preis - dlcDaten.guthaben;
+      var kopf = '<div class="dlg-titel">' + esc(d.name) + '</div>';
+      if (d.besitz) { grDialog('dlg-dlc', kopf + '<div class="dlg-sub" style="margin:4px 0 14px">Das besitzt du schon.</div><div class="dlg-fuss"><button type="button" class="btn btn-ghost" data-zu>Schließen</button></div>', function () { }); return; }
+      var h = grDialog('dlg-dlc', kopf + '<div class="dlg-sub" style="margin:2px 0 6px">' + esc(d.text) + '</div>' +
+        '<div class="dlc-zeilen"><div class="dlc-zeile"><span>Preis</span><b>' + betrag(d.preis) + '</b></div>' +
+        '<div class="dlc-zeile"><span>Dein Guthaben</span><b>' + betrag(dlcDaten.guthaben) + '</b></div>' +
+        (fehlt > 0 ? '<div class="dlc-zeile fett"><span>Dir fehlen</span><b>' + betrag(fehlt) + '</b></div>' : '<div class="dlc-zeile fett"><span>Danach</span><b>' + betrag(dlcDaten.guthaben - d.preis) + '</b></div>') + '</div>' +
+        '<div class="fr-meldung fehler" id="dlc-meld" role="status"></div>' +
+        '<div class="dlg-fuss"><button type="button" class="btn btn-ghost" data-zu>Abbrechen</button><button type="button" class="btn btn-gold" data-dlc-ja="' + esc(d.id) + '" style="margin-left:10px"' + (fehlt > 0 ? ' disabled' : '') + '>Kaufen</button></div>', function (e, zu) {
+          var b = e.target.closest ? e.target.closest('[data-dlc-ja]') : null;
+          if (!b || b.disabled) return;
+          var m = document.getElementById('dlc-meld'); m.textContent = ''; b.disabled = true;
+          LghKonto.dlc.kaufen(id).then(function (res) {
+            if (res.ok && res.j && res.j.katalog) {
+              dlcDaten = res.j; dlcChip(true); dlcFuellen(); dlcAnSpiel();
+              var dlg = document.querySelector('.dlg-dlc .dlg');
+              if (dlg) dlg.innerHTML = '<div class="dlg-titel">Gekauft</div><div class="dlg-sub" style="margin:4px 0 14px"><b>' + esc(d.name) + '</b> gehört dir jetzt. Es ist sofort im Spiel da.</div><div class="dlg-fuss"><button type="button" class="btn btn-primary" data-zu>Fertig</button></div>';
+              return;
+            }
+            if (res.status === 409) { dlcLaden(); }
+            b.disabled = false; m.textContent = dlcFehler(res);
+            if (res.status === 402) dlcLaden();
+          });
+        });
+      if (!h) return;
+    };
+    if (dlcDaten) los(); else dlcLaden().then(los);
+  }
+  function guthabenDialog() {
+    if (!dlcDaten) return;
+    var mein = ((dlcDaten.katalog) || []).filter(function (d) { return d.besitz; });
+    grDialog('dlg-dlc', '<div class="dlg-titel">Dein Guthaben</div><div class="dlc-gross">' + wabeSvg() + zahlText(dlcDaten.guthaben) + '</div><div class="dlg-sub" style="margin:0 0 10px">Wie du es verdienst, kommt später.</div>' +
+      (mein.length ? '<div class="dlc-zeilen"><div class="dlc-zeile"><span>Deine Zusatzinhalte</span></div>' + mein.map(function (d) { return '<div class="dlc-zeile fett"><b>' + esc(d.name) + '</b><span>' + esc(spielName(d.spiel)) + '</span></div>'; }).join('') + '</div>' : '<div class="dlg-sub">Du hast noch keine Zusatzinhalte.</div>') +
+      '<div class="dlg-fuss"><button type="button" class="btn btn-ghost" data-zu>Schließen</button></div>', function () { });
+  }
+  /* Spiel im Rahmen: fragt per postMessage ({lgh:'dlc', spiel, aktion:'frage'|'kaufen', id}) nach Besitz und kann einen Kauf auslösen.
+     Bezahlt wird immer im Hub-Dialog, das Spiel bekommt nur das Ergebnis. */
+  function dlcSpielNachricht(spielId) {
+    var l = dlcFuer(spielId);
+    return { lgh: 'dlc', spiel: spielId, guthaben: dlcDaten ? dlcDaten.guthaben : 0, katalog: l.map(function (d) { return { id: d.id, name: d.name, text: d.text, preis: d.preis, besitz: !!d.besitz }; }) };
+  }
+  function dlcAnFenster(fenster, url, spielId) {
+    try { fenster.postMessage(dlcSpielNachricht(spielId), new URL(url).origin); } catch (x) { }
+  }
+  function dlcAnSpiel() {
+    if (aktuell && aktuell.url && rahmen && rahmen.contentWindow) dlcAnFenster(rahmen.contentWindow, aktuell.url, aktuell.id);
+  }
+  document.addEventListener('click', function (e) {
+    var k = e.target.closest ? e.target.closest('[data-dlc]') : null;
+    if (k) { e.preventDefault(); dlcKaufDialog(k.getAttribute('data-dlc')); return; }
+    if (e.target.closest && e.target.closest('#waehrung-knopf')) guthabenDialog();
+  });
+
   /* ---------- Navigation ---------- */
   /* Ansichten bleiben als fertige Knoten erhalten: beim Zurück- oder Weiterklicken werden sie nur wieder eingehängt,
      so laden Bilder nicht jedes Mal neu und Galerie, Scrollstand und Update-Log bleiben, wie sie sind. */
@@ -1829,7 +1944,7 @@
       favoriten = favLokal();
       if (window.LghKonto) LghKonto.spielNamen(spielName);
       route();
-      if (window.LghKonto) LghKonto.bereit().then(function () { favLaden(); if (sortierung === 'bewertung') bewAlleLaden(); });
+      if (window.LghKonto) LghKonto.bereit().then(function () { favLaden(); dlcLaden(); if (sortierung === 'bewertung') bewAlleLaden(); });
     })
     .catch(function () { inhalt.innerHTML = '<div class="leer" style="padding:80px 28px">Die Spieleliste konnte nicht geladen werden.</div>'; });
 })();
