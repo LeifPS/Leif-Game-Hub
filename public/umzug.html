@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Umzug – Leif Game Hub</title>
+<style>
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0e1118; color: #e8ecf4; font: 16px/1.5 system-ui, sans-serif; text-align: center; padding: 24px; box-sizing: border-box; }
+  p { max-width: 320px; margin: 0 auto; }
+  small { color: #8b95a8; }
+</style>
+</head>
+<body>
+<p id="t">Deine Spielstände werden übertragen …<br><small>Dieses Fenster schließt sich gleich von selbst.</small></p>
+<script>
+/* Einmaliger Umzug von lgh.leifps.workers.dev nach leifps.de.
+   Der Browser-Speicher gehört immer zu genau einer Adresse. Deshalb öffnet leifps.de dieses Fenster auf der alten Adresse,
+   das liest die lokalen Spielstände und die Geräte-Kennung und schickt sie direkt an das öffnende Fenster zurück.
+   Gesendet wird nur an https://leifps.de (fest eingetragen), nie an eine andere Seite. Die Anmeldung (lgh.konto) wird NICHT übertragen. */
+(function () {
+  var ZIEL = 'https://leifps.de';
+  var t = document.getElementById('t');
+  if (!window.opener) { t.textContent = 'Dieses Fenster wird von leifps.de aus geöffnet. Du kannst es schließen.'; return; }
+  var daten = { stand: {}, geraet: null };
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && /^lgh\.stand\.[a-z0-9_-]{1,40}(\.vorher|\.sicher)?$/.test(k)) {
+        var v = localStorage.getItem(k);
+        if (typeof v === 'string' && v.length < 2000000) daten.stand[k] = v;
+      }
+    }
+    var g = localStorage.getItem('lgh.geraet');
+    if (g && /^[0-9a-f]{32}$/.test(g)) daten.geraet = g;
+  } catch (e) { }
+  try {
+    window.opener.postMessage({ lghUmzug: 1, daten: daten }, ZIEL);
+    t.innerHTML = 'Fertig. Dieses Fenster schließt sich …';
+  } catch (e) { t.textContent = 'Das hat nicht geklappt. Du kannst das Fenster schließen.'; return; }
+  setTimeout(function () { try { window.close(); } catch (e) { } }, 400);
+})();
+</script>
+</body>
+</html>

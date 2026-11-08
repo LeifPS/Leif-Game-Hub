@@ -8,6 +8,9 @@
   'use strict';
 
   var KEY = 'lgh.konto';
+  // Einmaliger Umzug von der alten Adresse auf leifps.de (siehe umzug.html): Spielstände und Geräte-Kennung wandern per Pop-up herüber.
+  var ALT_HOST = 'lgh.leifps.workers.dev', NEU_HOST = 'leifps.de', UMZUG_KEY = 'lgh.umzug';
+  var STAND_RE = /^lgh\.stand\.[a-z0-9_-]{1,40}(\.vorher|\.sicher)?$/;
   var NAME_RE = /^[\p{L}\p{N}._-]{3,20}$/u;
   var konto = null;            // { name (= @Benutzername, fest), anzeige (Anzeigename), token }
   var bereitFn = null, bereitP = null;
@@ -119,6 +122,36 @@
     zeigeAnmeldung('Bitte melde dich neu an.');
   }
 
+  function umzugOffen() { return location.hostname === NEU_HOST && lsGet(UMZUG_KEY) === null; }
+
+  // Wartet, bis das Pop-up auf der alten Adresse seine Daten geschickt hat (nur von genau diesem Fenster und dieser Adresse)
+  function holeAlt(popup) {
+    return new Promise(function (ok) {
+      var fertig = false, timer, wach;
+      function ende(d) { if (fertig) return; fertig = true; clearTimeout(timer); clearInterval(wach); window.removeEventListener('message', h); ok(d); }
+      function h(e) {
+        if (e.origin !== 'https://' + ALT_HOST || e.source !== popup) return;
+        var d = e.data;
+        if (d && d.lghUmzug === 1 && d.daten && typeof d.daten === 'object') ende(d.daten);
+      }
+      window.addEventListener('message', h);
+      timer = setTimeout(function () { ende(null); }, 10000);
+      wach = setInterval(function () { if (popup.closed) setTimeout(function () { ende(null); }, 400); }, 500);
+    });
+  }
+  // Übernimmt Spielstände (nur wo hier noch keiner liegt) und die Geräte-Kennung. Die Anmeldung selbst wird nie übertragen.
+  function uebernimm(d) {
+    if (!d) return -1;
+    var n = 0, st = d.stand && typeof d.stand === 'object' ? d.stand : {};
+    Object.keys(st).forEach(function (k) {
+      if (!STAND_RE.test(k) || typeof st[k] !== 'string' || st[k].length > 2000000 || lsGet(k) !== null) return;
+      try { localStorage.setItem(k, st[k]); if (!/\.(vorher|sicher)$/.test(k)) n++; } catch (e) { }
+    });
+    if (typeof d.geraet === 'string' && /^[0-9a-f]{32}$/.test(d.geraet)) { lsSet('lgh.geraet', d.geraet); gidMerk = d.geraet; }
+    lsSet(UMZUG_KEY, '1');
+    return n;
+  }
+
   function zeigeAnmeldung(hinweis) {
     var alt = document.getElementById('konto-sperre');
     if (alt) alt.remove();
@@ -139,6 +172,7 @@
       '<label class="nur-neu">Passwort wiederholen<input name="password2" type="password" autocomplete="new-password"></label>' +
       '<div class="konto-regel nur-neu">Mindestens 6 Zeichen. Merk es dir gut: Es gibt keine E-Mail zum Zurücksetzen.</div>' +
       '<div class="konto-regel nur-neu"><b>Wichtig:</b> Ein Konto gilt vorerst nur auf diesem Gerät. Anmelden auf mehreren Geräten kommt später, wenn die Spielstände zwischen Geräten abgeglichen werden.</div>' +
+      (umzugOffen() ? '<label class="konto-umzug"><input type="checkbox" name="umzug" checked><span><b>Daten von der alten Adresse übernehmen</b> (einmalig). Beim Anmelden öffnet sich kurz ein Fenster von ' + ALT_HOST + ', das deine Spielstände herüberschickt. Bitte Pop-ups erlauben.</span></label>' : '') +
       '<div class="konto-fehler" id="konto-fehler" role="alert"></div>' +
       '<button class="btn btn-primary konto-los" type="submit">Anmelden</button>' +
       '</form>' +
@@ -170,12 +204,22 @@
         if (pw.length < 6) { fehler.textContent = 'Das Passwort braucht mindestens 6 Zeichen.'; return; }
         if (pw !== form.password2.value) { fehler.textContent = 'Die beiden Passwörter sind nicht gleich.'; return; }
       }
+      // Das Pop-up muss direkt im Klick geöffnet werden, sonst blockiert es der Browser
+      var umzug = !!(form.umzug && form.umzug.checked && umzugOffen()), popup = null;
+      if (umzug) {
+        try { popup = window.open('https://' + ALT_HOST + '/umzug.html', 'lgh-umzug', 'width=420,height=320'); } catch (x) { popup = null; }
+        if (!popup) { fehler.textContent = 'Das Fenster für die Übernahme wurde blockiert. Erlaube Pop-ups für diese Seite oder nimm den Haken bei „Daten übernehmen“ raus.'; return; }
+      }
       los.disabled = true; los.textContent = 'Einen Moment …';
-      schluessel(name, pw).then(function (key) {
+      var vorspann = umzug ? holeAlt(popup).then(function (d) { var n = uebernimm(d); if (n < 0) { try { popup.close(); } catch (x) { } } return n; }) : Promise.resolve(0);
+      vorspann.then(function () { return schluessel(name, pw); }).then(function (key) {
         return api('POST', modus === 'neu' ? '/api/registrieren' : '/api/anmelden', { name: name, anzeige: anz || undefined, key: key, geraet: geraet(), gid: geraetId() || undefined }, { ohneToken: true });
       }).then(function (res) {
-        if (!res.ok) { fehler.textContent = fehlerText(res); los.disabled = false; los.textContent = modus === 'neu' ? 'Konto erstellen' : 'Anmelden'; return; }
+        if (!res.ok) {
+          fehler.textContent = fehlerText(res) + (res.j && res.j.fehler === 'anderes_geraet' && form.umzug && !form.umzug.checked ? ' Tipp: Setze den Haken bei „Daten von der alten Adresse übernehmen“, dann klappt es.' : '');
+          los.disabled = false; los.textContent = modus === 'neu' ? 'Konto erstellen' : 'Anmelden'; return; }
         speichereKonto({ name: res.j.name, anzeige: res.j.anzeige || res.j.name, token: res.j.token, av: res.j.av || null });
+        if (location.hostname === NEU_HOST) lsSet(UMZUG_KEY, '1');
         el.remove(); document.body.classList.remove('konto-offen');
         nachAnmeldung();
       }, function () { fehler.textContent = 'Die Anmeldung ist hier nicht möglich (Browser ohne Verschlüsselung).'; los.disabled = false; });
