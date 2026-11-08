@@ -9,7 +9,7 @@
 
   var KEY = 'lgh.konto';
   // Einmaliger Umzug von der alten Adresse auf leifps.de (siehe umzug.html): Spielstände und Geräte-Kennung wandern per Pop-up herüber.
-  var ALT_HOST = 'lgh.leifps.workers.dev', NEU_HOST = 'leifps.de', UMZUG_KEY = 'lgh.umzug';
+  var ALT_HOST = 'lgh.leifps.workers.dev', NEU_HOSTS = ['leifps.de', 'hub.leifps.de'], UMZUG_KEY = 'lgh.umzug';
   var STAND_RE = /^lgh\.stand\.[a-z0-9_-]{1,40}(\.vorher|\.sicher)?$/;
   var NAME_RE = /^[\p{L}\p{N}._-]{3,20}$/u;
   var konto = null;            // { name (= @Benutzername, fest), anzeige (Anzeigename), token }
@@ -122,7 +122,7 @@
     zeigeAnmeldung('Bitte melde dich neu an.');
   }
 
-  function umzugOffen() { return location.hostname === NEU_HOST && lsGet(UMZUG_KEY) === null; }
+  function umzugOffen() { return NEU_HOSTS.indexOf(location.hostname) >= 0 && lsGet(UMZUG_KEY) === null; }
 
   // Wartet, bis das Pop-up auf der alten Adresse seine Daten geschickt hat (nur von genau diesem Fenster und dieser Adresse)
   function holeAlt(popup) {
@@ -219,7 +219,7 @@
           fehler.textContent = fehlerText(res) + (res.j && res.j.fehler === 'anderes_geraet' && form.umzug && !form.umzug.checked ? ' Tipp: Setze den Haken bei „Daten von der alten Adresse übernehmen“, dann klappt es.' : '');
           los.disabled = false; los.textContent = modus === 'neu' ? 'Konto erstellen' : 'Anmelden'; return; }
         speichereKonto({ name: res.j.name, anzeige: res.j.anzeige || res.j.name, token: res.j.token, av: res.j.av || null });
-        if (location.hostname === NEU_HOST) lsSet(UMZUG_KEY, '1');
+        if (NEU_HOSTS.indexOf(location.hostname) >= 0) lsSet(UMZUG_KEY, '1');
         el.remove(); document.body.classList.remove('konto-offen');
         nachAnmeldung();
       }, function () { fehler.textContent = 'Die Anmeldung ist hier nicht möglich (Browser ohne Verschlüsselung).'; los.disabled = false; });

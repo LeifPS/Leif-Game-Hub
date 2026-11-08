@@ -17,11 +17,11 @@
 /* Einmaliger Umzug von lgh.leifps.workers.dev nach leifps.de.
    Der Browser-Speicher gehört immer zu genau einer Adresse. Deshalb öffnet leifps.de dieses Fenster auf der alten Adresse,
    das liest die lokalen Spielstände und die Geräte-Kennung und schickt sie direkt an das öffnende Fenster zurück.
-   Gesendet wird nur an https://leifps.de (fest eingetragen), nie an eine andere Seite. Die Anmeldung (lgh.konto) wird NICHT übertragen. */
+   Gesendet wird nur an https://leifps.de und https://hub.leifps.de (fest eingetragen), nie an eine andere Seite; angenommen wird es nur vom Fenster, das dieses geöffnet hat. Die Anmeldung (lgh.konto) wird NICHT übertragen. */
 (function () {
-  var ZIEL = 'https://leifps.de';
+  var ZIELE = ['https://leifps.de', 'https://hub.leifps.de'];
   var t = document.getElementById('t');
-  if (!window.opener) { t.textContent = 'Dieses Fenster wird von leifps.de aus geöffnet. Du kannst es schließen.'; return; }
+  if (!window.opener) { t.textContent = 'Dieses Fenster wird vom Hub aus geöffnet. Du kannst es schließen.'; return; }
   var daten = { stand: {}, geraet: null };
   try {
     for (var i = 0; i < localStorage.length; i++) {
@@ -35,7 +35,7 @@
     if (g && /^[0-9a-f]{32}$/.test(g)) daten.geraet = g;
   } catch (e) { }
   try {
-    window.opener.postMessage({ lghUmzug: 1, daten: daten }, ZIEL);
+    ZIELE.forEach(function (z) { window.opener.postMessage({ lghUmzug: 1, daten: daten }, z); });
     t.innerHTML = 'Fertig. Dieses Fenster schließt sich …';
   } catch (e) { t.textContent = 'Das hat nicht geklappt. Du kannst das Fenster schließen.'; return; }
   setTimeout(function () { try { window.close(); } catch (e) { } }, 400);
