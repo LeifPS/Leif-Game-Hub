@@ -469,6 +469,7 @@
       "url": "https://erntezeitaufbruch.leifps.workers.dev",
       "repo": "LeifPS/erntezeitaufbruch",
       "phase": "alpha",
+      "entwickler": ["leif", "thore"],
       "farbe": "#7fb83f",
       "kategorien": [
         "Simulation",
@@ -476,6 +477,7 @@
         "Online"
       ],
       "icon": "screens/erntezeitaufbruch-icon.webp",
+      "wallpaper": "screens/erntezeitaufbruch-wallpaper.webp",
       "schrift": {
         "familie": "lilita",
         "versalien": false,
