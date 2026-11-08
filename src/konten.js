@@ -540,10 +540,13 @@ async function favoritSetzen(request, db, s, jetzt) {
 
 /* ---------- Bewertungen ---------- */
 // 1 bis 5 Sterne pro Konto und Spiel, nur Zahlen, keine Texte. Jeder angemeldete Mensch sieht Durchschnitt und Anzahl, die eigene Bewertung nur man selbst.
+// Bewerten darf nur, wer das Spiel mindestens 15 Minuten gespielt hat (Spielzeit aus dem Konto); Zurücknehmen geht immer.
+export const BEWERTUNG_MIN_SEKUNDEN = 900;
 async function bewertungStand(db, s, spiel) {
   const g = await db.prepare('SELECT COUNT(*) AS n, AVG(stars) AS m FROM ratings WHERE game = ?').bind(spiel).first();
   const me = await db.prepare('SELECT stars FROM ratings WHERE user_id = ? AND game = ?').bind(s.id, spiel).first();
-  return { spiel, anzahl: g.n, schnitt: g.n ? Math.round(g.m * 10) / 10 : null, meine: me ? me.stars : 0 };
+  const z = await db.prepare('SELECT seconds FROM playtime WHERE user_id = ? AND game = ?').bind(s.id, spiel).first();
+  return { spiel, anzahl: g.n, schnitt: g.n ? Math.round(g.m * 10) / 10 : null, meine: me ? me.stars : 0, spielzeit: z ? z.seconds : 0, mindest: BEWERTUNG_MIN_SEKUNDEN };
 }
 async function bewertungSetzen(request, env, db, s, spiel, jetzt) {
   const { b } = await lies(request);
@@ -552,7 +555,11 @@ async function bewertungSetzen(request, env, db, s, spiel, jetzt) {
   const ids = (await gamesDaten(env, request)).ids;
   if (ids.size && !ids.has(spiel)) return fehler(404, 'unbekannt');
   if (b.sterne === 0) await db.prepare('DELETE FROM ratings WHERE user_id = ? AND game = ?').bind(s.id, spiel).run();
-  else await db.prepare('INSERT INTO ratings (user_id, game, stars, updated) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, game) DO UPDATE SET stars = excluded.stars, updated = excluded.updated').bind(s.id, spiel, b.sterne, jetzt).run();
+  else {
+    const z = await db.prepare('SELECT seconds FROM playtime WHERE user_id = ? AND game = ?').bind(s.id, spiel).first();
+    if (!z || z.seconds < BEWERTUNG_MIN_SEKUNDEN) return fehler(403, 'zu_wenig_spielzeit', { fehlt: BEWERTUNG_MIN_SEKUNDEN - (z ? z.seconds : 0) });
+    await db.prepare('INSERT INTO ratings (user_id, game, stars, updated) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, game) DO UPDATE SET stars = excluded.stars, updated = excluded.updated').bind(s.id, spiel, b.sterne, jetzt).run();
+  }
   return antwort(await bewertungStand(db, s, spiel));
 }
 

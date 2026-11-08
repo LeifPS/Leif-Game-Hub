@@ -135,19 +135,28 @@
   var releaseFertig = false;
   /* Bewertungen: 1 bis 5 Sterne pro Konto (nur Sterne, keine Texte). Durchschnitt und Anzahl sehen alle, die eigene Wahl nur man selbst. */
   var bewDaten = {};
-  function bewHtml(sp) { return '<div class="bew" data-bew="' + esc(sp.id) + '"' + (bewDaten[sp.id] ? '' : ' hidden') + '>' + (bewDaten[sp.id] ? bewInnen(bewDaten[sp.id], sp) : '') + '</div>'; }
+  var BEW_MIN = 900;   // mindestens 15 Minuten Spielzeit (der Server prüft das auch)
+  function bewHtml(sp) { return '<section class="bew" data-bew="' + esc(sp.id) + '"' + (bewDaten[sp.id] ? '' : ' hidden') + '>' + (bewDaten[sp.id] ? bewInnen(bewDaten[sp.id], sp) : '') + '</section>'; }
+  function bewFakt(sp) {
+    var d = bewDaten[sp.id];
+    return '<span class="bew-fakt" data-bewfakt="' + esc(sp.id) + '">' + (d ? bewFaktText(d) : '…') + '</span>';
+  }
+  function bewFaktText(d) {
+    return d.anzahl ? '<b>' + d.schnitt.toFixed(1).replace('.', ',') + '</b> <span class="bew-stern" aria-label="Sterne">★</span> <span class="bew-anz">(' + d.anzahl + ')</span>' : '<span class="bew-anz">Noch keine Bewertungen</span>';
+  }
   function bewInnen(d, sp) {
-    var kopf = d.anzahl
-      ? '<span class="sterne" style="--p:' + Math.round(d.schnitt / 5 * 100) + '%" role="img" aria-label="Durchschnitt ' + String(d.schnitt).replace('.', ',') + ' von 5 Sternen"></span><span class="bew-zahl">' + d.schnitt.toFixed(1).replace('.', ',') + '</span><span class="bew-anz">' + d.anzahl + (d.anzahl === 1 ? ' Bewertung' : ' Bewertungen') + '</span>'
-      : '<span class="bew-anz">Noch keine Bewertungen</span>';
+    var frei = (d.spielzeit || 0) >= (d.mindest || BEW_MIN), fehlt = Math.max(1, Math.ceil(((d.mindest || BEW_MIN) - (d.spielzeit || 0)) / 60));
     var wahl = '';
-    for (var n = 5; n >= 1; n--) wahl += '<button type="button" role="radio" class="' + (n <= d.meine ? 'an' : '') + '" data-s="' + n + '" aria-checked="' + (n === d.meine) + '" aria-label="' + n + (n === 1 ? ' Stern' : ' Sterne') + '">★</button>';
-    return '<div class="bew-kopf">' + kopf + '</div><div class="bew-meine"><span class="bew-lab">' + (d.meine ? 'Deine Bewertung' : 'Bewerte dieses Spiel') + '</span><span class="bew-wahl" role="radiogroup" aria-label="Deine Bewertung für ' + esc(sp.name) + '">' + wahl + '</span></div>';
+    for (var n = 5; n >= 1; n--) wahl += '<button type="button" role="radio" class="' + (n <= d.meine ? 'an' : '') + '" data-s="' + n + '" aria-checked="' + (n === d.meine) + '" aria-label="' + n + (n === 1 ? ' Stern' : ' Sterne') + '"' + (frei ? '' : ' disabled') + '>★</button>';
+    return '<h2>' + (d.meine ? 'Deine Bewertung' : 'Bewerte ' + esc(sp.name)) + '</h2><div class="bew-zeile"><span class="bew-wahl' + (frei ? '' : ' gesperrt') + '" role="radiogroup" aria-label="Deine Bewertung für ' + esc(sp.name) + '">' + wahl + '</span>' +
+      '<span class="bew-hinweis">' + (frei ? (d.meine ? 'Tippe dieselbe Zahl nochmal, um die Bewertung zurückzunehmen.' : 'Nur Sterne, keine Texte.') : 'Bewerten geht ab 15 Minuten Spielzeit. Dir fehlen noch ' + fehlt + (fehlt === 1 ? ' Minute.' : ' Minuten.')) + '</span></div>';
   }
   function bewZeichne(id) {
     var d = bewDaten[id], sp = spiele.filter(function (g) { return g.id === id; })[0];
     if (!d || !sp) return;
-    [].forEach.call(document.querySelectorAll('.bew[data-bew="' + id.replace(/"/g, '') + '"]'), function (el) { el.innerHTML = bewInnen(d, sp); el.hidden = false; });
+    var q = id.replace(/"/g, '');
+    [].forEach.call(document.querySelectorAll('.bew[data-bew="' + q + '"]'), function (el) { el.innerHTML = bewInnen(d, sp); el.hidden = false; });
+    [].forEach.call(document.querySelectorAll('.bew-fakt[data-bewfakt="' + q + '"]'), function (el) { el.innerHTML = bewFaktText(d); });
   }
   function bewLaden(id) {
     if (!window.LghKonto) return;
@@ -156,10 +165,10 @@
     });
   }
   function bewSetzen(id, n) {
-    var d = bewDaten[id]; if (!d || !window.LghKonto) return;
+    var d = bewDaten[id]; if (!d || !window.LghKonto || (d.spielzeit || 0) < (d.mindest || BEW_MIN)) return;
     var neu = n === d.meine ? 0 : n, alt = d;   // dieselbe Zahl nochmal: Bewertung zurücknehmen
     var anz = d.anzahl + (neu && !d.meine ? 1 : !neu && d.meine ? -1 : 0), summe = (d.schnitt || 0) * d.anzahl - d.meine + neu;
-    bewDaten[id] = { spiel: id, anzahl: anz, schnitt: anz ? Math.round(summe / anz * 10) / 10 : null, meine: neu };   // sofort anzeigen, der Server liefert gleich den genauen Stand
+    bewDaten[id] = { spiel: id, anzahl: anz, schnitt: anz ? Math.round(summe / anz * 10) / 10 : null, meine: neu, spielzeit: d.spielzeit, mindest: d.mindest };   // sofort anzeigen, der Server liefert gleich den genauen Stand
     bewZeichne(id);
     LghKonto.bewertung.setzen(id, neu).then(function (res) {
       if (res && res.ok && typeof res.j.anzahl === 'number') bewDaten[id] = res.j; else bewDaten[id] = alt;
@@ -173,7 +182,7 @@
   });
   function favKnopf(sp, klasse) {
     var an = favIst(sp.id);
-    return '<button type="button" class="' + klasse + (an ? ' an' : '') + '" data-fav="' + esc(sp.id) + '" aria-pressed="' + an + '" aria-label="' + esc(sp.name) + (an ? ' aus den Favoriten entfernen' : ' zu den Favoriten hinzufügen') + '"><svg aria-hidden="true"><use href="#i-star"/></svg>' + (klasse === 'btn btn-ghost fav-btn' ? '<span>Favorit</span>' : '') + '</button>';
+    return '<button type="button" class="' + klasse + (an ? ' an' : '') + '" data-fav="' + esc(sp.id) + '" aria-pressed="' + an + '" aria-label="' + esc(sp.name) + (an ? ' aus den Favoriten entfernen' : ' zu den Favoriten hinzufügen') + '"><svg aria-hidden="true"><use href="#i-star"/></svg>' + (klasse === 'fav-ban' ? '<span>Favorit</span>' : '') + '</button>';
   }
   function tile(sp) {
     var offen = !!sp.url, detail = offen || !!sp.wartung, id = encodeURIComponent(sp.id), v = ver(sp);   // Spiele in Wartung haben weiter ihre Detailseite, nur Spielen geht nicht
@@ -471,13 +480,13 @@
     var titel = !!sp.wallpaper;
     var v = ver(sp);
     var online = kategorien(sp).indexOf('Online') >= 0;
-    var h = '<div class="detail-banner' + (titel ? ' titel' : '') + '">' + (titel ? '<div class="titelrahmen"><img class="titelhg" src="' + esc(sp.wallpaper) + '" alt="" aria-hidden="true" decoding="async"><img class="titelbild titelfg" src="' + esc(sp.wallpaper) + '" alt="' + esc(sp.name) + '" decoding="async"></div>' : art(sp, 1400, 420)) + '<a class="zurueck-link" href="#"><svg aria-hidden="true"><use href="#i-back"/></svg>Alle Spiele</a></div>';
+    var h = '<div class="detail-banner' + (titel ? ' titel' : '') + '">' + (titel ? '<div class="titelrahmen"><img class="titelhg" src="' + esc(sp.wallpaper) + '" alt="" aria-hidden="true" decoding="async"><img class="titelbild titelfg" src="' + esc(sp.wallpaper) + '" alt="' + esc(sp.name) + '" decoding="async"></div>' : art(sp, 1400, 420)) + '<a class="zurueck-link" href="#"><svg aria-hidden="true"><use href="#i-back"/></svg>Alle Spiele</a>' + ((sp.url || sp.wartung) ? favKnopf(sp, 'fav-ban') : '') + '</div>';
     h += '<div class="shop' + (titel ? ' titel' : '') + '">';
-    h += '<div class="shop-titelzeile">' + titelHtml(sp) + '<div class="spiel-aktion"><div class="spielinfo" hidden></div>' + favKnopf(sp, 'btn btn-ghost fav-btn') + (sp.url ? '<a class="btn btn-primary btn-spielen" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a>' : '<span class="btn btn-spielen gesperrt" aria-disabled="true"' + cdAttr(sp, '') + '>' + (sp.wartung ? sperrText(sp, '') : 'Bald') + '</span>') + '</div></div>';
+    h += '<div class="shop-titelzeile">' + titelHtml(sp) + '<div class="spiel-aktion"><div class="spielinfo" hidden></div>' + (sp.url ? '<a class="btn btn-primary btn-spielen" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a>' : '<span class="btn btn-spielen gesperrt" aria-disabled="true"' + cdAttr(sp, '') + '>' + (sp.wartung ? sperrText(sp, '') : 'Bald') + '</span>') + '</div></div>';
     var gal = galerieHtml(sp);
     var text = (sp.beschreibung && sp.beschreibung !== sp.text) ? '<section class="shop-text"><h2>Über dieses Spiel</h2><p>' + esc(sp.beschreibung) + '</p></section>' : '';
     h += '<div class="shop-oben' + (gal ? '' : ' ohne-galerie') + '">' + (gal ? '<div class="shop-haupt">' + gal + text + '</div>' : '');
-    h += '<aside class="shop-info"><div class="shop-kopf"><div class="shop-icon">' + art(sp, 300, 300) + '</div><p class="kurz">' + esc(sp.text) + '</p></div>' + (sp.url ? bewHtml(sp) : '') + '<dl class="fakten">';
+    h += '<aside class="shop-info"><div class="shop-kopf"><div class="shop-icon">' + art(sp, 300, 300) + '</div><p class="kurz">' + esc(sp.text) + '</p></div><dl class="fakten">';
     var erschienen = sp.release ? sp.release : v && v.erste ? v.erste : (sp.erschienen ? sp.erschienen + 'T12:00:00+02:00' : null);   // ohne Repo: Datum von Hand (games.json: "erschienen"); mit "release" gilt dessen Zeitpunkt
     if (sp.cd) h += faktZeile('Wird veröffentlicht', esc(datumZeitText(sp.release)));   // noch nicht freigegeben: Zeitpunkt statt "Erschienen"
     else if (erschienen) h += faktZeile('Erschienen', esc(datumText(erschienen)));
@@ -488,13 +497,15 @@
     if (!v && sp.phase) h += faktZeile('Status', '<span class="ver-pill' + (sp.phase === 'alpha' ? ' alpha' : '') + '">' + phaseName(sp, null) + '</span>');
     if (v) h += faktZeile('Status', '<span class="ver-pill' + (v.offiziell ? ' offiziell' : sp.phase === 'alpha' ? ' alpha' : '') + '">' + phaseName(sp, v) + '</span> Version ' + esc(vz(v.version)));
     if (v && v.datum) h += faktZeile('Zuletzt aktualisiert', esc(datumText(v.datum)));
+    if (sp.url) h += faktZeile('Bewertung', bewFakt(sp));
     h += faktZeile(entwicklerListe(sp).length > 1 ? 'Entwickler' : 'Entwickler', entwicklerLinks(sp));   // games.json: "entwickler" = Liste von Benutzernamen
     h += faktZeile('Spielmodus', online ? 'Mehrspieler (online)' : 'Einzelspieler');
     h += faktZeile('Plattform', 'Browser · ' + esc(sp.sprache || 'Deutsch'));   // games.json: "sprache" falls nicht Deutsch
+    if (kategorien(sp).length) h += faktZeile('Tags', pills(sp));
     h += '</dl>';
-    if (kategorien(sp).length) h += '<div class="tags-titel">Beliebte Tags</div>' + pills(sp);
     h += '</aside></div>';
     if (!gal) h += text;
+    if (sp.url) h += bewHtml(sp);   // Bewertung abgeben: über den Neuigkeiten
     h += '<section class="log" id="log"><h2>Neuigkeiten und Updates</h2><div class="log-liste" id="log-liste"><div class="log-leer">Lädt …</div></div></section>';
     h += '<details class="sysreq"><summary>Systemanforderungen</summary><ul><li>Läuft direkt im Browser, ohne Download und ohne Installation.</li><li>Aktueller Browser (Chrome, Safari, Edge oder Firefox) auf PC, Handy oder Tablet.</li><li>Bedienung mit Maus oder Touch.</li>' + (online ? '<li>Internetverbindung erforderlich.</li>' : '') + '</ul></details>';
     var mehr = aehnliche(sp);

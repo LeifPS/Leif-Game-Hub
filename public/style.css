@@ -943,21 +943,29 @@ body.pseudo-voll .voll-aus { display: flex; }
 .fav-btn svg { flex: none; }
 .spiel-aktion { flex-wrap: wrap; }
 
-/* Bewertung (Detailseite): nur Sterne */
-.bew { margin: 0 0 14px; padding: 12px 14px; border-radius: 12px; background: rgba(255, 255, 255, .04); border: 1px solid var(--line); }
+/* Bewertung: Eingabe über den Neuigkeiten, Durchschnitt als Zeile in den Fakten */
+.bew { margin: 28px 0 0; }
 .bew[hidden] { display: none; }
-.bew-kopf { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
-.sterne { position: relative; display: inline-block; font-size: 19px; line-height: 1; letter-spacing: 1px; color: #3a4256; }
-.sterne::before { content: '★★★★★'; }
-.sterne::after { content: '★★★★★'; position: absolute; left: 0; top: 0; width: var(--p, 0%); overflow: hidden; white-space: nowrap; color: #ffd36b; }
-.bew-zahl { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.bew-anz { font-size: 13px; color: var(--muted); }
-.bew-meine { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
-.bew-lab { font-size: 13px; color: var(--muted); }
+.bew h2 { margin: 0 0 10px; font-size: 20px; font-weight: 650; letter-spacing: -.02em; }
+.bew-zeile { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 16px; padding: 10px 14px; border-radius: 12px; background: rgba(255, 255, 255, .04); border: 1px solid var(--line); }
 .bew-wahl { display: inline-flex; flex-direction: row-reverse; }
-.bew-wahl button { all: unset; box-sizing: border-box; width: 34px; height: 34px; display: grid; place-items: center; cursor: pointer; font-size: 22px; line-height: 1; color: #3a4256; border-radius: 8px; transition: transform .1s; }
+.bew-wahl button { all: unset; box-sizing: border-box; width: 38px; height: 38px; display: grid; place-items: center; cursor: pointer; font-size: 26px; line-height: 1; color: #3a4256; border-radius: 8px; transition: transform .1s; }
 .bew-wahl button.an { color: #ffd36b; }
-.bew-wahl button:hover, .bew-wahl button:hover ~ button { color: #ffe08a; }
+.bew-wahl:not(.gesperrt) button:hover, .bew-wahl:not(.gesperrt) button:hover ~ button { color: #ffe08a; }
 .bew-wahl button:active { transform: scale(.9); }
 .bew-wahl button:focus-visible { outline: 2px solid var(--accent-hi); outline-offset: 1px; }
+.bew-wahl.gesperrt button { cursor: default; opacity: .6; }
+.bew-hinweis { font-size: 13px; color: var(--muted); }
 @media (hover: none) { .bew-wahl button:hover, .bew-wahl button:hover ~ button { color: #3a4256; } .bew-wahl button.an, .bew-wahl button.an:hover { color: #ffd36b; } }
+.bew-fakt b { font-variant-numeric: tabular-nums; }
+.bew-stern { color: #ffd36b; }
+.bew-anz { color: var(--muted); font-size: 12.5px; }
+.fakt .pills { margin: 0; }
+/* Favorit auf der Detailseite: oben rechts im Titelbild, nicht neben Spielen */
+.fav-ban { all: unset; box-sizing: border-box; position: absolute; z-index: 3; top: 18px; right: 28px; display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 13px 0 11px; border-radius: 8px; cursor: pointer; font-size: 13.5px; font-weight: 500; color: #e8ecf4; background: rgba(10, 12, 17, .6); border: 1px solid var(--line); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.fav-ban:hover { background: rgba(10, 12, 17, .85); }
+.fav-ban:focus-visible { outline: 2px solid var(--accent-hi); outline-offset: 1px; }
+.fav-ban.an { color: #ffd36b; }
+.fav-ban svg { width: 16px; height: 16px; flex: none; }
+.detail-banner.titel .fav-ban { top: 14px; right: 32px; }
+@media (max-width: 700px) { .fav-ban { right: 16px; } .detail-banner.titel .fav-ban { top: 12px; right: 16px; } }
