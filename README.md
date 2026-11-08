@@ -155,7 +155,7 @@ In `public/games.json` beim Spiel `"wartung": true` eintragen. Das Spiel bleibt 
 
 ### Release mit Countdown
 
-`"release": "2026-11-08T14:00:00+01:00"` (ISO-Zeit mit Zeitzone) hält ein Spiel bis dahin zu, ohne `"wartung"`. Der Spielen-Knopf zeigt „Startet in 06:33“ (Kachel und Seitenleiste „In 06:33“), zählt live herunter und wird zur angegebenen Zeit für alle von selbst zum normalen „Spielen“, auch bei offenen Seiten und ohne Neuladen. Die Uhrzeit kommt vom Server (Date-Header von `games.json`), die Geräteuhr spielt keine Rolle. Das Feld darf danach stehen bleiben; ist die Zeit vorbei, hat es keine Wirkung mehr.
+`"release": "2026-11-08T14:00:00+01:00"` (ISO-Zeit mit Zeitzone) hält ein Spiel bis dahin zu, ohne `"wartung"`. Der Spielen-Knopf zeigt „Startet in 06:33“ (Kachel und Seitenleiste „In 06:33“), zählt live herunter und wird zur angegebenen Zeit für alle von selbst zum normalen „Spielen“, auch bei offenen Seiten und ohne Neuladen. Die Uhrzeit kommt vom Server (Date-Header von `games.json`), die Geräteuhr spielt keine Rolle. Vor dem Release steht in den Fakten „Wird veröffentlicht <Datum, Uhrzeit>“, danach „Erschienen <Datum>“ (das Datum von `release`). Das Feld darf danach stehen bleiben; ist die Zeit vorbei, hat es keine Wirkung mehr.
 
 ### Große Spielstände (Übergabe per postMessage)
 
@@ -164,6 +164,9 @@ Stände bis ca. 100.000 Zeichen (Base64) gehen weiter über `#lgh=<Base64url>` a
 ## Adressen und einmaliger Umzug
 
 Der Hub läuft auf `https://hub.leifps.de` und `https://leifps.de` (eigene Domain, leifps.de kann per Cloudflare-Weiterleitung auf hub.leifps.de zeigen) und weiterhin auf `https://lgh.leifps.workers.dev`; beide zeigen auf denselben Worker und dieselbe Datenbank. Der Browser-Speicher gehört aber immer zu genau einer Adresse, deshalb liegen Spielstände (`lgh.stand.*`) und die Geräte-Kennung (`lgh.geraet`) auf der neuen Adresse zunächst nicht vor. Beim ersten Anmelden auf leifps.de gibt es darum den Haken "Daten von der alten Adresse übernehmen" (standardmäßig gesetzt): Beim Klick auf "Anmelden" öffnet sich `lgh.leifps.workers.dev/umzug.html` als Pop-up, liest dort die Stände samt `.vorher`/`.sicher` und die Geräte-Kennung und schickt sie per `postMessage` an das öffnende Fenster. Gesendet wird nur an `https://leifps.de` und `https://hub.leifps.de` (fest eingetragen), empfangen nur vom Pop-up der alten Adresse. Vorhandene Stände auf der neuen Adresse werden nie überschrieben. Die Anmeldung (`lgh.konto`) wird nicht übertragen; man meldet sich mit Name und Passwort neu an. Die übernommene Geräte-Kennung sorgt dafür, dass die Gerätesperre (`EIN_GERAET`) das Konto nicht aussperrt. Danach lädt der normale Grundabgleich die Stände wieder hoch. Das Angebot erscheint nur bis zur ersten erfolgreichen Anmeldung auf leifps.de. Nicht getestet: iPhone/Safari und der Home-Bildschirm-Modus (dort hat die installierte App einen eigenen Speicher).
+
+**Abschaltung der alten Adresse:** Auf `lgh.leifps.workers.dev` steht ein Hinweis (Banner und in der Anmeldemaske), dass die Adresse bald nicht mehr unterstützt wird. Ab **Dienstag, 10. November 2026, 15:00 Uhr (Berlin)** leitet der Worker (`src/umzug.js`, Konstante `WEITERLEITUNG_AB`) jeden Seitenaufruf per 302 auf `https://hub.leifps.de` weiter (Pfad und Query bleiben). Ausgenommen sind `/api/*` und `/umzug.html`, damit offene Tabs weiter funktionieren und die einmalige Übernahme der Spielstände beim Anmelden auf der neuen Adresse auch danach noch geht.
+
 
 ## Entwickler und Profile
 
