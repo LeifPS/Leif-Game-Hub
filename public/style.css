@@ -925,3 +925,18 @@ body.pseudo-voll .voll-aus { display: flex; }
 .weiter-play svg { width: 16px; height: 16px; }
 @media (max-width: 700px) { .weiter-liste { padding: 0 16px; grid-template-columns: 1fr 1fr; } .weiter .abschnitt { padding-left: 16px; padding-right: 16px; } }
 @media (max-width: 480px) { .weiter-liste { grid-template-columns: 1fr; } }
+
+/* Favoriten */
+.lib-stern { margin-left: auto; flex: none; color: #ffd36b; font-size: 12px; line-height: 1; }
+.lib-stern + small { margin-left: 6px; }
+.tile .fav { all: unset; box-sizing: border-box; position: absolute; z-index: 4; top: 8px; right: 8px; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; cursor: pointer; color: #e8ecf4; background: rgba(8, 10, 15, .62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); opacity: 0; transition: opacity .15s, background .15s; }
+.tile:hover .fav, .tile .fav:focus-visible, .tile .fav.an { opacity: 1; }
+@media (hover: none) { .tile .fav { opacity: .9; } }
+.tile .fav:hover { background: rgba(8, 10, 15, .85); }
+.tile .fav:focus-visible { outline: 2px solid var(--accent-hi); outline-offset: 1px; }
+.fav svg, .fav-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; }
+.fav.an, .fav-btn.an { color: #ffd36b; }
+.fav.an svg, .fav-btn.an svg { fill: #ffd36b; stroke: #ffd36b; }
+.fav-btn { gap: 7px; }
+.fav-btn svg { flex: none; }
+.spiel-aktion { flex-wrap: wrap; }

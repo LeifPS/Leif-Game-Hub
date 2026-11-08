@@ -52,8 +52,14 @@
   }
   function kategorien(sp) { return sp.kategorien || []; }
   function spielbar() { return spiele.filter(function (s) { return s.url; }); }
-  function alphabetisch() { return sortiert().slice().sort(function (x, y) { return x.name.localeCompare(y.name, 'de', { numeric: true, sensitivity: 'base' }); }); }
-  function sortiert() { return spielbar().concat(spiele.filter(function (s) { return !s.url; })); }
+  /* Favoriten: pro Konto auf dem Server (/api/favoriten), zusätzlich pro Konto auf dem Gerät zwischengespeichert, damit sie sofort da sind. Sie stehen oben in Bibliothek und Spieleliste. */
+  var favoriten = [];
+  function favIst(id) { return favoriten.indexOf(id) >= 0; }
+  function favKey() { var n = window.LghKonto && LghKonto.name(); return n ? 'lgh.fav.' + String(n).toLowerCase() : null; }
+  function favLokal() { var k = favKey(); try { var l = k && JSON.parse(localStorage.getItem(k)); return Array.isArray(l) ? l.filter(function (x) { return typeof x === 'string'; }) : []; } catch (e) { return []; } }
+  function favNachOben(l) { return l.filter(function (s) { return favIst(s.id); }).concat(l.filter(function (s) { return !favIst(s.id); })); }
+  function alphabetisch() { return favNachOben(sortiert().slice().sort(function (x, y) { return x.name.localeCompare(y.name, 'de', { numeric: true, sensitivity: 'base' }); })); }
+  function sortiert() { return favNachOben(spielbar().concat(spiele.filter(function (s) { return !s.url; }))); }
 
   /* ---------- Automatisch gezeichnete Titelbilder (Platzhalter, bis es echte Bilder gibt: Feld "bild" in games.json) ---------- */
   function art(sp, W, H) {
@@ -127,6 +133,10 @@
     if (!offen && releaseTimer) { clearInterval(releaseTimer); releaseTimer = null; }
   }
   var releaseFertig = false;
+  function favKnopf(sp, klasse) {
+    var an = favIst(sp.id);
+    return '<button type="button" class="' + klasse + (an ? ' an' : '') + '" data-fav="' + esc(sp.id) + '" aria-pressed="' + an + '" aria-label="' + esc(sp.name) + (an ? ' aus den Favoriten entfernen' : ' zu den Favoriten hinzufügen') + '"><svg aria-hidden="true"><use href="#i-star"/></svg>' + (klasse === 'btn btn-ghost fav-btn' ? '<span>Favorit</span>' : '') + '</button>';
+  }
   function tile(sp) {
     var offen = !!sp.url, detail = offen || !!sp.wartung, id = encodeURIComponent(sp.id), v = ver(sp);   // Spiele in Wartung haben weiter ihre Detailseite, nur Spielen geht nicht
     var s = '<article class="tile' + (offen ? '' : ' off') + '">';
@@ -139,6 +149,7 @@
     s += '<div class="tile-text"><strong>' + esc(sp.name) + '</strong><span>' + esc(kategorien(sp).join(', ')) + '</span></div>';
     s += detail ? '</a>' : '</div>';
     if (offen) s += '<a class="play" href="#spiel/' + id + '/play" aria-label="' + esc(sp.name) + ' spielen">' + playIcon() + '</a>';
+    if (detail) s += favKnopf(sp, 'fav');
     return s + '</article>';
   }
 
@@ -166,7 +177,7 @@
     s += '<div class="nav-label">Bibliothek</div>';
     alphabetisch().forEach(function (sp) {
       var offen = !!sp.url;
-      var inner = '<span class="lib-icon">' + art(sp, 100, 100) + '</span><span class="name">' + esc(sp.name) + '</span>' + (offen ? '' : '<small' + cdAttr(sp, '') + '>' + (sp.wartung ? sperrText(sp, '') : 'Bald') + '</small>');
+      var inner = '<span class="lib-icon">' + art(sp, 100, 100) + '</span><span class="name">' + esc(sp.name) + '</span>' + (favIst(sp.id) ? '<span class="lib-stern" aria-label="Favorit" title="Favorit">★</span>' : '') + (offen ? '' : '<small' + cdAttr(sp, '') + '>' + (sp.wartung ? sperrText(sp, '') : 'Bald') + '</small>');
       s += offen || sp.wartung
         ? '<a class="lib-item' + (offen ? '' : ' off') + (sp.id === aktivId ? ' aktiv' : '') + '" href="#spiel/' + encodeURIComponent(sp.id) + '">' + inner + '</a>'
         : '<div class="lib-item off">' + inner + '</div>';
@@ -424,7 +435,7 @@
     var online = kategorien(sp).indexOf('Online') >= 0;
     var h = '<div class="detail-banner' + (titel ? ' titel' : '') + '">' + (titel ? '<div class="titelrahmen"><img class="titelhg" src="' + esc(sp.wallpaper) + '" alt="" aria-hidden="true" decoding="async"><img class="titelbild titelfg" src="' + esc(sp.wallpaper) + '" alt="' + esc(sp.name) + '" decoding="async"></div>' : art(sp, 1400, 420)) + '<a class="zurueck-link" href="#"><svg aria-hidden="true"><use href="#i-back"/></svg>Alle Spiele</a></div>';
     h += '<div class="shop' + (titel ? ' titel' : '') + '">';
-    h += '<div class="shop-titelzeile">' + titelHtml(sp) + '<div class="spiel-aktion"><div class="spielinfo" hidden></div>' + (sp.url ? '<a class="btn btn-primary btn-spielen" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a>' : '<span class="btn btn-spielen gesperrt" aria-disabled="true"' + cdAttr(sp, '') + '>' + (sp.wartung ? sperrText(sp, '') : 'Bald') + '</span>') + '</div></div>';
+    h += '<div class="shop-titelzeile">' + titelHtml(sp) + '<div class="spiel-aktion"><div class="spielinfo" hidden></div>' + favKnopf(sp, 'btn btn-ghost fav-btn') + (sp.url ? '<a class="btn btn-primary btn-spielen" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a>' : '<span class="btn btn-spielen gesperrt" aria-disabled="true"' + cdAttr(sp, '') + '>' + (sp.wartung ? sperrText(sp, '') : 'Bald') + '</span>') + '</div></div>';
     var gal = galerieHtml(sp);
     var text = (sp.beschreibung && sp.beschreibung !== sp.text) ? '<section class="shop-text"><h2>Über dieses Spiel</h2><p>' + esc(sp.beschreibung) + '</p></section>' : '';
     h += '<div class="shop-oben' + (gal ? '' : ' ohne-galerie') + '">' + (gal ? '<div class="shop-haupt">' + gal + text + '</div>' : '');
@@ -1201,6 +1212,45 @@
     window.LghKonto.kontoDialog(a === 'konto' ? null : a);
   });
 
+  /* ---------- Favoriten umschalten ---------- */
+  function aktivIdAusHash() { var m = /^#spiel\/([^\/]+)/.exec(location.hash); return m ? decodeURIComponent(m[1]) : null; }
+  function favAnwenden(liste) {
+    favoriten = liste.slice();
+    var k = favKey(); if (k) { try { localStorage.setItem(k, JSON.stringify(favoriten)); } catch (e) { } }
+    ansichtSpeicher = {}; seiteFertig = false;   // gemerkte Ansichten und die Seitenleiste neu aufbauen
+    var ansicht = body.getAttribute('data-view');
+    if (ansicht === 'home') { renderHome(); ansichtKey = homeKey(); }
+    else if (ansicht === 'detail') {
+      [].forEach.call(document.querySelectorAll('[data-fav]'), function (b) {
+        var id = b.getAttribute('data-fav'), an = favIst(id);
+        b.classList.toggle('an', an); b.setAttribute('aria-pressed', String(an));
+        b.setAttribute('aria-label', spielName(id) + (an ? ' aus den Favoriten entfernen' : ' zu den Favoriten hinzufügen'));
+      });
+    }
+    renderSide(aktivIdAusHash(), location.hash === '#freunde');
+  }
+  function favUmschalten(id) {
+    var alt = favoriten.slice(), an = !favIst(id);
+    favAnwenden(an ? favoriten.concat([id]) : favoriten.filter(function (x) { return x !== id; }));
+    if (!window.LghKonto) return;
+    LghKonto.favoriten.setzen(id, an).then(function (res) {
+      if (!res.ok) { favAnwenden(alt); return; }   // Server hat abgelehnt oder war nicht erreichbar: zurück zum alten Stand
+      if (Array.isArray(res.j.favoriten) && JSON.stringify(res.j.favoriten) !== JSON.stringify(favoriten)) favAnwenden(res.j.favoriten);
+    });
+  }
+  function favLaden() {
+    if (!window.LghKonto || !LghKonto.angemeldet()) return;
+    LghKonto.favoriten.laden().then(function (res) {
+      if (res.ok && Array.isArray(res.j.favoriten) && JSON.stringify(res.j.favoriten) !== JSON.stringify(favoriten)) favAnwenden(res.j.favoriten);
+    });
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-fav]') : null;
+    if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    favUmschalten(b.getAttribute('data-fav'));
+  });
+
   /* ---------- Navigation ---------- */
   /* Ansichten bleiben als fertige Knoten erhalten: beim Zurück- oder Weiterklicken werden sie nur wieder eingehängt,
      so laden Bilder nicht jedes Mal neu und Galerie, Scrollstand und Update-Log bleiben, wie sie sind. */
@@ -1369,7 +1419,9 @@
       });
       if (spiele.some(function (sp) { return sp.cd; })) releaseTimer = setInterval(releaseTick, 1000);
       spiele.forEach(function (sp) { ['bild', 'banner', 'icon', 'wallpaper'].forEach(function (k) { if (typeof sp[k] === 'string' && sp[k].indexOf('?') < 0) sp[k] += '?v=' + BILD_V; }); });
+      favoriten = favLokal();
       route();
+      if (window.LghKonto) LghKonto.bereit().then(favLaden);
     })
     .catch(function () { inhalt.innerHTML = '<div class="leer" style="padding:80px 28px">Die Spieleliste konnte nicht geladen werden.</div>'; });
 })();

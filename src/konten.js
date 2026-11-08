@@ -287,6 +287,7 @@ async function kontoLoeschen(request, db, s, jetzt) {
     db.prepare('DELETE FROM chat_read WHERE user_id = ? OR other = ?').bind(s.id, s.id),
     db.prepare('DELETE FROM presence WHERE user_id = ?').bind(s.id),
     db.prepare('DELETE FROM playtime WHERE user_id = ?').bind(s.id),
+    db.prepare('DELETE FROM favorites WHERE user_id = ?').bind(s.id),
     db.prepare('DELETE FROM users WHERE id = ?').bind(s.id),
   ]);
   return antwort({ ok: true });
@@ -517,6 +518,25 @@ async function chatUngelesen(db, s, jetzt) {
   return antwort({ von: r.results.map((x) => ({ name: x.name, anzeige: x.display || x.name, av: avParse(x.avatar), n: x.n, neu: x.neu, text: x.text })), jetzt });
 }
 
+/* ---------- Favoriten ---------- */
+// Spiele-IDs, die man oben in der Bibliothek haben möchte (in der Reihenfolge des Hinzufügens). Höchstens 60 pro Konto.
+const FAVORITEN_MAX = 60;
+async function favoritenListe(db, s) {
+  const r = await db.prepare('SELECT game FROM favorites WHERE user_id = ? ORDER BY created, game').bind(s.id).all();
+  return antwort({ favoriten: r.results.map((x) => x.game) });
+}
+async function favoritSetzen(request, db, s, jetzt) {
+  const { b } = await lies(request);
+  if (!b || typeof b.spiel !== 'string' || !SPIEL_RE.test(b.spiel) || typeof b.an !== 'boolean') return fehler(400, 'eingabe');
+  if (b.an) {
+    const n = await db.prepare('SELECT COUNT(*) AS n FROM favorites WHERE user_id = ?').bind(s.id).first();
+    const schon = await db.prepare('SELECT 1 AS x FROM favorites WHERE user_id = ? AND game = ?').bind(s.id, b.spiel).first();
+    if (!schon && n.n >= FAVORITEN_MAX) return fehler(400, 'zu_viele');
+    await db.prepare('INSERT OR IGNORE INTO favorites (user_id, game, created) VALUES (?, ?, ?)').bind(s.id, b.spiel, jetzt).run();
+  } else await db.prepare('DELETE FROM favorites WHERE user_id = ? AND game = ?').bind(s.id, b.spiel).run();
+  return favoritenListe(db, s);
+}
+
 async function chatSenden(request, db, s, name, jetzt) {
   const { b } = await lies(request);
   if (!b) return fehler(400, 'eingabe');
@@ -702,6 +722,8 @@ export async function handle(request, env, jetztMs = Date.now()) {
     if (pfad === '/api/freunde/annehmen' && m === 'POST') return await freundAnnehmen(request, db, s);
     if (pfad === '/api/freunde/ablehnen' && m === 'POST') return await freundLoeschen(request, db, s, true);
     if (pfad === '/api/freunde/entfernen' && m === 'POST') return await freundLoeschen(request, db, s, false);
+    if (pfad === '/api/favoriten' && m === 'GET') return await favoritenListe(db, s);
+    if (pfad === '/api/favoriten' && m === 'POST') return await favoritSetzen(request, db, s, jetzt);
     if (pfad === '/api/ungelesen' && m === 'GET') return await chatUngelesen(db, s, jetzt);
     const cm = /^\/api\/chat\/([^/]+)(?:\/(loeschen))?$/.exec(pfad);
     if (cm) {

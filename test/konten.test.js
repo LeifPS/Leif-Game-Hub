@@ -740,6 +740,32 @@ test('Chat: Freundschaft entfernen löscht den Verlauf, Konto löschen ebenfalls
   assert.equal(lesen.n, 0);
 });
 
+test('Favoriten: je Konto, setzen und entfernen, Eingaben geprüft, mit dem Konto gelöscht', async () => {
+  const env = umgebung();
+  const a = await neuesKonto(env, 'Anna'), b = await neuesKonto(env, 'Ben');
+  assert.equal((await call(env, 'GET', '/api/favoriten')).status, 401);
+  assert.deepEqual((await call(env, 'GET', '/api/favoriten', undefined, a)).j.favoriten, []);
+  assert.deepEqual((await call(env, 'POST', '/api/favoriten', { spiel: 'spells', an: true }, a)).j.favoriten, ['spells']);
+  assert.deepEqual((await call(env, 'POST', '/api/favoriten', { spiel: 'spells', an: true }, a)).j.favoriten, ['spells']);   // doppelt: bleibt einmal
+  assert.deepEqual((await call(env, 'POST', '/api/favoriten', { spiel: 'tierspiel', an: true }, a)).j.favoriten, ['spells', 'tierspiel']);
+  assert.deepEqual((await call(env, 'GET', '/api/favoriten', undefined, b)).j.favoriten, []);   // jedes Konto für sich
+  assert.deepEqual((await call(env, 'POST', '/api/favoriten', { spiel: 'spells', an: false }, a)).j.favoriten, ['tierspiel']);
+  assert.deepEqual((await call(env, 'POST', '/api/favoriten', { spiel: 'gibtsnicht', an: false }, a)).j.favoriten, ['tierspiel']);   // Entfernen ist idempotent
+  for (const body of [{ spiel: 'Böse Id!', an: true }, { spiel: 'spells' }, { spiel: 'spells', an: 'ja' }, { an: true }, {}]) {
+    assert.equal((await call(env, 'POST', '/api/favoriten', body, a)).status, 400, JSON.stringify(body));
+  }
+  // Obergrenze
+  for (let i = 0; i < 59; i++) await call(env, 'POST', '/api/favoriten', { spiel: 'g' + i, an: true }, a);
+  assert.equal((await call(env, 'POST', '/api/favoriten', { spiel: 'zuviel', an: true }, a)).status, 400);
+  assert.equal((await call(env, 'POST', '/api/favoriten', { spiel: 'g3', an: true }, a)).status, 200);   // schon vorhanden zählt nicht als neu
+  // Konto löschen räumt auf
+  await call(env, 'POST', '/api/favoriten', { spiel: 'spells', an: true }, b);
+  const vorher = (await env.DB.prepare('SELECT COUNT(*) AS n FROM favorites').first()).n;
+  assert.equal((await call(env, 'POST', '/api/loeschen', { key: await schluessel('Ben', 'geheim123') }, b)).status, 200);
+  assert.equal((await env.DB.prepare('SELECT COUNT(*) AS n FROM favorites').first()).n, vorher - 1);
+  assert.equal((await env.DB.prepare("SELECT COUNT(*) AS n FROM favorites WHERE game = 'tierspiel'").first()).n, 1);   // die von Anna bleiben
+});
+
 test('Chat: /api/ungelesen liefert je Freund Zahl und neueste Nachricht, nur für den Empfänger', async () => {
   const env = umgebung();
   const [a, b] = await freunde2(env);   // Anna, Ben

@@ -74,6 +74,13 @@ export const SCHEMA = [
     last_id INTEGER NOT NULL,
     PRIMARY KEY (user_id, other)
   )`,
+  // Favoriten: Spiele, die ein Konto oben in der Bibliothek haben möchte (geräteübergreifend)
+  `CREATE TABLE IF NOT EXISTS favorites (
+    user_id INTEGER NOT NULL,
+    game TEXT NOT NULL,
+    created INTEGER NOT NULL,
+    PRIMARY KEY (user_id, game)
+  )`,
   // Zähler gegen Raten von Passwörtern und Massenanmeldungen
   `CREATE TABLE IF NOT EXISTS limits (
     k TEXT PRIMARY KEY,
