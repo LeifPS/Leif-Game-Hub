@@ -1099,3 +1099,27 @@ test('DLC-Bewertung: nur Besitzer, Spielzeit zählt im Spiel', async () => {
   assert.equal(ok.status, 200, JSON.stringify(ok.j));
   assert.equal(ok.j.anzahl, 1); assert.equal(ok.j.meine, 4);
 });
+
+test('Startgeschenk: Konten bis einschließlich 8.11.2026 bekommen einmalig 1000, spätere nichts', async () => {
+  const env = umgebung();
+  const alt = uhr;
+  try {
+    uhr = Date.UTC(2026, 10, 8, 20, 0, 0);          // 8.11.2026, 21 Uhr Berliner Zeit: noch Geschenk-Zeitraum
+    const t1 = await neuesKonto(env, 'Fruehe');
+    uhr = Date.UTC(2026, 10, 8, 23, 0, 1);          // 9.11.2026, 0:00:01 Uhr Berliner Zeit
+    const t2 = await neuesKonto(env, 'Spaete');
+    uhr = Date.UTC(2026, 10, 12, 10, 0, 0);
+    const a = await call(env, 'GET', '/api/dlc', undefined, t1);
+    assert.equal(a.j.guthaben, 1000);
+    assert.equal((await call(env, 'GET', '/api/dlc', undefined, t1)).j.guthaben, 1000);   // nicht noch einmal
+    // gleichzeitige Abrufe geben es auch nur einmal
+    await Promise.all([call(env, 'GET', '/api/dlc', undefined, t1), call(env, 'GET', '/api/dlc', undefined, t1)]);
+    assert.equal((await call(env, 'GET', '/api/dlc', undefined, t1)).j.guthaben, 1000);
+    assert.equal((await call(env, 'GET', '/api/dlc', undefined, t2)).j.guthaben, 0);
+    const uid = (await env.DB.prepare('SELECT id FROM users WHERE name_lc = ?').bind('fruehe').first()).id;
+    assert.equal((await env.DB.prepare("SELECT COUNT(*) AS n FROM wallet_log WHERE user_id = ? AND grund = 'startgeschenk'").bind(uid).first()).n, 1);
+    // Kaufen geht damit (500) und das Geschenk kommt danach nicht wieder
+    assert.equal((await call(env, 'POST', '/api/dlc/kaufen', { id: 'schleimmerge-runen' }, t1)).j.guthaben, 500);
+    assert.equal((await call(env, 'GET', '/api/dlc', undefined, t1)).j.guthaben, 500);
+  } finally { uhr = alt; }
+});

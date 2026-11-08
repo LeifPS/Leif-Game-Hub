@@ -212,4 +212,5 @@ Spiele können Zusatzinhalte anbieten, die man mit Hexis (dem Guthaben des Hubs)
 - **Im Spiel**: Das Spiel fragt per `postMessage` `{lgh:'dlc', spiel, aktion:'frage'}` und bekommt `{lgh:'dlc', spiel, guthaben, katalog:[{id, name, text, preis, besitz}]}`. Mit `{lgh:'dlc', spiel, aktion:'kaufen', id}` öffnet das Spiel den Kaufdialog des Hubs; bezahlt wird immer im Hub. Das Spiel schaltet Inhalte nur frei, wenn `besitz` wahr ist.
 - **Guthaben vergeben** (Verdienen gibt es noch nicht), z. B. mit der Cloudflare-D1-Konsole:
   `INSERT INTO wallet (user_id, amount) SELECT id, 500 FROM users WHERE name_lc = 'leif' ON CONFLICT(user_id) DO UPDATE SET amount = amount + 500;`
+- **Startgeschenk**: Jedes Konto, das bis einschließlich 8.11.2026 (Berliner Zeit) angelegt wurde, bekommt beim ersten Abruf von `/api/dlc` einmalig 1000 Hexis (`GESCHENK`, `GESCHENK_BIS` in `src/dlc.js`; die Tabelle `wallet_gift` verhindert doppeltes Vergeben, im Verlauf steht `startgeschenk`). Spätere Konten bekommen nichts.
 - Erster DLC: **Runenschmiede** für Schleimmerge (Runenwaffen und Verzauberungen).

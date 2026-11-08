@@ -3,7 +3,8 @@
 // - Die Währung heißt intern Hexis. Nach außen hat sie keinen Namen: Hub und Spiele zeigen immer nur das Sechseck-Symbol mit der Zahl.
 // - Der Katalog steht nur hier auf dem Server, damit Preise nicht vom Browser aus änderbar sind.
 // - Guthaben und Besitz liegen pro Konto in D1. Gekauft wird atomar: Guthaben abziehen und Besitz eintragen in einer Transaktion.
-// - Verdienen von Währung ist noch nicht eingebaut; Guthaben wird bisher nur von Hand vergeben (siehe README).
+// - Verdienen von Währung ist noch nicht eingebaut. Einmaliges Startgeschenk: jedes Konto, das bis einschließlich 8.11.2026 (Berliner Zeit)
+//   angelegt wurde, bekommt beim ersten Abruf 1000 (Tabelle wallet_gift sorgt dafür, dass es nur einmal passiert). Alle weiteren von Hand (README).
 export const KATALOG = [
   {
     id: 'schleimmerge-runen',
@@ -14,13 +15,28 @@ export const KATALOG = [
   },
 ];
 
+export const GESCHENK = 1000;
+export const GESCHENK_BIS = 1794178800;   // Sekunden: 9.11.2026, 00:00 Uhr Berliner Zeit; wer davor angelegt wurde, bekommt das Geschenk
 export const DLC_ID_RE = /^[a-z0-9_-]{1,40}$/;
 const dlcDef = (id) => KATALOG.find((d) => d.id === id) || null;
 
 export function dlcModul(h) {
   const { antwort, fehler, lies, gesperrt, zaehle } = h;
 
-  async function stand(db, s) {
+  // Einmaliges Startgeschenk für Konten bis GESCHENK_BIS. Alles in einer Transaktion und nur, wenn noch kein Geschenk eingetragen ist.
+  async function geschenk(db, s, jetzt) {
+    const r = await db.prepare('SELECT (SELECT created FROM users WHERE id = ?1) AS c, EXISTS (SELECT 1 FROM wallet_gift WHERE user_id = ?1) AS g').bind(s.id).first();
+    if (!r || r.g || r.c == null || r.c >= GESCHENK_BIS) return;
+    const bed = 'NOT EXISTS (SELECT 1 FROM wallet_gift WHERE user_id = ?1) AND (SELECT created FROM users WHERE id = ?1) < ?3';
+    await db.batch([
+      db.prepare('INSERT INTO wallet (user_id, amount) SELECT ?1, ?2 WHERE ' + bed + ' ON CONFLICT(user_id) DO UPDATE SET amount = amount + ?2').bind(s.id, GESCHENK, GESCHENK_BIS),
+      db.prepare("INSERT INTO wallet_log (user_id, delta, grund, created) SELECT ?1, ?2, 'startgeschenk', ?4 WHERE " + bed).bind(s.id, GESCHENK, GESCHENK_BIS, jetzt),
+      db.prepare('INSERT OR IGNORE INTO wallet_gift (user_id, amount, created) SELECT ?1, ?2, ?4 WHERE ' + bed.replace('NOT EXISTS (SELECT 1 FROM wallet_gift WHERE user_id = ?1) AND ', '')).bind(s.id, GESCHENK, GESCHENK_BIS, jetzt),
+    ]);
+  }
+
+  async function stand(db, s, jetzt) {
+    await geschenk(db, s, jetzt);
     const g = await db.prepare('SELECT amount FROM wallet WHERE user_id = ?').bind(s.id).first();
     const b = await db.prepare('SELECT dlc, bought FROM dlc_owned WHERE user_id = ?').bind(s.id).all();
     const gekauft = {};
@@ -53,11 +69,11 @@ export function dlcModul(h) {
     const nun = await db.prepare('SELECT 1 AS x FROM dlc_owned WHERE user_id = ? AND dlc = ?').bind(s.id, d.id).first();
     if (!nun) return fehler(402, 'zu_wenig');
     await db.prepare('INSERT INTO wallet_log (user_id, delta, grund, created) VALUES (?, ?, ?, ?)').bind(s.id, -d.preis, 'dlc:' + d.id, jetzt).run();
-    return antwort({ ok: true, ...(await stand(db, s)) });
+    return antwort({ ok: true, ...(await stand(db, s, jetzt)) });
   }
 
   async function route(request, db, s, jetzt, m, unter) {
-    if (!unter && m === 'GET') return antwort(await stand(db, s));
+    if (!unter && m === 'GET') return antwort(await stand(db, s, jetzt));
     if (unter === 'kaufen' && m === 'POST') return await kaufen(request, db, s, jetzt);
     return fehler(404, 'unbekannt');
   }
@@ -67,6 +83,7 @@ export function dlcModul(h) {
       db.prepare('DELETE FROM wallet WHERE user_id = ?').bind(uid),
       db.prepare('DELETE FROM wallet_log WHERE user_id = ?').bind(uid),
       db.prepare('DELETE FROM dlc_owned WHERE user_id = ?').bind(uid),
+      db.prepare('DELETE FROM wallet_gift WHERE user_id = ?').bind(uid),
     ]);
   }
 
