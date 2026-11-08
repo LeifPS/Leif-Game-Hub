@@ -37,14 +37,16 @@ Pflicht sind `id` (kurz, klein, ohne Leerzeichen), `name`, `text`, `url` und `fa
 
 ## Versionen und Update-Log
 
-Jedes Spiel hat eine Version **Major.Minor.Patch.Build**, jeder Commit des Spiel-Repos ist ein Eintrag im Update-Log.
+Jedes Spiel hat eine Version **Major.Großes Update.Kleines Update.Patch** (z. B. `1.2.4.1`), jeder Commit des Spiel-Repos ist ein Eintrag im Update-Log.
 
 | Stelle | Bedeutung |
 | --- | --- |
 | Major | riesige Hauptversionen, z. B. Beta zu Release (`1.0.0.0`) |
-| Minor | neuer Inhalt oder neue Funktionen |
-| Patch | Bugfixes, Balancing, kleine Verbesserungen |
-| Build | interne Builds, schnelle Hotfixes |
+| Großes Update | neuer Inhalt oder neue Funktionen |
+| Kleines Update | Bugfixes, Balancing, kleine Verbesserungen |
+| Patch | Kleinkram, Feinschliff, schnelle Hotfixes |
+
+Intern (in `data/levels/*.json`, `public/changelog/*.json`) heißen die Stufen weiter `major` / `minor` / `patch` / `build`; „Großes Update“ ist `minor`, „Kleines Update“ ist `patch`, „Patch“ ist `build`. Nur die Namen für Menschen haben sich im November 2026 geändert, bestehende Einträge und Versionsnummern bleiben unverändert.
 
 Alle Spiele starten bei `0.1.0.0` (Beta). Mit `"offiziell_seit": "0.1.0.0"` in `games.json` gilt ein Spiel von Anfang an als offiziell, dann beginnt die Zählung bei `1.1.0.0` (nur mit `python3 tools/changelog.py --force --only <id>` neu berechnen). Angezeigt werden Versionen ohne Nullen am Ende (mindestens zwei Stellen): `0.1.0.0` als `0.1`, `1.2.4.0` als `1.2.4`, `0.1.0.1` bleibt `0.1.0.1`.
 
@@ -53,14 +55,14 @@ Alle Spiele starten bei `0.1.0.0` (Beta). Mit `"offiziell_seit": "0.1.0.0"` in `
 Am Anfang der Commit-Nachricht steht die Art:
 
 ```
-Minor: Neue Insel mit drei Quests
-Patch: Kollision an der Brücke repariert
-Build: Tippfehler
+Großes Update: Neue Insel mit drei Quests
+Kleines Update: Kollision an der Brücke repariert
+Patch: Tippfehler
 Major: Release
 1.2.0.0: Genau diese Versionsnummer setzen
 ```
 
-Ohne Marker stuft das Skript nach Regeln ein (Schlüsselwörter wie "Fix", "neu", Länge der Nachricht, bei Sammel-Uploads die Zahl der geänderten Zeilen). Das ist eine Schätzung, kein Urteil über jeden einzelnen Commit.
+Die alten Schreibweisen `Minor:` und `Build:` werden weiter erkannt; `Patch:` meint ab jetzt die unterste Stufe (früher `Build:`). Ohne Marker stuft das Skript nach Regeln ein (Schlüsselwörter wie "Fix", "neu", Länge der Nachricht, bei Sammel-Uploads die Zahl der geänderten Zeilen). Das ist eine Schätzung, kein Urteil über jeden einzelnen Commit.
 
 ### Wie es automatisch läuft
 
@@ -69,7 +71,7 @@ Ohne Marker stuft das Skript nach Regeln ein (Schlüsselwörter wie "Fix", "neu"
 1. Pro Spiel eine winzige Abfrage (`git ls-remote`), ob es neue Commits gibt. Ohne Neues passiert nichts.
 2. Nur bei Neuem wird der Commit-Verlauf geholt (ohne Dateien) und die neuen Commits eingestuft.
 3. Ergebnisse landen als statische Dateien in `public/changelog/<id>.json` und `public/versions.json`. Besucher fragen nie GitHub ab, es gibt also kein Rate-Limit-Problem.
-4. Die Einstufung jedes Commits wird in `data/levels/<id>.json` eingefroren. Eine Einstufung dort von Hand zu ändern (`minor`, `patch`, `build`, `major` oder `skip`) und danach die Action mit "Alles neu berechnen" zu starten, korrigiert die Versionen.
+4. Die Einstufung jedes Commits wird in `data/levels/<id>.json` eingefroren. Eine Einstufung dort von Hand zu ändern (`major`, `minor` = Großes Update, `patch` = Kleines Update, `build` = Patch oder `skip`) und danach die Action mit "Alles neu berechnen" zu starten, korrigiert die Versionen.
 
 Für ein privates Spiel-Repo braucht die Action ein Secret `GAME_REPOS_TOKEN` (GitHub-Token mit Lesezugriff auf Inhalte dieses Repos).
 

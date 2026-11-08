@@ -7,15 +7,18 @@ Aufruf:
   python3 tools/changelog.py --cache DIR     vorhandene Klone in DIR wiederverwenden (DIR/<repo>.git)
   python3 tools/changelog.py --force         alles neu berechnen, auch wenn es keine neuen Commits gibt
 
-Version: Major.Minor.Patch.Build (alle Spiele starten bei 0.1.0.0 = Beta).
-  Major  riesige Hauptversion / Wechsel zur Veröffentlichung (nur von Hand: "Major:" oder offiziell_ab)
-  Minor  neue Inhalte, Mechaniken, größere Features
-  Patch  Fehler beheben, Balance, kleinere Optimierungen
-  Build  Kleinkram, Feinschliff, Tests, Hotfix
+Version: Major.Großes.Kleines.Patch (alle Spiele starten bei 0.1.0.0 = Beta).
+  Major          riesige Hauptversion / Wechsel zur Veröffentlichung (nur von Hand: "Major:" oder offiziell_ab)
+  Großes Update  neue Inhalte, Mechaniken, größere Features
+  Kleines Update Fehler beheben, Balance, kleinere Optimierungen
+  Patch          Kleinkram, Feinschliff, Tests, Hotfix
+Intern heißen die Stufen weiter major / minor / patch / build (so stehen sie in data/levels und public/changelog);
+nur die Namen für Menschen haben sich geändert: Großes Update = minor, Kleines Update = patch, Patch = build.
 
 Einstufung eines Commits (erste passende Regel gewinnt):
   1. eingefroren: Stufe steht in data/levels/<id>.json (alte Historie, ändert sich nie wieder)
-  2. Marker am Anfang der Commit-Nachricht: "Minor: Text" / "Patch: ..." / "Build: ..." / "Major: ..."
+  2. Marker am Anfang der Commit-Nachricht: "Großes Update: Text" / "Kleines Update: ..." / "Patch: ..." / "Major: ..."
+     (alte Schreibweisen "Minor:" und "Build:" gelten weiter; "Patch:" meint seit November 2026 die unterste Stufe)
      oder eine ausgeschriebene Nummer "1.2.0.0: Text" (überschreibt die Berechnung)
   3. Regeln nach Schlüsselwörtern und Länge der Nachricht (Upload-Commits nach Zeilenumfang)
 """
@@ -41,7 +44,19 @@ LEVELS = ("major", "minor", "patch", "build")
 # ---------- Regeln ----------
 IGNORE = re.compile(r"^(initial commit|merge\b|wiki|delete\b|rename\b|revert \"merge)", re.I)
 GENERIC = re.compile(r"^(add files via upload|upload\b|update [\w.\-]+$|create\b)", re.I)
-MARKER_ART = re.compile(r"^(major|minor|patch|build)\s*[:\-–—]\s*(.*)$", re.I | re.S)
+MARKER_ART = re.compile(
+    r"^(major|gro(?:ß|ss)es\s+update|klein(?:es)?\s+update|patch|minor|build)\s*[:\-–—]\s*(.*)$", re.I | re.S)
+# Name im Marker -> interne Stufe (siehe Kopfkommentar)
+MARKER_STUFE = {"major": "major", "minor": "minor", "build": "build", "patch": "build"}
+
+
+def marker_stufe(name):
+    n = re.sub(r"\s+", " ", name.lower())
+    if n.startswith("gro"):
+        return "minor"
+    if n.startswith("klein"):
+        return "patch"
+    return MARKER_STUFE[n]
 MARKER_NUM = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)\.(\d+)\s*[:\-–—]\s*(.*)$", re.S)
 
 REVERT = re.compile(r"^revert\b", re.I)
@@ -211,7 +226,7 @@ def process_game(game, base: Path, freeze: bool):
                 explicit = tuple(int(m_num.group(i)) for i in range(1, 5))
                 text = m_num.group(5).strip()
             elif m_art:
-                level, text = m_art.group(1).lower(), m_art.group(2).strip()
+                level, text = marker_stufe(m_art.group(1)), m_art.group(2).strip()
             elif GENERIC.match(subject):
                 lines = changed_lines(path, c["sha"])
                 level = level_by_lines(lines)

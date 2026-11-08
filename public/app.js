@@ -11,7 +11,7 @@
   var versionen = {};
   var logCache = {};
   var LOG_SEITE = 8;
-  var ARTEN = { start: 'Start', major: 'Major', minor: 'Minor', patch: 'Patch', build: 'Build' };
+  var ARTEN = { start: 'Start', major: 'Major', minor: 'Großes Update', patch: 'Kleines Update', build: 'Patch' };
 
   var body = document.body;
   var inhalt = document.getElementById('inhalt');
