@@ -895,3 +895,16 @@ test('Einladung: "[einladung:spiel:RAUM]" geht als normale Chat-Nachricht durch 
   assert.deepEqual([l.freunde[0].ungelesen, l.freunde[0].vorschau], [2, '[einladung:spells:ABC123]']);
   assert.deepEqual((await call(env, 'GET', '/api/chat/Anna', undefined, b)).j.nachrichten.map((m) => m.text), ['[einladung:spells]', '[einladung:spells:ABC123]']);
 });
+
+test('Bewertungen aller Spiele: Durchschnitt und Anzahl je Spiel, nur mit Anmeldung', async () => {
+  const env = umgebung();
+  const a = await neuesKonto(env, 'Anna'), b = await neuesKonto(env, 'Ben');
+  assert.equal((await call(env, 'GET', '/api/bewertungen')).status, 401);
+  assert.deepEqual((await call(env, 'GET', '/api/bewertungen', undefined, a)).j, { spiele: {} });
+  for (const k of [a, b]) {
+    await env.DB.prepare('INSERT INTO playtime (user_id, game, seconds, last) VALUES ((SELECT id FROM users WHERE name = ?), ?, ?, ?)').bind(k === a ? 'Anna' : 'Ben', 'spells', 1000, 1).run();
+  }
+  await call(env, 'POST', '/api/bewertung/spells', { sterne: 5 }, a);
+  await call(env, 'POST', '/api/bewertung/spells', { sterne: 4 }, b);
+  assert.deepEqual((await call(env, 'GET', '/api/bewertungen', undefined, b)).j, { spiele: { spells: { anzahl: 2, schnitt: 4.5 } } });
+});

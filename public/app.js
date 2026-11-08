@@ -202,8 +202,60 @@
 
   function passt(sp) {
     if (filter !== 'Alle' && kategorien(sp).indexOf(filter) < 0) return false;
-    if (!suche) return true;
-    return (sp.name + ' ' + (sp.text || '') + ' ' + kategorien(sp).join(' ')).toLowerCase().indexOf(suche) >= 0;
+    return !suche || suchScore(sp, suche) > 0;
+  }
+  /* Suche: ohne Groß-/Kleinschreibung, Umlaute, Akzente und Satzzeichen ("erntezeit" findet "Ernte-Zeit"), alle Wörter müssen vorkommen
+     (Name, Kurztext, Beschreibung, Tags). Bei einer Suche sortiert die Trefferqualität: Name beginnt mit dem Suchwort, Name enthält es, Tag, sonst Text. */
+  function norm(t) {
+    return String(t || '').toLowerCase().replace(/ß/g, 'ss').replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  function suchScore(sp, roh) {
+    var q = norm(roh); if (!q) return 1;
+    var kompakt = function (t) { return t.replace(/ /g, ''); }, toks = q.split(' '), qk = kompakt(q);
+    var name = norm(sp.name), tags = norm(kategorien(sp).join(' ')), rest = norm((sp.text || '') + ' ' + (sp.beschreibung || ''));
+    var alle = name + ' ' + tags + ' ' + rest;
+    if (!(toks.every(function (t) { return alle.indexOf(t) >= 0; }) || kompakt(alle).indexOf(qk) >= 0)) return 0;
+    var nk = kompakt(name);
+    if (nk.indexOf(qk) === 0) return 100;
+    if (nk.indexOf(qk) > 0) return 60;
+    if (toks.every(function (t) { return name.indexOf(t) >= 0; })) return 50;
+    if (toks.every(function (t) { return tags.indexOf(t) >= 0; })) return 20;
+    return 10;
+  }
+  /* Sortierung der Spieleliste auf der Startseite (gemerkt auf dem Gerät). Favoriten stehen nur bei „Empfohlen“ und „A–Z“ oben; Spiele ohne „Spielen“ (Bald, Wartung) immer hinten. */
+  var SORTEN = [['empfohlen', 'Empfohlen'], ['az', 'A–Z'], ['zuletzt', 'Zuletzt gespielt'], ['meist', 'Meine Spielzeit'], ['bewertung', 'Beste Bewertung'], ['update', 'Zuletzt aktualisiert'], ['neu', 'Neueste Spiele']];
+  var sortierung = (function () { try { var v = localStorage.getItem('lgh.sortierung'); return SORTEN.some(function (x) { return x[0] === v; }) ? v : 'empfohlen'; } catch (e) { return 'empfohlen'; } })();
+  var bewSchnitt = {}, bewAlleGeladen = 0, spielzeitServer = {};
+  function zuletztAlle() {
+    var zul = zuletztLokal(), alle = {};
+    Object.keys(weiterServer).forEach(function (i) { alle[i] = weiterServer[i]; });
+    Object.keys(zul).forEach(function (i) { if (!(alle[i] > zul[i])) alle[i] = zul[i]; });
+    return alle;
+  }
+  function sortiereListe(l) {
+    if (suche) { var sc = {}; l.forEach(function (sp) { sc[sp.id] = suchScore(sp, suche); }); return l.slice().sort(function (a, b) { return sc[b.id] - sc[a.id]; }); }
+    if (sortierung === 'empfohlen') return l;
+    if (sortierung === 'az') return favNachOben(l.slice().sort(function (x, y) { return x.name.localeCompare(y.name, 'de', { numeric: true, sensitivity: 'base' }); }));
+    var zul = zuletztAlle(), wert = {
+      zuletzt: function (sp) { return zul[sp.id] || 0; },
+      meist: function (sp) { return spielzeitServer[sp.id] || 0; },
+      bewertung: function (sp) { var b = bewSchnitt[sp.id]; return b ? b.schnitt * 1000 + Math.min(b.anzahl, 999) : 0; },
+      update: function (sp) { var v = ver(sp); return v && v.datum ? Date.parse(v.datum) : 0; },
+      neu: function (sp) { return erstesDatum(sp); },
+    }[sortierung];
+    return l.slice().sort(function (x, y) {
+      var ox = x.url ? 0 : 1, oy = y.url ? 0 : 1;
+      return (ox - oy) || (wert(y) - wert(x)) || x.name.localeCompare(y.name, 'de', { numeric: true, sensitivity: 'base' });
+    });
+  }
+  function homeNeu() { if (body.getAttribute('data-view') === 'home') { renderHome(); ansichtKey = homeKey(); } }
+  function bewAlleLaden() {
+    if (!window.LghKonto || !LghKonto.angemeldet() || Date.now() - bewAlleGeladen < 300000) return;
+    bewAlleGeladen = Date.now();
+    LghKonto.bewertungen().then(function (res) {
+      if (!res.ok || !res.j.spiele) { bewAlleGeladen = 0; return; }
+      bewSchnitt = res.j.spiele; if (sortierung === 'bewertung') homeNeu();
+    });
   }
 
   /* ---------- Ansichten ---------- */
@@ -269,8 +321,9 @@
     weiterGeladen = Date.now();
     LghKonto.profil().then(function (res) {
       if (!res.ok || !res.j.spiele) return;
-      var m = {}; res.j.spiele.forEach(function (x) { if (x.zuletzt) m[x.spiel] = x.zuletzt * 1000; });
-      weiterServer = m; weiterZeichne();
+      var m = {}, z = {}; res.j.spiele.forEach(function (x) { if (x.zuletzt) m[x.spiel] = x.zuletzt * 1000; z[x.spiel] = x.sekunden || 0; });
+      weiterServer = m; spielzeitServer = z; weiterZeichne();
+      if (sortierung === 'zuletzt' || sortierung === 'meist') homeNeu();
     });
   }
 
@@ -327,7 +380,7 @@
   }
 
   function renderHome() {
-    var liste = sortiert().filter(passt);
+    var liste = sortiereListe(sortiert().filter(passt));
     var hero = null;
     if (filter === 'Alle' && !suche) hero = spielbar().filter(function (s) { return s.featured; })[0] || spielbar()[0];
     var h = '';
@@ -350,7 +403,9 @@
     h += '<div class="abschnitt"><h2>' + (suche ? 'Suchergebnisse' : 'Alle Spiele') + '</h2><span class="zahl">' + liste.length + '</span>';
     h += '<div class="chips" role="group" aria-label="Kategorien">' + chips.map(function (k) {
       return '<button type="button" class="chip" data-k="' + esc(k) + '" aria-pressed="' + (k === filter) + '">' + esc(k) + '</button>';
-    }).join('') + '</div></div>';
+    }).join('') + '</div>';
+    if (!suche) h += '<label class="sortierung"><span class="sr-only">Sortieren nach</span><select id="sort-wahl" aria-label="Sortieren">' + SORTEN.map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === sortierung ? ' selected' : '') + '>' + esc(x[1]) + '</option>'; }).join('') + '</select></label>';
+    h += '</div>';
     h += '<div class="grid">' + (liste.length ? liste.map(tile).join('') : '<div class="leer">Keine Spiele gefunden.</div>') + '</div>';
     inhalt.innerHTML = h;
     weiterZeichne(); weiterLaden(); neuZeichne();
@@ -989,9 +1044,7 @@
     if (a) { try { navigator.clipboard.writeText(a.getAttribute('data-raum')); } catch (x) { } }   // Raumcode liegt dann in der Zwischenablage, das Spiel startet über den Link
   });
   function einlSpiele() {
-    var zul = zuletztLokal(), alle = {};
-    Object.keys(weiterServer).forEach(function (i) { alle[i] = weiterServer[i]; });
-    Object.keys(zul).forEach(function (i) { if (!(alle[i] > zul[i])) alle[i] = zul[i]; });
+    var alle = zuletztAlle();
     return spielbar().slice().sort(function (x, y) {
       return (favIst(y.id) - favIst(x.id)) || ((alle[y.id] || 0) - (alle[x.id] || 0)) || x.name.localeCompare(y.name, 'de', { numeric: true, sensitivity: 'base' });
     });
@@ -1437,7 +1490,7 @@
   /* Ansichten bleiben als fertige Knoten erhalten: beim Zurück- oder Weiterklicken werden sie nur wieder eingehängt,
      so laden Bilder nicht jedes Mal neu und Galerie, Scrollstand und Update-Log bleiben, wie sie sind. */
   var ansichtSpeicher = {}, ansichtKey = null;
-  function homeKey() { return 'home|' + filter + '|' + suche; }
+  function homeKey() { return 'home|' + filter + '|' + suche + '|' + sortierung; }
   function zeigeAnsicht(key, rendern) {
     if (ansichtKey === key && inhalt.firstChild) return;
     if (ansichtKey === 'freunde' || String(ansichtKey).indexOf('profil|') === 0 || String(ansichtKey).indexOf('chat|') === 0) inhalt.innerHTML = '';
@@ -1551,6 +1604,14 @@
     zeichneLeiste();
     if (body.getAttribute('data-view') !== 'home') location.hash = ''; else { renderHome(); ansichtKey = homeKey(); }
   });
+  inhalt.addEventListener('change', function (e) {
+    if (!e.target || e.target.id !== 'sort-wahl') return;
+    sortierung = e.target.value;
+    try { localStorage.setItem('lgh.sortierung', sortierung); } catch (x) { }
+    if (sortierung === 'bewertung') bewAlleLaden();
+    if (sortierung === 'zuletzt' || sortierung === 'meist') { weiterGeladen = 0; weiterLaden(); }
+    renderHome(); ansichtKey = homeKey();
+  });
   inhalt.addEventListener('click', function (e) {
     var c = e.target.closest ? e.target.closest('.chip') : null;
     if (!c) return;
@@ -1612,7 +1673,7 @@
       favoriten = favLokal();
       if (window.LghKonto) LghKonto.spielNamen(spielName);
       route();
-      if (window.LghKonto) LghKonto.bereit().then(favLaden);
+      if (window.LghKonto) LghKonto.bereit().then(function () { favLaden(); if (sortierung === 'bewertung') bewAlleLaden(); });
     })
     .catch(function () { inhalt.innerHTML = '<div class="leer" style="padding:80px 28px">Die Spieleliste konnte nicht geladen werden.</div>'; });
 })();

@@ -1004,3 +1004,9 @@ body.pseudo-voll .voll-aus { display: flex; }
 .dlg-einl .einl-liste { max-height: 52dvh; overflow-y: auto; }
 .einl-icon { width: 36px; height: 36px; border-radius: 9px; }
 .dlg-einl .dlg-fuss { margin-top: 12px; }
+
+/* Sortierung (Startseite) */
+.abschnitt .sortierung { margin-left: auto; }
+.sortierung select { appearance: none; -webkit-appearance: none; height: 34px; padding: 0 34px 0 14px; border-radius: 17px; border: 1px solid var(--line-2); background: var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239aa4b8' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 13px center; color: var(--text); font: inherit; font-size: 13.5px; cursor: pointer; }
+.sortierung select:hover { border-color: rgba(255, 255, 255, .28); }
+.sortierung select:focus-visible { outline: 2px solid var(--accent-hi); outline-offset: 2px; }

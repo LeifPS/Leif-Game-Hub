@@ -548,6 +548,13 @@ async function bewertungStand(db, s, spiel) {
   const z = await db.prepare('SELECT seconds FROM playtime WHERE user_id = ? AND game = ?').bind(s.id, spiel).first();
   return { spiel, anzahl: g.n, schnitt: g.n ? Math.round(g.m * 10) / 10 : null, meine: me ? me.stars : 0, spielzeit: z ? z.seconds : 0, mindest: BEWERTUNG_MIN_SEKUNDEN };
 }
+// Durchschnitt und Anzahl aller Spiele auf einmal (für die Sortierung „Beste Bewertung“ auf der Startseite)
+async function bewertungenAlle(db) {
+  const r = await db.prepare('SELECT game, COUNT(*) AS n, AVG(stars) AS m FROM ratings GROUP BY game').all();
+  const spiele = {};
+  for (const x of r.results) spiele[x.game] = { anzahl: x.n, schnitt: Math.round(x.m * 10) / 10 };
+  return antwort({ spiele });
+}
 async function bewertungSetzen(request, env, db, s, spiel, jetzt) {
   const { b } = await lies(request);
   if (!b || !Number.isInteger(b.sterne) || b.sterne < 0 || b.sterne > 5) return fehler(400, 'eingabe');
@@ -757,6 +764,7 @@ export async function handle(request, env, jetztMs = Date.now()) {
       if (m === 'GET') return antwort(await bewertungStand(db, s, bm[1]));
       if (m === 'POST') return await bewertungSetzen(request, env, db, s, bm[1], jetzt);
     }
+    if (pfad === '/api/bewertungen' && m === 'GET') return await bewertungenAlle(db);
     if (pfad === '/api/favoriten' && m === 'GET') return await favoritenListe(db, s);
     if (pfad === '/api/favoriten' && m === 'POST') return await favoritSetzen(request, db, s, jetzt);
     if (pfad === '/api/ungelesen' && m === 'GET') return await chatUngelesen(db, s, jetzt);

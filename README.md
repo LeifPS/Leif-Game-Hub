@@ -135,6 +135,12 @@ Unter „Weiterspielen“ steht „Neu im Hub“: bis zu drei **neue Spiele** (e
 
 Im Chat (oben rechts) und in der Freundesliste gibt es **Einladen**: man wählt ein Spiel (Favoriten und zuletzt Gespieltes stehen oben), und der Freund bekommt im Chat eine Karte mit dem Spiel und dem Knopf **Spielen**. Technisch ist das eine normale Chat-Nachricht mit dem Text `[einladung:spiel-id]` oder `[einladung:spiel-id:RAUMCODE]`; der Hub zeigt sie als Karte (Vorschauen und die Karte im Spiel zeigen „Einladung zu <Spiel>“). Hat das Spiel in der letzten Stunde einen Raumcode gemeldet (`{lgh:'status', raum}`), geht er mit; beim Klick auf Spielen wird er in die Zwischenablage kopiert. Unbekannte Spiel-IDs bleiben einfacher Text. Der Server braucht dafür nichts Eigenes.
 
+## Suche und Sortierung (Startseite)
+
+**Suche:** ohne Groß-/Kleinschreibung, Umlaute, Akzente und Satzzeichen („erntezeit“ findet „Ernte-Zeit“); alle eingegebenen Wörter müssen in Name, Kurztext, Beschreibung oder Tags vorkommen. Treffer sortiert die Qualität: Name beginnt mit dem Suchwort, Name enthält es, Tag, sonst Text.
+
+**Sortierung** (Auswahl neben den Kategorien, wird auf dem Gerät gemerkt): Empfohlen (Reihenfolge in `games.json`, Favoriten zuerst), A–Z (Favoriten zuerst), Zuletzt gespielt, Meine Spielzeit, Beste Bewertung (`GET /api/bewertungen`: Durchschnitt und Anzahl aller Spiele), Zuletzt aktualisiert, Neueste Spiele. Nur bei Empfohlen und A–Z stehen Favoriten oben; Spiele ohne „Spielen“ (Bald, Wartung) stehen sonst immer hinten. Zuletzt gespielt, Spielzeit und Bewertung brauchen das Konto.
+
 ## Konten, Freunde und mitgeschriebene Spielstände
 
 Der Hub ist ohne Konto gesperrt (Name und Passwort, keine E-Mail). Konten, Freunde und Spielstand-Verlauf liegen in einer Cloudflare-D1-Datenbank `lgh`; der Server ist `src/worker.js` (Logik in `src/konten.js`, Tabellen in `src/schema.js`, Tests mit `npm test`). Er läuft im selben Worker wie die statischen Dateien, nur `/api/*` kommt an (`wrangler.jsonc`, `run_worker_first`). Die Oberfläche ist `public/konto.js` (Anmeldung, Konto-Dialog, Herzschlag, stilles Mitschreiben) und der Abschnitt "Freunde" in `public/app.js` (Route `#freunde`).
