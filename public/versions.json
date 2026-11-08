@@ -48,6 +48,13 @@
   "offiziell": false,
   "version": "0.30.5.0"
  },
+ "erntezeitaufbruch": {
+  "anzahl": 4,
+  "datum": "2026-11-08T13:44:36+01:00",
+  "erste": "2026-11-08T13:26:02+01:00",
+  "offiziell": false,
+  "version": "0.4.0.0"
+ },
  "fischerdock": {
   "anzahl": 12,
   "datum": "2026-11-07T19:14:28+01:00",
