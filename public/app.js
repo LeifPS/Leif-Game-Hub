@@ -96,12 +96,41 @@
 
   // Entwicklungsstand: Alpha (games.json: "phase": "alpha"), sonst Beta, ab 1.0 Offiziell
   function phaseName(sp, v) { return v && v.offiziell ? 'Offiziell' : sp.phase === 'alpha' ? 'Alpha' : 'Beta'; }
+  /* Release mit Countdown: "release": "2026-11-08T14:00:00+01:00" in games.json hält ein Spiel bis dahin zu (wie Wartung, aber mit Countdown) und gibt es zur Zeit von selbst frei.
+     Die Uhrzeit kommt vom Server (Date-Header von games.json), damit falsch gehende Geräteuhren nichts ändern. */
+  var zeitVersatz = 0, releaseTimer = null;
+  function jetztMs() { return Date.now() + zeitVersatz; }
+  function p2(n) { return (n < 10 ? '0' : '') + n; }
+  function cdText(sp) {
+    var t = Math.max(0, Math.ceil((sp.releaseMs - jetztMs()) / 1000)), d = Math.floor(t / 86400), h = Math.floor(t % 86400 / 3600), m = Math.floor(t % 3600 / 60), x = t % 60;
+    return d ? d + ' T ' + h + ':' + p2(m) + ':' + p2(x) : h ? h + ':' + p2(m) + ':' + p2(x) : p2(m) + ':' + p2(x);
+  }
+  function sperrText(sp, praefix) { return sp.cd ? praefix + cdText(sp) : 'Wartung'; }
+  function cdAttr(sp, praefix) { return sp.cd ? ' data-cd="' + esc(sp.id) + '" data-p="' + esc(praefix) + '"' : ''; }
+  function releaseTick() {
+    var offen = false;
+    spiele.forEach(function (sp) {
+      if (!sp.cd) return;
+      if (sp.releaseMs <= jetztMs()) { sp.cd = false; sp.wartung = false; sp.url = sp.vorUrl; releaseFertig = true; } else offen = true;
+    });
+    if (releaseFertig) {   // frisch freigegeben: Ansichten neu aufbauen, damit überall "Spielen" steht
+      releaseFertig = false; ansichtSpeicher = {}; ansichtKey = null; seiteFertig = false;
+      if (body.getAttribute('data-view') !== 'play') route();
+    }
+    var els = document.querySelectorAll('[data-cd]');
+    for (var i = 0; i < els.length; i++) {
+      var sp = spiele.filter(function (g) { return g.id === els[i].getAttribute('data-cd'); })[0];
+      if (sp && sp.cd) els[i].textContent = els[i].getAttribute('data-p') + cdText(sp);
+    }
+    if (!offen && releaseTimer) { clearInterval(releaseTimer); releaseTimer = null; }
+  }
+  var releaseFertig = false;
   function tile(sp) {
     var offen = !!sp.url, detail = offen || !!sp.wartung, id = encodeURIComponent(sp.id), v = ver(sp);   // Spiele in Wartung haben weiter ihre Detailseite, nur Spielen geht nicht
     var s = '<article class="tile' + (offen ? '' : ' off') + '">';
     s += detail ? '<a class="tile-link" href="#spiel/' + id + '" aria-label="' + esc(sp.name) + '">' : '<div class="tile-link">';
     s += '<div class="tile-art">' + art(sp, 400, 400);
-    if (!offen) s += '<span class="badge">' + (sp.wartung ? 'Wartung' : 'Bald') + '</span>';
+    if (!offen) s += '<span class="badge"' + cdAttr(sp, 'In ') + '>' + (sp.wartung ? sperrText(sp, 'In ') : 'Bald') + '</span>';
     else if (!v && sp.phase === 'alpha') s += '<span class="ver-tag">Alpha</span>';
     else if (v) s += '<span class="ver-tag">' + (v.offiziell ? '' : phaseName(sp, v) + ' ') + esc(vz(v.version)) + '</span>';
     s += '</div>';
@@ -135,7 +164,7 @@
     s += '<div class="nav-label">Bibliothek</div>';
     alphabetisch().forEach(function (sp) {
       var offen = !!sp.url;
-      var inner = '<span class="lib-icon">' + art(sp, 100, 100) + '</span><span class="name">' + esc(sp.name) + '</span>' + (offen ? '' : '<small>' + (sp.wartung ? 'Wartung' : 'Bald') + '</small>');
+      var inner = '<span class="lib-icon">' + art(sp, 100, 100) + '</span><span class="name">' + esc(sp.name) + '</span>' + (offen ? '' : '<small' + cdAttr(sp, 'In ') + '>' + (sp.wartung ? sperrText(sp, 'In ') : 'Bald') + '</small>');
       s += offen || sp.wartung
         ? '<a class="lib-item' + (offen ? '' : ' off') + (sp.id === aktivId ? ' aktiv' : '') + '" href="#spiel/' + encodeURIComponent(sp.id) + '">' + inner + '</a>'
         : '<div class="lib-item off">' + inner + '</div>';
@@ -353,7 +382,7 @@
     var online = kategorien(sp).indexOf('Online') >= 0;
     var h = '<div class="detail-banner' + (titel ? ' titel' : '') + '">' + (titel ? '<div class="titelrahmen"><img class="titelhg" src="' + esc(sp.wallpaper) + '" alt="" aria-hidden="true" decoding="async"><img class="titelbild titelfg" src="' + esc(sp.wallpaper) + '" alt="' + esc(sp.name) + '" decoding="async"></div>' : art(sp, 1400, 420)) + '<a class="zurueck-link" href="#"><svg aria-hidden="true"><use href="#i-back"/></svg>Alle Spiele</a></div>';
     h += '<div class="shop' + (titel ? ' titel' : '') + '">';
-    h += '<div class="shop-titelzeile">' + titelHtml(sp) + '<div class="spiel-aktion"><div class="spielinfo" hidden></div>' + (sp.url ? '<a class="btn btn-primary btn-spielen" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a>' : '<span class="btn btn-spielen gesperrt" aria-disabled="true">Wartung</span>') + '</div></div>';
+    h += '<div class="shop-titelzeile">' + titelHtml(sp) + '<div class="spiel-aktion"><div class="spielinfo" hidden></div>' + (sp.url ? '<a class="btn btn-primary btn-spielen" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a>' : '<span class="btn btn-spielen gesperrt" aria-disabled="true"' + cdAttr(sp, 'Startet in ') + '>' + (sp.wartung ? sperrText(sp, 'Startet in ') : 'Bald') + '</span>') + '</div></div>';
     var gal = galerieHtml(sp);
     var text = (sp.beschreibung && sp.beschreibung !== sp.text) ? '<section class="shop-text"><h2>Über dieses Spiel</h2><p>' + esc(sp.beschreibung) + '</p></section>' : '';
     h += '<div class="shop-oben' + (gal ? '' : ' ohne-galerie') + '">' + (gal ? '<div class="shop-haupt">' + gal + text + '</div>' : '');
@@ -1074,7 +1103,7 @@
       var eigeneSpiele = spieleVon(p.name), spieleHtml = '';
       if (eigeneSpiele.length) {
         spieleHtml = '<h2 class="fr-abschnitt">' + (p.eigen ? 'Meine Spiele' : 'Spiele von @' + esc(p.name)) + '</h2><div class="pf-liste">' + eigeneSpiele.map(function (sp) {
-          return '<a class="pf-spiel" href="#spiel/' + encodeURIComponent(sp.id) + '"><span class="pf-icon">' + art(sp, 100, 100) + '</span><span class="pf-text"><b>' + esc(sp.name) + '</b>' + (sp.wartung ? '<small>In Wartung</small>' : '') + '</span></a>';
+          return '<a class="pf-spiel" href="#spiel/' + encodeURIComponent(sp.id) + '"><span class="pf-icon">' + art(sp, 100, 100) + '</span><span class="pf-text"><b>' + esc(sp.name) + '</b>' + (sp.wartung ? '<small>' + (sp.cd ? 'Bald spielbar' : 'In Wartung') + '</small>' : '') + '</span></a>';
         }).join('') + '</div>';
       }
       if (p.nurOeffentlich) {   // Kein Freund: Entwickler (nur Name, Bild, Spiele) und alles, was die Person für „Alle“ freigegeben hat
@@ -1261,12 +1290,25 @@
 
   var BILD_V = '4';
   function json(url) { return fetch(url, { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); }
-  Promise.all([json('games.json'), json('versions.json').catch(function () { return {}; })])
+  function gamesJson() {
+    return fetch('games.json', { cache: 'no-cache' }).then(function (r) {
+      if (!r.ok) throw new Error(r.status);
+      var dh = Date.parse(r.headers.get('Date') || ''); if (dh) zeitVersatz = dh - Date.now();
+      return r.json();
+    });
+  }
+  Promise.all([gamesJson(), json('versions.json').catch(function () { return {}; })])
     .then(function (d) {
       spiele = d[0].games || []; versionen = d[1] || {};
       // Beim Ersetzen eines Bildes die Nummer BILD_V hochzählen: alle Browser holen dann die neue Datei statt der zwischengespeicherten.
       // "wartung": true in games.json sperrt ein Spiel vorübergehend (wie "Bald", aber mit Hinweis "Wartung"); zum Freigeben das Feld entfernen.
       spiele.forEach(function (sp) { if (sp.wartung) sp.url = ''; });
+      // "release" in games.json: bis zur Uhrzeit gesperrt mit Countdown, danach von selbst offen (nur ohne "wartung")
+      spiele.forEach(function (sp) {
+        var t = sp.release && !sp.wartung ? Date.parse(sp.release) : NaN;
+        if (t && t > jetztMs() && sp.url) { sp.releaseMs = t; sp.cd = true; sp.wartung = true; sp.vorUrl = sp.url; sp.url = ''; }
+      });
+      if (spiele.some(function (sp) { return sp.cd; })) releaseTimer = setInterval(releaseTick, 1000);
       spiele.forEach(function (sp) { ['bild', 'banner', 'icon', 'wallpaper'].forEach(function (k) { if (typeof sp[k] === 'string' && sp[k].indexOf('?') < 0) sp[k] += '?v=' + BILD_V; }); });
       route();
     })

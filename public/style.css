@@ -868,3 +868,5 @@ body[data-view="chat"] { overflow: hidden; }
 .entw-link:hover { text-decoration: underline; }
 .pf-meld { min-height: 18px; margin: 0 0 10px; font-size: 13px; color: #ff8a8a; }
 .pf-meld.ok { color: #7ee2a8; }
+
+[data-cd] { font-variant-numeric: tabular-nums; }

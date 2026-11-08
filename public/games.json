@@ -463,7 +463,7 @@
     },
     {
       "id": "erntezeitaufbruch",
-      "wartung": true,
+      "release": "2026-11-08T14:00:00+01:00",
       "name": "Erntezeit: Aufbruch",
       "text": "Bewirtschafte deinen Hof in Echtzeit, schicke Wagen auf Aufbruch-Reisen, handle online und besuche die Höfe anderer Spieler.",
       "url": "https://erntezeitaufbruch.leifps.workers.dev",

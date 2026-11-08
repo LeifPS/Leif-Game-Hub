@@ -153,6 +153,10 @@ Die Bilder in `public/screens/` (außer `shots/`) werden vom Browser bei jedem A
 
 In `public/games.json` beim Spiel `"wartung": true` eintragen. Das Spiel bleibt in der Liste, ist aber mit dem Hinweis „Wartung“ nicht spielbar (auch nicht über einen direkten Link). Zum Freigeben das Feld wieder entfernen.
 
+### Release mit Countdown
+
+`"release": "2026-11-08T14:00:00+01:00"` (ISO-Zeit mit Zeitzone) hält ein Spiel bis dahin zu, ohne `"wartung"`. Der Spielen-Knopf zeigt „Startet in 06:33“ (Kachel und Seitenleiste „In 06:33“), zählt live herunter und wird zur angegebenen Zeit für alle von selbst zum normalen „Spielen“, auch bei offenen Seiten und ohne Neuladen. Die Uhrzeit kommt vom Server (Date-Header von `games.json`), die Geräteuhr spielt keine Rolle. Das Feld darf danach stehen bleiben; ist die Zeit vorbei, hat es keine Wirkung mehr.
+
 ### Große Spielstände (Übergabe per postMessage)
 
 Stände bis ca. 100.000 Zeichen (Base64) gehen weiter über `#lgh=<Base64url>` an die Spieladresse. Größere (z. B. Tierspiel mit tausenden Tieren) gehen nicht mehr durch die Adresse, sondern per `postMessage`: Der Hub setzt `#lgh=msg`, das Spiel fragt mit `{lgh:'hallo'}` nach, bekommt `{lgh:'daten', json}` und meldet `{lgh:'fertig'}` (Vorlade-Skript `tools/lgh-vorlade.js`, der Spielcode startet erst nach `window.__lghBereit`, siehe Tierspiel `index.html`). Bis `fertig` kommt, nimmt der Hub keine Stände von diesem Rahmen an. Schrumpft ein Stand plötzlich stark, bleibt der alte als `lgh.stand.<id>.sicher` erhalten.
