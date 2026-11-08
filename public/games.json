@@ -597,7 +597,7 @@
       "url": "https://alexander-schm.github.io/numberfactory/",
       "repo": "alexander-schm/numberfactory",
       "phase": "beta",
-      "entwickler": "Alexander (TeleTeddy)",
+      "entwickler": ["Teleteddy"],
       "sprache": "Englisch",
       "farbe": "#2f8f89",
       "kategorien": [
@@ -627,7 +627,7 @@
       "url": "https://manufaktur.leifps.workers.dev",
       "repo": "LeifPS/Manufaktur",
       "phase": "alpha",
-      "entwickler": "Alexander (TeleTeddy) und Ida (irgendwieida13)",
+      "entwickler": ["Teleteddy", "irgendwieida13"],
       "farbe": "#c9764a",
       "kategorien": [
         "Simulation",

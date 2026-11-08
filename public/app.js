@@ -308,6 +308,18 @@
     else if (e.key === 'ArrowLeft' && (offen || document.getElementById('gal-img'))) galerieZeige(G().i - 1, -1);
   });
 
+  // games.json: "entwickler" ist eine Liste von Benutzernamen (Hub-Konten); ohne Eintrag gilt "leif"
+  function entwicklerListe(sp) {
+    var l = Array.isArray(sp.entwickler) ? sp.entwickler : (sp.entwickler ? [sp.entwickler] : ['leif']);
+    return l.map(function (n) { return String(n).replace(/^@/, ''); }).filter(Boolean);
+  }
+  function entwicklerLinks(sp) {
+    return entwicklerListe(sp).map(function (n) { return '<a class="entw-link" href="#profil/' + encodeURIComponent(n) + '">@' + esc(n) + '</a>'; }).join(', ');
+  }
+  function spieleVon(name) {
+    var lc = String(name).toLowerCase();
+    return spiele.filter(function (g) { return entwicklerListe(g).some(function (n) { return n.toLowerCase() === lc; }); });
+  }
   function faktZeile(k, v) { return v ? '<div class="fakt"><dt>' + esc(k) + '</dt><dd>' + v + '</dd></div>' : ''; }
   function aehnliche(sp) {
     var meine = kategorien(sp);
@@ -338,7 +350,7 @@
     if (!v && sp.phase) h += faktZeile('Status', '<span class="ver-pill' + (sp.phase === 'alpha' ? ' alpha' : '') + '">' + phaseName(sp, null) + '</span>');
     if (v) h += faktZeile('Status', '<span class="ver-pill' + (v.offiziell ? ' offiziell' : sp.phase === 'alpha' ? ' alpha' : '') + '">' + phaseName(sp, v) + '</span> Version ' + esc(vz(v.version)));
     if (v && v.datum) h += faktZeile('Zuletzt aktualisiert', esc(datumText(v.datum)));
-    h += faktZeile('Entwickler', esc(sp.entwickler || 'Leif (LeifPS)'));   // games.json: "entwickler" für Spiele von anderen
+    h += faktZeile(entwicklerListe(sp).length > 1 ? 'Entwickler' : 'Entwickler', entwicklerLinks(sp));   // games.json: "entwickler" = Liste von Benutzernamen
     h += faktZeile('Spielmodus', online ? 'Mehrspieler (online)' : 'Einzelspieler');
     h += faktZeile('Plattform', 'Browser · ' + esc(sp.sprache || 'Deutsch'));   // games.json: "sprache" falls nicht Deutsch
     h += '</dl>';
@@ -1042,6 +1054,18 @@
       }
       var p = res.j, jetzt = Math.floor(Date.now() / 1000), gesamt = 0, gespielt = 0;
       var seit = p.seit ? new Date(p.seit * 1000).toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+      var eigeneSpiele = spieleVon(p.name), spieleHtml = '';
+      if (eigeneSpiele.length) {
+        spieleHtml = '<h2 class="fr-abschnitt">' + (p.eigen ? 'Meine Spiele' : 'Spiele von @' + esc(p.name)) + '</h2><div class="pf-liste">' + eigeneSpiele.map(function (sp) {
+          return '<a class="pf-spiel" href="#spiel/' + encodeURIComponent(sp.id) + '"><span class="pf-icon">' + art(sp, 100, 100) + '</span><span class="pf-text"><b>' + esc(sp.name) + '</b>' + (sp.wartung ? '<small>In Wartung</small>' : '') + '</span></a>';
+        }).join('') + '</div>';
+      }
+      if (p.nurOeffentlich) {   // Entwickler, mit denen man nicht befreundet ist: nur Name, Bild und ihre Spiele
+        w.innerHTML = '<div class="pf-kopf">' + LghKonto.avatar('avatar gross', p.name, p.anzeige, p.av) +
+          '<div class="pf-kopftext"><h1 class="pf-name">' + esc(p.anzeige) + '</h1><div class="pf-at">@' + esc(p.name) + (seit ? ' · dabei seit ' + esc(seit) : '') + '</div><div class="pf-status">Entwickler im Hub</div></div></div>' +
+          '<div class="pf-aktionen"><button type="button" class="btn btn-primary" data-pf-anfrage="' + esc(p.name) + '">Freundschaftsanfrage senden</button></div><div class="pf-meld" id="pf-meld" role="status"></div>' + spieleHtml;
+        return;
+      }
       var sicher = {}; (p.staende || []).forEach(function (x) { sicher[x.spiel] = x; });
       var zeilen = '';
       (p.spiele || []).forEach(function (x) {
@@ -1059,10 +1083,19 @@
         (!p.eigen ? '<div class="pf-aktionen"><a class="btn btn-primary" href="#chat/' + encodeURIComponent(p.name) + '">Nachricht schreiben</a></div>' : '') +
         (p.eigen ? '<div class="pf-aktionen"><button type="button" class="btn btn-ghost" data-pf="bild">Profilbild ändern</button><button type="button" class="btn btn-ghost" data-pf="anz">Anzeigename ändern</button><button type="button" class="btn btn-ghost" data-pf="stand">Spielstände sichern und zurückholen</button><button type="button" class="btn btn-ghost" data-pf="konto">Konto</button></div>' : '') +
         '<h2 class="fr-abschnitt">' + (p.eigen ? 'Zuletzt gespielt' : 'Gespielte Spiele') + '</h2>' +
-        (zeilen ? '<div class="pf-liste">' + zeilen + '</div>' : '<div class="fr-leer">' + (p.spielePrivat ? 'Diese Person zeigt ihre gespielten Spiele nicht.' : p.eigen ? 'Noch nichts gespielt. Die Spielzeit wird ab jetzt gezählt.' : 'Noch nichts gespielt.') + '</div>');
+        (zeilen ? '<div class="pf-liste">' + zeilen + '</div>' : '<div class="fr-leer">' + (p.spielePrivat ? 'Diese Person zeigt ihre gespielten Spiele nicht.' : p.eigen ? 'Noch nichts gespielt. Die Spielzeit wird ab jetzt gezählt.' : 'Noch nichts gespielt.') + '</div>') + spieleHtml;
     });
   }
   inhalt.addEventListener('click', function (e) {
+    var q = e.target.closest ? e.target.closest('[data-pf-anfrage]') : null;
+    if (q && window.LghKonto) {
+      var nm = q.getAttribute('data-pf-anfrage'), mel = document.getElementById('pf-meld'); q.disabled = true;
+      LghKonto.freunde.anfrage(nm).then(function (res) {
+        if (mel) mel.textContent = res.ok ? (res.j.freunde ? 'Ihr seid jetzt Freunde.' : 'Anfrage gesendet.') : (FR_FEHLER[res.j.fehler] || 'Das hat nicht geklappt.');
+        if (res.ok) { if (mel) mel.className = 'pf-meld ok'; } else q.disabled = false;
+      });
+      return;
+    }
     var b = e.target.closest ? e.target.closest('[data-pf]') : null;
     if (!b || !window.LghKonto) return;
     var a = b.getAttribute('data-pf');

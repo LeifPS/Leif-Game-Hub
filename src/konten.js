@@ -562,7 +562,28 @@ async function praesenz(request, db, s, jetzt) {
 
 /* ---------- Profil ---------- */
 // Eigenes Profil und das von Freunden. Fremde ohne Freundschaft sehen nichts (404, wie bei unbekanntem Namen).
-async function profil(db, s, name, jetzt) {
+// Konten, die in games.json als Entwickler stehen (ohne Eintrag gilt "leif"). Ihr Profil darf jeder angemeldete Mensch öffnen,
+// allerdings nur mit den öffentlichen Angaben (Name, Bild, seit wann dabei). Die Datei kommt aus den Assets und wird 5 Minuten gemerkt.
+const entwCache = new WeakMap();
+async function entwickler(env, request) {
+  const quelle = env && env.ASSETS;
+  if (!quelle) return new Set();
+  const z = entwCache.get(quelle);
+  if (z && Date.now() - z.t < 300000) return z.set;
+  const set = new Set();
+  try {
+    const r = await quelle.fetch(new Request(new URL('/games.json', request.url)));
+    const j = await r.json();
+    (j.games || []).forEach((g) => {
+      if (Array.isArray(g.entwickler) && g.entwickler.length) g.entwickler.forEach((n) => set.add(String(n).toLowerCase()));
+      else set.add('leif');
+    });
+  } catch (e) { return z ? z.set : set; }
+  entwCache.set(quelle, { t: Date.now(), set });
+  return set;
+}
+
+async function profil(db, s, name, jetzt, entw) {
   let u;
   name = name ? name.replace(/^@/, '') : name;
   if (!name || name.toLowerCase() === s.name.toLowerCase()) u = { id: s.id, name: s.name, display: s.anzeige !== s.name ? s.anzeige : null, avatar: s.avatar };
@@ -571,7 +592,12 @@ async function profil(db, s, name, jetzt) {
     if (!z) return fehler(404, 'unbekannt');
     const [x, y] = paar(s.id, z.id);
     const f = await db.prepare('SELECT status FROM friends WHERE a = ? AND b = ?').bind(x, y).first();
-    if (!f || f.status !== 'accepted') return fehler(404, 'unbekannt');
+    if (!f || f.status !== 'accepted') {
+      // Kein Freund: nur Entwickler-Konten sind sichtbar, und nur mit den öffentlichen Angaben
+      if (!(entw && entw.has(z.name.toLowerCase()))) return fehler(404, 'unbekannt');
+      const r0 = await db.prepare('SELECT created FROM users WHERE id = ?').bind(z.id).first();
+      return antwort({ name: z.name, anzeige: z.display || z.name, av: avParse(z.avatar), seit: r0 ? r0.created : null, eigen: false, freund: false, nurOeffentlich: true, entwickler: true });
+    }
     u = z;
   }
   const row = await db.prepare('SELECT created, vis_online, vis_spiele FROM users WHERE id = ?').bind(u.id).first();
@@ -583,7 +609,7 @@ async function profil(db, s, name, jetzt) {
   const statusPrivat = !eigen && !!row && row.vis_online === 0, spielePrivat = !eigen && !!row && row.vis_spiele === 0;
   const online = !statusPrivat && !!p && !!p.seen && jetzt - p.seen < ONLINE_SEKUNDEN;
   const out = {
-    name: u.name, anzeige: u.display || u.name, av: avParse(u.avatar), seit: row ? row.created : null, eigen,
+    name: u.name, anzeige: u.display || u.name, av: avParse(u.avatar), seit: row ? row.created : null, eigen, freund: !eigen,
     freunde: fr ? fr.n : 0, online, spiel: online && !spielePrivat ? p.game || null : null, zuletzt: statusPrivat ? null : p ? p.seen : null,
   };
   if (statusPrivat) out.statusPrivat = true;
@@ -645,9 +671,9 @@ export async function handle(request, env, jetztMs = Date.now()) {
       if (!cm[2] && m === 'POST') return await chatSenden(request, db, s, n, jetzt);
     }
     if (pfad === '/api/praesenz' && m === 'POST') return await praesenz(request, db, s, jetzt);
-    if (pfad === '/api/profil' && m === 'GET') return await profil(db, s, null, jetzt);
+    if (pfad === '/api/profil' && m === 'GET') return await profil(db, s, null, jetzt, null);
     const pm = /^\/api\/profil\/([^/]+)$/.exec(pfad);
-    if (pm && m === 'GET') { let n; try { n = decodeURIComponent(pm[1]); } catch (e) { return fehler(400, 'eingabe'); } return await profil(db, s, n, jetzt); }
+    if (pm && m === 'GET') { let n; try { n = decodeURIComponent(pm[1]); } catch (e) { return fehler(400, 'eingabe'); } return await profil(db, s, n, jetzt, await entwickler(env, request)); }
 
     const sp = /^\/api\/stand\/([^/]+)(?:\/(versionen))?$/.exec(pfad);
     if (sp) {

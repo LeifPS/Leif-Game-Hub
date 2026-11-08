@@ -862,3 +862,9 @@ body[data-view="chat"] { overflow: hidden; }
 .konto-karte label.konto-umzug { display: flex; gap: 10px; align-items: flex-start; margin: 4px 0 12px; padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, .05); font-weight: 400; font-size: 13px; line-height: 1.45; color: var(--muted); cursor: pointer; }
 .konto-karte label.konto-umzug b { color: #e8ecf4; font-weight: 600; }
 .konto-karte label.konto-umzug input { width: 18px; height: 18px; flex: none; margin: 1px 0 0; padding: 0; accent-color: var(--accent); }
+
+/* Entwickler als Profil-Link (Detailseite) und Meldung auf dem Profil */
+.entw-link { color: var(--accent-hi, #8fb4ff); text-decoration: none; font-weight: 600; }
+.entw-link:hover { text-decoration: underline; }
+.pf-meld { min-height: 18px; margin: 0 0 10px; font-size: 13px; color: #ff8a8a; }
+.pf-meld.ok { color: #7ee2a8; }

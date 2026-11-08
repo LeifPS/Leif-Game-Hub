@@ -714,3 +714,21 @@ test('Chat: Ungelesenes zählt nur von Freunden und nur für den Empfänger', as
   assert.equal((await call(env, 'GET', '/api/chat/Ben', undefined, c)).status, 404);
   assert.equal((await call(env, 'GET', '/api/freunde', undefined, b)).j.chat, 1);
 });
+
+test('Profile von Entwicklern (games.json) sieht jeder, aber nur die öffentlichen Angaben; andere nur Freunde', async () => {
+  const env = umgebung();
+  env.ASSETS = { fetch: async () => new Response(JSON.stringify({ games: [{ id: 'a', entwickler: ['Dora'] }, { id: 'b' }] })) };
+  await neuesKonto(env, 'Dora'); await neuesKonto(env, 'Leif'); await neuesKonto(env, 'Kai');
+  const t = await neuesKonto(env, 'Fremd');
+  const d = await call(env, 'GET', '/api/profil/Dora', undefined, t);
+  assert.equal(d.status, 200);
+  assert.equal(d.j.name, 'Dora'); assert.equal(d.j.nurOeffentlich, true); assert.equal(d.j.entwickler, true); assert.equal(d.j.freund, false);
+  for (const k of ['online', 'spiel', 'zuletzt', 'freunde', 'spiele', 'staende', 'sicht']) assert.equal(k in d.j, false, k + ' darf nicht sichtbar sein');
+  // ein Spiel ohne Eintrag gehört "leif"
+  assert.equal((await call(env, 'GET', '/api/profil/leif', undefined, t)).j.nurOeffentlich, true);
+  // kein Entwickler und kein Freund: nicht sichtbar
+  assert.equal((await call(env, 'GET', '/api/profil/Kai', undefined, t)).status, 404);
+  // ohne Assets (z. B. Ausfall) bleibt es bei der Freunde-Regel
+  const env2 = umgebung(); await neuesKonto(env2, 'Dora'); const t2 = await neuesKonto(env2, 'Fremd');
+  assert.equal((await call(env2, 'GET', '/api/profil/Dora', undefined, t2)).status, 404);
+});
