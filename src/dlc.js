@@ -39,10 +39,13 @@ export function dlcModul(h) {
     await geschenk(db, s, jetzt);
     const g = await db.prepare('SELECT amount FROM wallet WHERE user_id = ?').bind(s.id).first();
     const b = await db.prepare('SELECT dlc, bought FROM dlc_owned WHERE user_id = ?').bind(s.id).all();
+    // Das Geschenk wird nicht heimlich gutgeschrieben: Der Hub zeigt es einmal an (bis das Konto es mit "gesehen" bestätigt).
+    const ge = await db.prepare('SELECT g.amount AS amount FROM wallet_gift g WHERE g.user_id = ?1 AND NOT EXISTS (SELECT 1 FROM wallet_gift_seen v WHERE v.user_id = ?1)').bind(s.id).first();
     const gekauft = {};
     for (const x of b.results) gekauft[x.dlc] = x.bought;
     return {
       guthaben: g ? g.amount : 0,
+      geschenk: ge ? ge.amount : null,
       katalog: KATALOG.map((d) => ({ id: d.id, spiel: d.spiel, name: d.name, text: d.text, preis: d.preis, besitz: d.id in gekauft, gekauft: gekauft[d.id] || null })),
     };
   }
@@ -74,6 +77,10 @@ export function dlcModul(h) {
 
   async function route(request, db, s, jetzt, m, unter) {
     if (!unter && m === 'GET') return antwort(await stand(db, s, jetzt));
+    if (unter === 'gesehen' && m === 'POST') {
+      await db.prepare('INSERT OR IGNORE INTO wallet_gift_seen (user_id) SELECT user_id FROM wallet_gift WHERE user_id = ?').bind(s.id).run();
+      return antwort({ ok: true, ...(await stand(db, s, jetzt)) });
+    }
     if (unter === 'kaufen' && m === 'POST') return await kaufen(request, db, s, jetzt);
     return fehler(404, 'unbekannt');
   }
@@ -84,6 +91,7 @@ export function dlcModul(h) {
       db.prepare('DELETE FROM wallet_log WHERE user_id = ?').bind(uid),
       db.prepare('DELETE FROM dlc_owned WHERE user_id = ?').bind(uid),
       db.prepare('DELETE FROM wallet_gift WHERE user_id = ?').bind(uid),
+      db.prepare('DELETE FROM wallet_gift_seen WHERE user_id = ?').bind(uid),
     ]);
   }
 

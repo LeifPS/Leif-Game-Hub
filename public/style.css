@@ -1085,3 +1085,7 @@ body.pseudo-voll .voll-aus { display: flex; }
 .dlc-marke svg { width: 15px; height: 15px; }
 .detail-banner:not(.titel) .dlc-marke { left: auto; right: 0; border-radius: 0 0 0 12px; }
 @media (max-width: 900px) { .dlc-marke { font-size: 10px; padding: 5px 10px 5px 8px; gap: 5px; border-radius: 0 0 9px 0; } .dlc-marke svg { width: 13px; height: 13px; } }
+
+/* Kleiner Punkt am Guthaben-Symbol, solange ein Geschenk noch nicht angesehen wurde */
+.tbtn.waehrung { position: relative; }
+.tbtn.waehrung.neu::after { content: ''; position: absolute; top: 7px; right: 7px; width: 9px; height: 9px; border-radius: 50%; background: #ff8a4a; border: 2px solid var(--bg); }

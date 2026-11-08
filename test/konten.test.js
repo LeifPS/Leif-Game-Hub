@@ -1123,3 +1123,23 @@ test('Startgeschenk: Konten bis einschließlich 8.11.2026 bekommen einmalig 1000
     assert.equal((await call(env, 'GET', '/api/dlc', undefined, t1)).j.guthaben, 500);
   } finally { uhr = alt; }
 });
+
+test('Startgeschenk wird angezeigt (geschenk) bis das Konto es als gesehen bestätigt', async () => {
+  const env = umgebung();
+  const alt = uhr;
+  try {
+    uhr = Date.UTC(2026, 10, 8, 10, 0, 0);
+    const t = await neuesKonto(env, 'Sieht');
+    const a = await call(env, 'GET', '/api/dlc', undefined, t);
+    assert.equal(a.j.guthaben, 1000);
+    assert.equal(a.j.geschenk, 1000);
+    assert.equal((await call(env, 'GET', '/api/dlc', undefined, t)).j.geschenk, 1000);   // bleibt, bis bestätigt
+    const g = await call(env, 'POST', '/api/dlc/gesehen', {}, t);
+    assert.equal(g.status, 200);
+    assert.equal(g.j.geschenk, null);
+    assert.equal(g.j.guthaben, 1000);
+    assert.equal((await call(env, 'GET', '/api/dlc', undefined, t)).j.geschenk, null);
+    const spaet = (uhr = Date.UTC(2026, 10, 9, 10, 0, 0), await neuesKonto(env, 'Neu'));
+    assert.equal((await call(env, 'POST', '/api/dlc/gesehen', {}, spaet)).j.geschenk, null);
+  } finally { uhr = alt; }
+});

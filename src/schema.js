@@ -130,6 +130,9 @@ export const SCHEMA = [
     amount INTEGER NOT NULL,
     created INTEGER NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS wallet_gift_seen (
+    user_id INTEGER PRIMARY KEY
+  )`,
   `CREATE TABLE IF NOT EXISTS dlc_owned (
     user_id INTEGER NOT NULL,
     dlc TEXT NOT NULL,

@@ -1657,14 +1657,14 @@
   function dlcChip(puls) {
     // Oben steht nur das Symbol, ohne Zahl: Das Hub soll ein Werkzeug bleiben. Den Stand zeigt erst der Klick darauf.
     var kn = document.getElementById('waehrung-knopf');
-    if (kn) kn.hidden = !dlcDaten;
+    if (kn) { kn.hidden = !dlcDaten; kn.classList.toggle('neu', !!(dlcDaten && dlcDaten.geschenk)); }   // Punkt, solange ein Geschenk noch nicht angesehen wurde
   }
   function dlcLaden() {
     if (!window.LghKonto) return Promise.resolve(null);
     return LghKonto.bereit().then(function () {
       if (!LghKonto.angemeldet()) return null;
       return LghKonto.dlc.laden().then(function (res) {
-        if (res.ok && res.j && Array.isArray(res.j.katalog)) { dlcDaten = res.j; dlcChip(); dlcFuellen(); dlcAnSpiel(); dlcSeiteNeu(); }
+        if (res.ok && res.j && Array.isArray(res.j.katalog)) { dlcDaten = res.j; dlcChip(); dlcFuellen(); dlcAnSpiel(); dlcSeiteNeu(); if (dlcDaten.geschenk && body.getAttribute('data-view') !== 'play') geschenkDialog(); }
         return dlcDaten;
       });
     });
@@ -1730,8 +1730,23 @@
     };
     if (dlcDaten) los(); else dlcLaden().then(los);
   }
+  function geschenkDialog() {
+    if (!dlcDaten || !dlcDaten.geschenk) return;
+    var h = grDialog('dlg-dlc', '<div class="dlg-titel">Ein Geschenk für dich</div><div class="dlc-gross">' + wabeSvg() + '+' + zahlText(dlcDaten.geschenk) + '</div>' +
+      '<div class="dlg-sub" style="margin:0 0 14px">Du warst schon von Anfang an dabei. Dafür gibt es zum Start ein Guthaben, mit dem du Zusatzinhalte kaufen kannst, zum Beispiel für Schleimmerge.</div>' +
+      '<div class="dlg-fuss"><button type="button" class="btn btn-primary" data-zu>Danke</button></div>', function () { });
+    if (!h) return;
+    // Egal wie der Dialog geschlossen wird (Danke, Esc, daneben tippen): damit gilt das Geschenk als gesehen.
+    var wach = new MutationObserver(function () {
+      if (h.isConnected) return;
+      wach.disconnect(); dlcDaten.geschenk = null; dlcChip();
+      LghKonto.dlc.gesehen().then(function (r) { if (r.ok && r.j && Array.isArray(r.j.katalog)) { dlcDaten = r.j; dlcChip(); } });
+    });
+    wach.observe(document.body, { childList: true });
+  }
   function guthabenDialog() {
     if (!dlcDaten) return;
+    if (dlcDaten.geschenk) return geschenkDialog();
     var mein = ((dlcDaten.katalog) || []).filter(function (d) { return d.besitz; });
     grDialog('dlg-dlc', '<div class="dlg-titel">Dein Guthaben</div><div class="dlc-gross">' + wabeSvg() + zahlText(dlcDaten.guthaben) + '</div><div class="dlg-sub" style="margin:0 0 10px">Guthaben für Zusatzinhalte.</div>' +
       (mein.length ? '<div class="dlc-zeilen"><div class="dlc-zeile"><span>Deine Zusatzinhalte</span></div>' + mein.map(function (d) { return '<div class="dlc-zeile fett"><b>' + esc(dlcTitel(d.name)) + '</b><span>' + esc(spielName(d.spiel)) + '</span></div>'; }).join('') + '</div>' : '<div class="dlg-sub">Du hast noch keine Zusatzinhalte.</div>') +
