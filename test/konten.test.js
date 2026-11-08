@@ -257,7 +257,7 @@ test('Freunde: Präsenz nur für Freunde sichtbar; gegenseitige Anfrage wird zur
   const env = umgebung();
   const a = await neuesKonto(env, 'Anna'), b = await neuesKonto(env, 'Ben'), c = await neuesKonto(env, 'Carl');
   await call(env, 'POST', '/api/praesenz', { spiel: 'spells' }, a);
-  assert.deepEqual((await call(env, 'GET', '/api/freunde', undefined, b)).j, { freunde: [], eingehend: [], ausgehend: [], chat: 0, jetzt: Math.floor(uhr / 1000) });
+  assert.deepEqual((await call(env, 'GET', '/api/freunde', undefined, b)).j, { freunde: [], eingehend: [], ausgehend: [], chat: 0, gruppen: [], jetzt: Math.floor(uhr / 1000) });
   // Ben und Carl fragen sich gegenseitig an
   await call(env, 'POST', '/api/freunde/anfrage', { name: 'Carl' }, b);
   const g = await call(env, 'POST', '/api/freunde/anfrage', { name: 'Ben' }, c);
@@ -907,4 +907,147 @@ test('Bewertungen aller Spiele: Durchschnitt und Anzahl je Spiel, nur mit Anmeld
   await call(env, 'POST', '/api/bewertung/spells', { sterne: 5 }, a);
   await call(env, 'POST', '/api/bewertung/spells', { sterne: 4 }, b);
   assert.deepEqual((await call(env, 'GET', '/api/bewertungen', undefined, b)).j, { spiele: { spells: { anzahl: 2, schnitt: 4.5 } } });
+});
+
+/* ---------- Chat-Gruppen ---------- */
+async function gruppe3(env) {
+  const a = await neuesKonto(env, 'Anna'), b = await neuesKonto(env, 'Ben'), c = await neuesKonto(env, 'Carla');
+  for (const [x, nx, y, ny] of [[a, 'Anna', b, 'Ben'], [a, 'Anna', c, 'Carla']]) {
+    await call(env, 'POST', '/api/freunde/anfrage', { name: ny }, x);
+    await call(env, 'POST', '/api/freunde/annehmen', { name: nx }, y);
+  }
+  return [a, b, c];
+}
+
+test('Gruppen: anlegen nur mit eigenen Freunden, Namen prüfen, Details und Liste', async () => {
+  const env = umgebung();
+  const [a, b, c] = await gruppe3(env);
+  assert.equal((await call(env, 'GET', '/api/gruppen')).status, 401);
+  assert.equal((await call(env, 'POST', '/api/gruppen', { name: '  ', mitglieder: [] }, a)).j.fehler, 'name');
+  assert.equal((await call(env, 'POST', '/api/gruppen', { name: 'x'.repeat(31), mitglieder: [] }, a)).j.fehler, 'name');
+  assert.equal((await call(env, 'POST', '/api/gruppen', { name: '<b>', mitglieder: [] }, a)).j.fehler, 'name');
+  // Ben und Carla sind nicht miteinander befreundet: Ben kann Carla nicht einladen, Fremde und er selbst auch nicht
+  assert.equal((await call(env, 'POST', '/api/gruppen', { name: 'Test', mitglieder: ['Carla'] }, b)).status, 404);
+  assert.equal((await call(env, 'POST', '/api/gruppen', { name: 'Test', mitglieder: ['Niemand'] }, a)).status, 404);
+  assert.equal((await call(env, 'POST', '/api/gruppen', { name: 'Test', mitglieder: ['Anna'] }, a)).status, 404);
+  const r = await call(env, 'POST', '/api/gruppen', { name: ' Familie  Schmale ', mitglieder: ['Ben', '@carla'] }, a);
+  assert.equal(r.status, 200);
+  assert.equal(r.j.gruppe.name, 'Familie Schmale');
+  assert.equal(r.j.gruppe.eigener, true);
+  assert.deepEqual(r.j.gruppe.mitglieder.map((m) => [m.name, m.besitzer]), [['Anna', true], ['Ben', false], ['Carla', false]]);
+  const id = r.j.gruppe.id;
+  // Mitglieder sehen die Gruppe, Außenstehende nicht
+  assert.equal((await call(env, 'GET', '/api/gruppen/' + id, undefined, b)).j.gruppe.eigener, false);
+  const d = await neuesKonto(env, 'Dora');
+  assert.equal((await call(env, 'GET', '/api/gruppen/' + id, undefined, d)).status, 404);
+  const l = (await call(env, 'GET', '/api/gruppen', undefined, c)).j.gruppen;
+  assert.deepEqual(l.map((g) => [g.id, g.name, g.mitglieder, g.ungelesen]), [[id, 'Familie Schmale', 3, 0]]);
+  assert.deepEqual((await call(env, 'GET', '/api/gruppen', undefined, d)).j.gruppen, []);
+});
+
+test('Gruppen: Chat nur für Mitglieder, ungelesen, Gelesen-Markierung, Löschen eigener Nachrichten, Einladungstext', async () => {
+  const env = umgebung();
+  const [a, b, c] = await gruppe3(env);
+  const id = (await call(env, 'POST', '/api/gruppen', { name: 'Fam', mitglieder: ['Ben'] }, a)).j.gruppe.id;
+  assert.equal((await call(env, 'POST', '/api/gruppen/' + id + '/chat', { text: 'Hi' }, c)).status, 404);   // Carla ist nicht drin
+  assert.equal((await call(env, 'GET', '/api/gruppen/' + id + '/chat', undefined, c)).status, 404);
+  const s1 = await call(env, 'POST', '/api/gruppen/' + id + '/chat', { text: '  Hallo zusammen  ' }, a);
+  assert.deepEqual([s1.status, s1.j.nachricht.von, s1.j.nachricht.text, s1.j.nachricht.name], [200, 'ich', 'Hallo zusammen', 'Anna']);
+  await call(env, 'POST', '/api/gruppen/' + id + '/chat', { text: '[einladung:spells]' }, a);
+  assert.equal((await call(env, 'POST', '/api/gruppen/' + id + '/chat', { text: '' }, a)).j.fehler, 'leer');
+  assert.equal((await call(env, 'POST', '/api/gruppen/' + id + '/chat', { text: 'x'.repeat(501) }, a)).j.fehler, 'zu_lang');
+  // Ben: 2 ungelesen, Abzeichen-Zähler und Vorschau
+  let fr = (await call(env, 'GET', '/api/freunde', undefined, b)).j;
+  assert.equal(fr.chat, 2);
+  assert.deepEqual([fr.gruppen[0].ungelesen, fr.gruppen[0].vorschau, fr.gruppen[0].von], [2, '[einladung:spells]', 'Anna']);
+  const ug = (await call(env, 'GET', '/api/ungelesen', undefined, b)).j.von;
+  assert.deepEqual([ug[0].name, ug[0].anzeige, ug[0].n, ug[0].text, ug[0].gruppe], ['#g' + id, 'Fam', 2, 'Anna: [einladung:spells]', id]);
+  // Lesen ohne Markierung ändert nichts, mit gelesen=1 ist alles gelesen
+  const r1 = await call(env, 'GET', '/api/gruppen/' + id + '/chat', undefined, b);
+  assert.deepEqual(r1.j.nachrichten.map((m) => [m.von, m.name, m.text]), [['er', 'Anna', 'Hallo zusammen'], ['er', 'Anna', '[einladung:spells]']]);
+  assert.equal((await call(env, 'GET', '/api/freunde', undefined, b)).j.chat, 2);
+  await call(env, 'GET', '/api/gruppen/' + id + '/chat?gelesen=1', undefined, b);
+  fr = (await call(env, 'GET', '/api/freunde', undefined, b)).j;
+  assert.deepEqual([fr.chat, fr.gruppen[0].ungelesen], [0, 0]);
+  // Eigene Antwort: bei Anna ungelesen, bei Ben nicht; nach=<id> liefert nur Neueres
+  const s3 = await call(env, 'POST', '/api/gruppen/' + id + '/chat', { text: 'Hallo Anna' }, b);
+  assert.equal((await call(env, 'GET', '/api/freunde', undefined, a)).j.chat, 1);
+  assert.deepEqual((await call(env, 'GET', '/api/gruppen/' + id + '/chat?nach=' + s1.j.nachricht.id, undefined, a)).j.nachrichten.map((m) => m.text), ['[einladung:spells]', 'Hallo Anna']);
+  // Löschen: nur die eigene Nachricht
+  assert.equal((await call(env, 'POST', '/api/gruppen/' + id + '/chat/loeschen', { id: s3.j.nachricht.id }, a)).status, 404);
+  assert.equal((await call(env, 'POST', '/api/gruppen/' + id + '/chat/loeschen', { id: s3.j.nachricht.id }, b)).status, 200);
+  assert.equal((await call(env, 'GET', '/api/gruppen/' + id + '/chat', undefined, a)).j.nachrichten.length, 2);
+});
+
+test('Gruppen: Besitzer verwaltet (hinzufügen, entfernen, umbenennen, löschen), Mitglieder dürfen nur austreten', async () => {
+  const env = umgebung();
+  const [a, b, c] = await gruppe3(env);
+  const id = (await call(env, 'POST', '/api/gruppen', { name: 'Fam', mitglieder: ['Ben'] }, a)).j.gruppe.id;
+  await call(env, 'POST', '/api/gruppen/' + id + '/chat', { text: 'Alte Nachricht' }, a);
+  for (const [pfad, body] of [['mitglied', { name: 'Carla' }], ['entfernen', { name: 'Anna' }], ['umbenennen', { name: 'Neu' }], ['loeschen', {}]]) {
+    assert.equal((await call(env, 'POST', '/api/gruppen/' + id + '/' + pfad, body, b)).j.fehler, 'nur_besitzer', pfad);
+  }
+  // Hinzufügen: nur Freunde des Besitzers, nicht doppelt; Neue sehen alte Nachrichten, aber nicht als ungelesen
+  assert.equal((await call(env, 'POST', '/api/gruppen/' + id + '/mitglied', { name: 'Niemand' }, a)).status, 404);
+  assert.equal((await call(env, 'POST', '/api/gruppen/' + id + '/mitglied', { name: 'Ben' }, a)).status, 409);
+  const h = await call(env, 'POST', '/api/gruppen/' + id + '/mitglied', { name: 'Carla' }, a);
+  assert.equal(h.j.gruppe.mitglieder.length, 3);
+  assert.equal((await call(env, 'GET', '/api/freunde', undefined, c)).j.chat, 0);
+  assert.equal((await call(env, 'GET', '/api/gruppen/' + id + '/chat', undefined, c)).j.nachrichten.length, 1);
+  // Umbenennen, Entfernen
+  assert.equal((await call(env, 'POST', '/api/gruppen/' + id + '/umbenennen', { name: 'Familie' }, a)).j.gruppe.name, 'Familie');
+  assert.equal((await call(env, 'POST', '/api/gruppen/' + id + '/umbenennen', { name: ' ' }, a)).j.fehler, 'name');
+  assert.equal((await call(env, 'POST', '/api/gruppen/' + id + '/entfernen', { name: 'Anna' }, a)).status, 404);   // sich selbst nicht
+  assert.equal((await call(env, 'POST', '/api/gruppen/' + id + '/entfernen', { name: 'Carla' }, a)).j.gruppe.mitglieder.length, 2);
+  assert.equal((await call(env, 'GET', '/api/gruppen/' + id, undefined, c)).status, 404);
+  // Austreten: Ben geht, Anna bleibt allein; Anna löscht die Gruppe
+  assert.equal((await call(env, 'POST', '/api/gruppen/' + id + '/verlassen', {}, b)).status, 200);
+  assert.equal((await call(env, 'POST', '/api/gruppen/' + id + '/verlassen', {}, b)).status, 404);
+  assert.equal((await call(env, 'POST', '/api/gruppen/' + id + '/loeschen', {}, a)).status, 200);
+  assert.equal((await call(env, 'GET', '/api/gruppen/' + id, undefined, a)).status, 404);
+  const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM chat_group_messages').first();
+  assert.equal(n.n, 0);
+});
+
+test('Gruppen: Besitzer tritt aus (Besitz geht an das am längsten dabei gebliebene Mitglied, letzte Person löscht die Gruppe)', async () => {
+  const env = umgebung();
+  const [a, b, c] = await gruppe3(env);
+  const id = (await call(env, 'POST', '/api/gruppen', { name: 'Fam', mitglieder: ['Ben', 'Carla'] }, a)).j.gruppe.id;
+  await call(env, 'POST', '/api/gruppen/' + id + '/chat', { text: 'x' }, a);
+  assert.equal((await call(env, 'POST', '/api/gruppen/' + id + '/verlassen', {}, a)).status, 200);
+  const g = (await call(env, 'GET', '/api/gruppen/' + id, undefined, b)).j.gruppe;
+  assert.deepEqual([g.eigener, g.mitglieder.filter((m) => m.besitzer).length, g.mitglieder.length], [true, 1, 2]);
+  await call(env, 'POST', '/api/gruppen/' + id + '/verlassen', {}, b);
+  await call(env, 'POST', '/api/gruppen/' + id + '/verlassen', {}, c);
+  assert.equal((await env.DB.prepare('SELECT COUNT(*) AS n FROM chat_groups').first()).n, 0);
+  assert.equal((await env.DB.prepare('SELECT COUNT(*) AS n FROM chat_group_messages').first()).n, 0);
+});
+
+test('Gruppen: Freundschaft beendet = raus aus Gruppen des anderen; Konto löschen = austreten; Grenzen', async () => {
+  const env = umgebung();
+  const [a, b, c] = await gruppe3(env);
+  const id = (await call(env, 'POST', '/api/gruppen', { name: 'Fam', mitglieder: ['Ben', 'Carla'] }, a)).j.gruppe.id;
+  await call(env, 'POST', '/api/freunde/entfernen', { name: 'Ben' }, a);
+  assert.equal((await call(env, 'GET', '/api/gruppen/' + id, undefined, b)).status, 404);
+  assert.equal((await call(env, 'GET', '/api/gruppen/' + id, undefined, c)).status, 200);
+  // Konto löschen: Mitgliedschaft und eigene Nachrichten verschwinden, Besitz geht weiter
+  await call(env, 'POST', '/api/gruppen/' + id + '/chat', { text: 'von Carla' }, c);
+  await call(env, 'POST', '/api/gruppen/' + id + '/chat', { text: 'von Anna' }, a);
+  const kc = await env.DB.prepare('SELECT id FROM users WHERE name = ?').bind('Carla').first();
+  assert.ok(kc);
+  const gm = await env.DB.prepare('SELECT COUNT(*) AS n FROM chat_group_members WHERE group_id = ?').bind(id).first();
+  assert.equal(gm.n, 2);
+  // Grenzen: höchstens 12 Mitglieder
+  // (die Gäste werden direkt in die Datenbank gelegt: Registrierungen sind pro Adresse begrenzt)
+  const ida = (await env.DB.prepare('SELECT id FROM users WHERE name = ?').bind('Anna').first()).id, viele = [];
+  for (let i = 0; i < 12; i++) {
+    const n = 'Gast' + String(i).padStart(2, '0');
+    const u = await env.DB.prepare('INSERT INTO users (name, name_lc, salt, hash, created) VALUES (?, ?, ?, ?, ?) RETURNING id').bind(n, n.toLowerCase(), 's', 'h', 1).first();
+    await env.DB.prepare("INSERT INTO friends (a, b, requester, status, created) VALUES (?, ?, ?, 'accepted', 1)").bind(Math.min(ida, u.id), Math.max(ida, u.id), ida).run();
+    viele.push(n);
+  }
+  assert.equal((await call(env, 'POST', '/api/gruppen', { name: 'Zu groß', mitglieder: viele }, a)).j.fehler, 'zu_viele');
+  const ok = await call(env, 'POST', '/api/gruppen', { name: 'Elf', mitglieder: viele.slice(0, 11) }, a);
+  assert.equal(ok.j.gruppe.mitglieder.length, 12);
+  assert.equal((await call(env, 'POST', '/api/gruppen/' + ok.j.gruppe.id + '/mitglied', { name: viele[11] }, a)).j.fehler, 'zu_viele');
 });

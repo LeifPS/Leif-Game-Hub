@@ -5,6 +5,7 @@
 // Der Server speichert davon noch einmal einen gesalzenen SHA-256. So bleibt der Rechenaufwand im Browser
 // (der Server hat pro Anfrage nur sehr wenig Rechenzeit) und das Klartext-Passwort erreicht den Server nie.
 import { SCHEMA } from './schema.js';
+import { gruppenModul } from './gruppen.js';
 
 const enc = new TextEncoder();
 const hex = (u8) => [...u8].map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -279,6 +280,7 @@ async function kontoLoeschen(request, db, s, jetzt) {
   if (!b || typeof b.key !== 'string' || !KEY_RE.test(b.key)) return fehler(400, 'eingabe');
   const r = await pruefeSchluessel(db, s.name, b.key, jetzt, request);
   if (r.fehler) return r.fehler;
+  await G.kontoWeg(db, s.id);
   await db.batch([
     db.prepare('DELETE FROM saves WHERE user_id = ?').bind(s.id),
     db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(s.id),
@@ -411,7 +413,9 @@ async function freundeListe(db, s, jetzt) {
     } else if (x.requester === s.id) ausgehend.push({ name: x.name, anzeige: x.display || x.name, av: avParse(x.avatar) });
     else eingehend.push({ name: x.name, anzeige: x.display || x.name, av: avParse(x.avatar) });
   }
-  return antwort({ freunde, eingehend, ausgehend, chat, jetzt });
+  const gruppen = await G.liste(db, s);
+  for (const g of gruppen) chat += g.ungelesen;   // ungelesene Gruppennachrichten zählen mit ins Abzeichen
+  return antwort({ freunde, eingehend, ausgehend, chat, gruppen, jetzt });
 }
 
 async function freundAnfrage(request, db, s, jetzt) {
@@ -458,6 +462,7 @@ async function freundLoeschen(request, db, s, nurAnfrage) {
   const [x, y] = paar(s.id, ziel.id);
   const r = await db.prepare(`DELETE FROM friends WHERE a = ? AND b = ?${nurAnfrage ? " AND status = 'pending'" : ''}`).bind(x, y).run();
   if (!r.meta || r.meta.changes !== 1) return fehler(404, 'nicht_gefunden');
+  if (!nurAnfrage) await G.freundschaftEnde(db, x, y);   // und nicht mehr in Gruppen des anderen
   if (!nurAnfrage) await db.batch([   // ohne Freundschaft kein Chatverlauf mehr
     db.prepare('DELETE FROM messages WHERE a = ? AND b = ?').bind(x, y),
     db.prepare('DELETE FROM chat_read WHERE (user_id = ? AND other = ?) OR (user_id = ? AND other = ?)').bind(x, y, y, x),
@@ -516,7 +521,8 @@ async function chatUngelesen(db, s, jetzt) {
      WHERE (m.a = ? OR m.b = ?) AND m.sender <> ? AND m.id > COALESCE((SELECT last_id FROM chat_read r WHERE r.user_id = ? AND r.other = m.sender), 0)
      GROUP BY m.sender ORDER BY neu DESC LIMIT 5`
   ).bind(s.id, s.id, s.id, s.id).all();
-  return antwort({ von: r.results.map((x) => ({ name: x.name, anzeige: x.display || x.name, av: avParse(x.avatar), n: x.n, neu: x.neu, text: x.text })), jetzt });
+  const von = r.results.map((x) => ({ name: x.name, anzeige: x.display || x.name, av: avParse(x.avatar), n: x.n, neu: x.neu, text: x.text }));
+  return antwort({ von: von.concat(await G.ungelesen(db, s)), jetzt });
 }
 
 /* ---------- Favoriten ---------- */
@@ -722,6 +728,8 @@ async function profil(db, s, name, jetzt, entw) {
 }
 
 /* ---------- Verteilung ---------- */
+const G = gruppenModul({ antwort, fehler, lies, gesperrt, zaehle, suche, paar, avParse, chatText, chatVorschau });
+
 export async function handle(request, env, jetztMs = Date.now()) {
   const url = new URL(request.url);
   const pfad = url.pathname;
@@ -768,6 +776,8 @@ export async function handle(request, env, jetztMs = Date.now()) {
     if (pfad === '/api/favoriten' && m === 'GET') return await favoritenListe(db, s);
     if (pfad === '/api/favoriten' && m === 'POST') return await favoritSetzen(request, db, s, jetzt);
     if (pfad === '/api/ungelesen' && m === 'GET') return await chatUngelesen(db, s, jetzt);
+    const gm = /^\/api\/gruppen(?:\/(\d{1,9}))?(?:\/([a-z]+))?(?:\/([a-z]+))?$/.exec(pfad);
+    if (gm) return await G.route(request, db, s, jetzt, m, gm[1] ? Number(gm[1]) : 0, gm[2] || '', gm[3] || '', url);
     const cm = /^\/api\/chat\/([^/]+)(?:\/(loeschen))?$/.exec(pfad);
     if (cm) {
       let n; try { n = decodeURIComponent(cm[1]); } catch (e) { return fehler(400, 'eingabe'); }

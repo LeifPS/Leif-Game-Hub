@@ -90,6 +90,29 @@ export const SCHEMA = [
     PRIMARY KEY (user_id, game)
   )`,
   `CREATE INDEX IF NOT EXISTS ratings_game ON ratings(game)`,
+  // Chat-Gruppen (siehe src/gruppen.js): Gruppe, Mitglieder (last_read = bis zu welcher Nachricht gelesen) und Nachrichten
+  `CREATE TABLE IF NOT EXISTS chat_groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    owner INTEGER NOT NULL,
+    created INTEGER NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS chat_group_members (
+    group_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    joined INTEGER NOT NULL,
+    last_read INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (group_id, user_id)
+  )`,
+  `CREATE INDEX IF NOT EXISTS chat_group_members_user ON chat_group_members(user_id)`,
+  `CREATE TABLE IF NOT EXISTS chat_group_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    group_id INTEGER NOT NULL,
+    sender INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    created INTEGER NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS chat_group_messages_gruppe ON chat_group_messages(group_id, id)`,
   // Zähler gegen Raten von Passwörtern und Massenanmeldungen
   `CREATE TABLE IF NOT EXISTS limits (
     k TEXT PRIMARY KEY,
