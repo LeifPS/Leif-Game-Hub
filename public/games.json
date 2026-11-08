@@ -653,7 +653,6 @@
     },
     {
       "id": "nebelmeer",
-      "wartung": true,
       "name": "Nebelmeer",
       "text": "Kein Ziel, keine Karte: Jemand hat dir ein Boot und eine Laterne dagelassen. Fahr durch den Nebel, finde Inseln, Siegel und Geheimnisse, manches zeigt sich nur bei Nacht.",
       "url": "https://leifps.github.io/nebelmeer/",
