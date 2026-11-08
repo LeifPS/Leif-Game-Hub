@@ -1078,3 +1078,10 @@ body.pseudo-voll .voll-aus { display: flex; }
 .dlc-aktion { display: flex; align-items: center; gap: 14px; }
 .dlc-preis.gross .betrag { font-size: 20px; }
 .dlc-besitz.gross { font-size: 15px; padding: 8px 16px; }
+
+/* Marke "Zusatzinhalt" oben links im Banner einer DLC-Seite */
+.dlc-marke { position: absolute; z-index: 3; top: 12px; left: 12px; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 10px;
+  color: #eef1f6; background: rgba(10, 12, 17, .62); border: 1px solid rgba(255, 255, 255, .16); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.dlc-marke svg { width: 20px; height: 20px; }
+.detail-banner:not(.titel) .dlc-marke { top: 62px; left: 28px; }
+@media (max-width: 900px) { .detail-banner:not(.titel) .dlc-marke { left: 16px; } .dlc-marke { top: 8px; left: 8px; width: 28px; height: 28px; border-radius: 8px; } .dlc-marke svg { width: 17px; height: 17px; } }
