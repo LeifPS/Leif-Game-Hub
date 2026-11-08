@@ -853,6 +853,21 @@
       });
       h += '</div>';
     }
+    var gr = d.gruppen || [];
+    if (gr.length || d.freunde.length) {
+      h += '<h2 class="fr-abschnitt fr-gr-kopf">Gruppen <span class="fr-zahl">' + gr.length + '</span>' + (d.freunde.length ? '<button type="button" class="btn btn-ghost fr-btn fr-gr-neu" data-a="gruppeneu">Neue Gruppe</button>' : '') + '</h2>';
+      if (!gr.length) h += '<div class="fr-leer">Noch keine Gruppen. Lege eine an, um mit mehreren Freunden gleichzeitig zu schreiben.</div>';
+      else {
+        h += '<div class="fr-liste">';
+        gr.forEach(function (g) {
+          var ziel = '#gruppe/' + g.id, text = g.vorschau ? '<b>' + n(g.von || '') + '</b>: ' + n(LghKonto.chatKurz(g.vorschau)) : 'Noch keine Nachrichten';
+          h += '<div class="fr-item"><a class="fr-hl" href="' + ziel + '" aria-label="Gruppe ' + n(g.name) + '">' + LghKonto.avatar('avatar', '#g' + g.id, g.name, null) +
+            '<div class="fr-text"><div class="fr-name">' + n(g.name) + '<span class="fr-at">' + g.mitglieder + ' Mitglieder</span></div><div class="fr-status fr-gr-text">' + text + '</div></div></a>' +
+            '<div class="fr-akt"><a class="btn ' + (g.ungelesen ? 'btn-primary' : 'btn-ghost') + ' fr-btn" href="' + ziel + '">Chat' + (g.ungelesen ? '<span class="fr-chatzahl">' + (g.ungelesen > 9 ? '9+' : g.ungelesen) + '</span>' : '') + '</a></div></div>';
+        });
+        h += '</div>';
+      }
+    }
     h += '<h2 class="fr-abschnitt">Freunde <span class="fr-zahl">' + d.freunde.length + '</span></h2>';
     if (!d.freunde.length) h += '<div class="fr-leer">Noch keine Freunde. Gib oben den @Benutzernamen deines Freundes ein und schick ihm eine Anfrage.</div>';
     else {
@@ -1015,6 +1030,7 @@
     if (!b || !window.LghKonto) return;
     var a = b.getAttribute('data-a'), nm = b.getAttribute('data-n');
     if (a === 'kopie') { try { navigator.clipboard.writeText(nm); frMeldung('Code kopiert.'); } catch (x) { frMeldung('Code: ' + nm); } return; }
+    if (a === 'gruppeneu') { neueGruppeDialog(); return; }
     if (a === 'einladen') {
       var fz = freundeDaten && freundeDaten.freunde.filter(function (y) { return y.name === nm; })[0], an = fz ? anz(fz) : nm;
       einladenDialog(nm, an, function () { frMeldung('Einladung an ' + an + ' gesendet.'); ladeFreunde(); });
@@ -1035,7 +1051,8 @@
   function einlBlase(m) {
     var e = window.LghKonto && LghKonto.einladung(m.text), sp = e && spielbar().filter(function (g) { return g.id === e.spiel; })[0];
     if (!sp) return '<div class="ch-blase">' + esc(m.text) + '</div>';
-    var wer = m.von === 'ich' ? 'Du hast ' + esc(chat ? chat.anzeige || chat.name : '') + ' eingeladen' : esc(chat ? chat.anzeige || chat.name : '') + ' lädt dich ein';
+    var wer = chat && chat.gruppe ? (m.von === 'ich' ? 'Du hast die Gruppe eingeladen' : esc(m.anzeige || m.name) + ' lädt ein')
+      : m.von === 'ich' ? 'Du hast ' + esc(chat ? chat.anzeige || chat.name : '') + ' eingeladen' : esc(chat ? chat.anzeige || chat.name : '') + ' lädt dich ein';
     return '<div class="ch-blase ch-einl"><span class="pf-icon">' + art(sp, 100, 100) + '</span><span class="ch-einl-text"><b>' + esc(sp.name) + '</b><small>' + wer + (e.raum ? ' · Raum <code>' + esc(e.raum) + '</code>' : '') + '</small></span>' +
       '<a class="btn btn-primary ch-einl-los" href="#spiel/' + encodeURIComponent(sp.id) + '/play"' + (e.raum ? ' data-raum="' + esc(e.raum) + '"' : '') + '>Spielen</a></div>';
   }
@@ -1080,6 +1097,111 @@
     var erst = hinter.querySelector('[data-sp]'); if (erst) erst.focus();
   }
 
+  /* ---------- Gruppen: anlegen und verwalten ---------- */
+  function grFehler(res, standard) {
+    var f = res.j && res.j.fehler;
+    if (res.status === 429) return 'Zu viele neue Gruppen in kurzer Zeit. Bitte später noch einmal.';
+    return { name: 'Der Name braucht 1 bis 30 Zeichen, ohne < und >.', unbekannt: 'Das geht nicht (mehr): Die Person ist kein Freund oder die Gruppe gibt es nicht.', nur_besitzer: 'Das darf nur, wer die Gruppe angelegt hat.',
+      zu_viele: 'Eine Gruppe hat höchstens 12 Mitglieder.', zu_viele_gruppen: 'Du bist schon in 20 Gruppen.', ziel_zu_viele_gruppen: 'Diese Person ist schon in 20 Gruppen.', schon_mitglied: 'Diese Person ist schon in der Gruppe.',
+      netz: 'Keine Verbindung zum Server.', server: 'Der Server hatte ein Problem. Bitte gleich noch einmal versuchen.' }[f] || standard || 'Das hat nicht geklappt.';
+  }
+  function grDialog(klasse, html, beiKlick) {
+    if (document.querySelector('.' + klasse)) return null;
+    var hinter = document.createElement('div');
+    hinter.className = 'dlg-hinter ' + klasse;
+    hinter.innerHTML = '<div class="dlg" role="dialog" aria-modal="true">' + html + '</div>';
+    function zu() { hinter.remove(); document.removeEventListener('keydown', taste); }
+    function taste(e) { if (e.key === 'Escape') zu(); }
+    hinter.addEventListener('click', function (e) {
+      if (e.target === hinter || (e.target.closest && e.target.closest('[data-zu]'))) return zu();
+      beiKlick(e, zu);
+    });
+    document.addEventListener('keydown', taste);
+    document.body.appendChild(hinter);
+    hinter._zu = zu;
+    return hinter;
+  }
+  function neueGruppeDialog() {
+    var fr = (freundeDaten && freundeDaten.freunde) || [];
+    var zeilen = fr.map(function (f) {
+      return '<label class="gr-wahl"><input type="checkbox" value="' + esc(f.name) + '">' + LghKonto.avatar('avatar', f.name, anz(f), f.av) + '<span class="gr-wname"><b>' + esc(anz(f)) + '</b><small>@' + esc(f.name) + '</small></span></label>';
+    }).join('');
+    var d = grDialog('dlg-gr', '<div class="dlg-titel">Neue Gruppe</div><div class="dlg-sub" style="margin:2px 0 12px">Alle in der Gruppe können schreiben. Du kannst nur deine Freunde hinzufügen (bis zu 11).</div>' +
+      '<input class="gr-name" id="gr-name" type="text" maxlength="30" placeholder="Name der Gruppe, z. B. Familie" autocomplete="off" aria-label="Name der Gruppe">' +
+      '<div class="dlg-gruppe gr-liste">' + (zeilen || '<div class="fr-leer">Du hast noch keine Freunde.</div>') + '</div>' +
+      '<div class="fr-meldung fehler" id="gr-meld" role="status"></div>' +
+      '<div class="dlg-fuss"><button type="button" class="btn btn-ghost" data-zu>Abbrechen</button><button type="button" class="btn btn-primary" data-gr="anlegen" style="margin-left:10px">Anlegen</button></div>', function (e, zu) {
+        var b = e.target.closest ? e.target.closest('[data-gr="anlegen"]') : null;
+        if (!b || b.disabled) return;
+        var m = document.getElementById('gr-meld'), name = document.getElementById('gr-name').value.trim();
+        var namen = [].map.call(document.querySelectorAll('.dlg-gr .gr-wahl input:checked'), function (x) { return x.value; });
+        if (!name) { m.textContent = 'Gib der Gruppe einen Namen.'; return; }
+        if (namen.length > 11) { m.textContent = 'Wähle höchstens 11 Freunde aus.'; return; }
+        m.textContent = ''; b.disabled = true;
+        LghKonto.gruppen.anlegen(name, namen).then(function (res) {
+          if (res.ok) { zu(); location.hash = '#gruppe/' + res.j.gruppe.id; return; }
+          b.disabled = false; m.textContent = grFehler(res);
+        });
+      });
+    if (d) { var ein = d.querySelector('#gr-name'); if (ein) ein.focus(); }
+  }
+  function gruppeInfo(id) {
+    var st = { g: null, frage: '', freunde: (freundeDaten && freundeDaten.freunde) || [] }, hinter = null;
+    function zeichne() {
+      var g = st.g, eig = g.eigener, namen = {};
+      g.mitglieder.forEach(function (m) { namen[m.name.toLowerCase()] = 1; });
+      var frei = st.freunde.filter(function (f) { return !namen[f.name.toLowerCase()]; });
+      var h = '<div class="dlg-titel">' + esc(g.name) + '</div><div class="dlg-sub" style="margin:2px 0 12px">' + g.mitglieder.length + ' von 12 Mitgliedern</div>';
+      if (eig) h += '<form class="gr-umb" data-gr="umbenennen"><input class="gr-name" id="gr-neuname" type="text" maxlength="30" value="' + esc(g.name) + '" aria-label="Gruppenname"><button class="btn btn-ghost" type="submit">Umbenennen</button></form>';
+      h += '<div class="dlg-gruppe gr-liste">' + g.mitglieder.map(function (m) {
+        return '<div class="gr-mitglied">' + LghKonto.avatar('avatar', m.name, m.anzeige, m.av) + '<span class="gr-wname"><b>' + esc(m.anzeige) + (m.ich ? ' (du)' : '') + '</b><small>@' + esc(m.name) + (m.besitzer ? ' · hat die Gruppe angelegt' : '') + '</small></span>' +
+          (eig && !m.ich ? '<button type="button" class="btn btn-ghost fr-btn leise" data-gr="raus" data-n="' + esc(m.name) + '">Entfernen</button>' : '') + '</div>';
+      }).join('') + '</div>';
+      if (eig) h += frei.length && g.mitglieder.length < 12
+        ? '<form class="gr-umb" data-gr="hinzu" style="margin-top:12px"><select class="gr-name" id="gr-hinzu" aria-label="Freund hinzufügen">' + frei.map(function (f) { return '<option value="' + esc(f.name) + '">' + esc(anz(f)) + ' (@' + esc(f.name) + ')</option>'; }).join('') + '</select><button class="btn btn-ghost" type="submit">Hinzufügen</button></form>'
+        : '<div class="dlg-sub" style="margin-top:12px">' + (g.mitglieder.length >= 12 ? 'Die Gruppe ist voll.' : 'Alle deine Freunde sind schon dabei.') + '</div>';
+      h += '<div class="fr-meldung fehler" id="gr-meld" role="status"></div><div class="dlg-fuss gr-fuss">' +
+        '<button type="button" class="btn btn-ghost gefahr" data-gr="verlassen">' + (st.frage === 'verlassen' ? 'Wirklich verlassen?' : 'Gruppe verlassen') + '</button>' +
+        (eig ? '<button type="button" class="btn btn-ghost gefahr" data-gr="loeschen">' + (st.frage === 'loeschen' ? 'Wirklich löschen?' : 'Gruppe löschen') + '</button>' : '') +
+        '<button type="button" class="btn btn-primary" data-zu style="margin-left:auto">Fertig</button></div>';
+      hinter.firstChild.innerHTML = h;
+    }
+    function neu(g) {
+      st.g = g; st.frage = '';
+      var t = document.getElementById('ch-status'); if (t) t.textContent = g.mitglieder.length + ' Mitglieder';
+      var nm = document.getElementById('ch-gname'); if (nm) nm.textContent = g.name;
+      if (chat && chat.gruppe === g.id) chat.anzeige = g.name;
+      zeichne();
+    }
+    function fehl(res) { var m = document.getElementById('gr-meld'); if (m) m.textContent = grFehler(res); }
+    hinter = grDialog('dlg-gr', '<div class="fr-leer">Lädt …</div>', function (e, zu) {
+      var b = e.target.closest ? e.target.closest('[data-gr]') : null;
+      if (!b || !st.g || b.tagName === 'FORM' || b.disabled) return;
+      var a = b.getAttribute('data-gr');
+      if (a === 'raus') { b.disabled = true; LghKonto.gruppen.entfernen(id, b.getAttribute('data-n')).then(function (r) { if (r.ok) neu(r.j.gruppe); else { fehl(r); b.disabled = false; } }); return; }
+      if (a === 'verlassen' || a === 'loeschen') {
+        if (st.frage !== a) { st.frage = a; zeichne(); setTimeout(function () { if (st.frage === a && hinter.isConnected) { st.frage = ''; zeichne(); } }, 5000); return; }
+        b.disabled = true;
+        LghKonto.gruppen[a](id).then(function (r) {
+          if (r.ok || r.status === 404) { zu(); chatStopp(); location.hash = '#freunde'; } else { fehl(r); b.disabled = false; }
+        });
+      }
+    });
+    if (!hinter) return;
+    hinter.addEventListener('submit', function (e) {
+      var f = e.target; e.preventDefault();
+      var a = f.getAttribute('data-gr');
+      if (a === 'umbenennen') LghKonto.gruppen.umbenennen(id, document.getElementById('gr-neuname').value).then(function (r) { if (r.ok) neu(r.j.gruppe); else fehl(r); });
+      else if (a === 'hinzu') LghKonto.gruppen.mitglied(id, document.getElementById('gr-hinzu').value).then(function (r) { if (r.ok) neu(r.j.gruppe); else fehl(r); });
+    });
+    LghKonto.gruppen.details(id).then(function (res) {
+      if (!hinter.isConnected) return;
+      if (!res.ok) { hinter._zu(); return; }
+      neu(res.j.gruppe);
+      LghKonto.freunde.liste().then(function (r) { if (r.ok && hinter.isConnected) { st.freunde = r.j.freunde; zeichne(); } });
+    });
+  }
+
   /* ---------- Chat unter Freunden ---------- */
   /* Eine Unterhaltung pro Freund (#chat/name). Neue Nachrichten werden alle paar Sekunden abgeholt, solange der Tab sichtbar ist.
      Nur Text; Links werden nicht angeklickbar gemacht. Der Server prüft alles noch einmal (nur Freunde, 500 Zeichen, Tempo). */
@@ -1118,9 +1240,11 @@
       var t = tagLabel(m.zeit);
       if (t !== tag) { tag = t; h += '<div class="ch-tag"><span>' + esc(t) + '</span></div>'; }
       var davor = chat.msgs[i - 1], danach = chat.msgs[i + 1];
-      var gruppeStart = !davor || davor.von !== m.von || m.zeit - davor.zeit > 300 || tagLabel(davor.zeit) !== t;
-      var gruppeEnde = !danach || danach.von !== m.von || danach.zeit - m.zeit > 300 || tagLabel(danach.zeit) !== t;
+      var wer = function (x) { return chat.gruppe && x.von !== 'ich' ? 'er:' + x.name : x.von; };   // in Gruppen sind mehrere andere Absender möglich
+      var gruppeStart = !davor || wer(davor) !== wer(m) || m.zeit - davor.zeit > 300 || tagLabel(davor.zeit) !== t;
+      var gruppeEnde = !danach || wer(danach) !== wer(m) || danach.zeit - m.zeit > 300 || tagLabel(danach.zeit) !== t;
       h += '<div class="ch-msg ' + (m.von === 'ich' ? 'ich' : 'er') + (gruppeStart ? ' start' : '') + (gruppeEnde ? ' ende' : '') + (chat.offen === m.id ? ' offen' : '') + '" data-id="' + m.id + '">' +
+        (chat.gruppe && m.von !== 'ich' && gruppeStart ? '<div class="ch-absender">' + esc(m.anzeige || m.name) + '</div>' : '') +
         einlBlase(m) +
         (gruppeEnde ? '<div class="ch-zeit">' + uhrzeit(m.zeit) + '</div>' : '') +
         (m.von === 'ich' && chat.offen === m.id ? '<button type="button" class="ch-weg" data-ch="weg" data-id="' + m.id + '">Nachricht löschen</button>' : '') + '</div>';
@@ -1191,7 +1315,7 @@
   }
   function chatNichtMehr() {
     var w = document.querySelector('.ch-wrap');
-    if (w) w.innerHTML = '<div class="ch-fehl"><h1 class="fr-titel">Chat</h1><div class="fr-leer">Diesen Chat gibt es nicht oder ihr seid nicht mehr befreundet.</div><a class="btn btn-ghost" href="#freunde">Zu den Freunden</a></div>';
+    if (w) w.innerHTML = '<div class="ch-fehl"><h1 class="fr-titel">Chat</h1><div class="fr-leer">' + (chat && chat.gruppe ? 'Diese Gruppe gibt es nicht (mehr) oder du bist nicht mehr dabei.' : 'Diesen Chat gibt es nicht oder ihr seid nicht mehr befreundet.') + '</div><a class="btn btn-ghost" href="#freunde">Zu den Freunden</a></div>';
     chatStopp();
   }
   document.addEventListener('visibilitychange', function () { if (!document.hidden && chat) { chat.aktiv = Date.now(); chatTick(); } });
@@ -1199,7 +1323,23 @@
     chatStopp();
     inhalt.innerHTML = '<div class="ch-wrap"><div class="fr-leer">Lädt …</div></div>';
     if (!window.LghKonto || !LghKonto.angemeldet()) { inhalt.querySelector('.ch-wrap').innerHTML = '<div class="fr-leer">Melde dich an, um zu chatten.</div>'; return; }
-    var c = chat = { name: name, msgs: [], letzte: 0, mehr: false, nah: true, aktiv: Date.now(), zaehler: 0, offen: 0, timer: null, lauf: false, tot: false };
+    var gm = /^#g(\d{1,9})$/.exec(name);   // "#g12" = Gruppenchat
+    var c = chat = { name: name, gruppe: gm ? Number(gm[1]) : 0, msgs: [], letzte: 0, mehr: false, nah: true, aktiv: Date.now(), zaehler: 0, offen: 0, timer: null, lauf: false, tot: false };
+    if (gm) {
+      LghKonto.gruppen.details(c.gruppe).then(function (res) {
+        if (chat !== c) return;
+        if (res.status === 404) return chatNichtMehr();
+        if (!res.ok) { inhalt.querySelector('.ch-wrap').innerHTML = '<div class="fr-leer">Der Gruppenchat konnte gerade nicht geladen werden.</div><a class="btn btn-ghost" href="#freunde">Zu den Freunden</a>'; return; }
+        var g = res.j.gruppe; c.anzeige = g.name;
+        var w = inhalt.querySelector('.ch-wrap');
+        w.innerHTML = '<div class="ch-kopf"><a class="ch-zurueck" href="#freunde" aria-label="Zurück zu den Freunden"><svg aria-hidden="true" width="22" height="22"><use href="#i-back"/></svg></a>' +
+          '<button type="button" class="ch-person ch-gruppe" data-ch="gruppeinfo" aria-label="Gruppeninfo">' + LghKonto.avatar('avatar', '#g' + g.id, g.name, null) +
+          '<span class="ch-pname"><b id="ch-gname">' + esc(g.name) + '</b><small id="ch-status">' + g.mitglieder.length + ' Mitglieder</small></span></button>' +
+          '<button type="button" class="btn btn-ghost ch-einladen" data-ch="einladen">Einladen</button></div>' + chatRumpf('Nachricht an die Gruppe');
+        chatLaden(c);
+      });
+      return;
+    }
     LghKonto.freunde.liste().then(function (res) {
       if (chat !== c) return;
       var f = res.ok ? res.j.freunde.filter(function (x) { return x.name.toLowerCase() === name.toLowerCase(); })[0] : null;
@@ -1212,25 +1352,32 @@
       w.innerHTML = '<div class="ch-kopf"><a class="ch-zurueck" href="#freunde" aria-label="Zurück zu den Freunden"><svg aria-hidden="true" width="22" height="22"><use href="#i-back"/></svg></a>' +
         '<a class="ch-person" href="#profil/' + encodeURIComponent(f.name) + '">' + LghKonto.avatar('avatar', f.name, anz(f), f.av) +
         '<span class="ch-pname"><b>' + esc(anz(f)) + '</b><small id="ch-status"></small></span></a>' +
-        '<button type="button" class="btn btn-ghost ch-einladen" data-ch="einladen">Einladen</button></div>' +
-        '<div class="ch-liste" id="ch-liste" role="log" aria-live="polite" aria-label="Nachrichten mit ' + esc(anz(f)) + '"></div>' +
-        '<button type="button" class="ch-neu" id="ch-neu" data-ch="unten" hidden>Neue Nachricht ↓</button>' +
-        '<div class="ch-meld" id="ch-meld" role="status"></div>' +
-        '<form class="ch-form" id="ch-form" novalidate><textarea id="ch-text" rows="1" maxlength="500" placeholder="Nachricht an ' + esc(anz(f)) + '" aria-label="Nachricht" autocomplete="off" enterkeyhint="send"></textarea>' +
-        '<button class="btn btn-primary ch-senden" type="submit">Senden</button></form>';
-      chatHoehe(); chatStatus(f);
-      LghKonto.chat.lesen(c.name, { gelesen: true }).then(function (r) {
-        if (chat !== c) return;
-        if (r.status === 404) return chatNichtMehr();
-        if (!r.ok) { chatMeld('Die Nachrichten konnten nicht geladen werden.', true); }
-        else { c.msgs = r.j.nachrichten; c.mehr = !!r.j.mehr; c.letzte = c.msgs.length ? c.msgs[c.msgs.length - 1].id : 0; }
-        chatZeichne(); chatUnten(false);
-        if (c.letzte) abzeichenNeu();
-        c.timer = setTimeout(chatTick, 3000);
-      });
-      var ta = document.getElementById('ch-text');
-      if (ta && matchMedia('(hover: hover)').matches) ta.focus();
+        '<button type="button" class="btn btn-ghost ch-einladen" data-ch="einladen">Einladen</button></div>' + chatRumpf('Nachricht an ' + anz(f), anz(f));
+      chatStatus(f);
+      chatLaden(c);
     });
+  }
+  // Liste, Eingabefeld und Meldungszeile (gleich für Freunde und Gruppen)
+  function chatRumpf(platzhalter, fuerName) {
+    return '<div class="ch-liste" id="ch-liste" role="log" aria-live="polite" aria-label="' + esc(fuerName ? 'Nachrichten mit ' + fuerName : 'Nachrichten der Gruppe') + '"></div>' +
+      '<button type="button" class="ch-neu" id="ch-neu" data-ch="unten" hidden>Neue Nachricht ↓</button>' +
+      '<div class="ch-meld" id="ch-meld" role="status"></div>' +
+      '<form class="ch-form" id="ch-form" novalidate><textarea id="ch-text" rows="1" maxlength="500" placeholder="' + esc(platzhalter) + '" aria-label="Nachricht" autocomplete="off" enterkeyhint="send"></textarea>' +
+      '<button class="btn btn-primary ch-senden" type="submit">Senden</button></form>';
+  }
+  function chatLaden(c) {
+    chatHoehe();
+    LghKonto.chat.lesen(c.name, { gelesen: true }).then(function (r) {
+      if (chat !== c) return;
+      if (r.status === 404) return chatNichtMehr();
+      if (!r.ok) { chatMeld('Die Nachrichten konnten nicht geladen werden.', true); }
+      else { c.msgs = r.j.nachrichten; c.mehr = !!r.j.mehr; c.letzte = c.msgs.length ? c.msgs[c.msgs.length - 1].id : 0; }
+      chatZeichne(); chatUnten(false);
+      if (c.letzte) abzeichenNeu();
+      c.timer = setTimeout(chatTick, 3000);
+    });
+    var ta = document.getElementById('ch-text');
+    if (ta && matchMedia('(hover: hover)').matches) ta.focus();
   }
   function chatMeld(t, fehler) { var m = document.getElementById('ch-meld'); if (m) { m.textContent = t || ''; m.className = 'ch-meld' + (fehler ? ' fehler' : ''); } }
   function chatWachsen(ta) { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 130) + 'px'; }
@@ -1269,6 +1416,7 @@
     if (b && chat) {
       var a = b.getAttribute('data-ch');
       if (a === 'unten') { chatUnten(false); b.hidden = true; return; }
+      if (a === 'gruppeinfo') { gruppeInfo(chat.gruppe); return; }
       if (a === 'einladen') {
         var ce = chat;
         einladenDialog(ce.name, ce.anzeige || ce.name, function (res) { if (chat !== ce) return; chatNeue({ ok: true, j: { nachrichten: [res.j.nachricht] } }); chatUnten(false); });
@@ -1538,6 +1686,15 @@
       if (String(ansichtKey).indexOf('chat|') === 0) ansichtKey = null;   // Chat immer frisch aufbauen
       zeigeAnsicht('chat|' + cn.toLowerCase(), function () { renderChat(cn); }); renderSide(null, true);
       document.title = 'Chat – Leif Game Hub';
+      window.scrollTo(0, 0);
+      return;
+    }
+    var grm = /^#gruppe\/(\d{1,9})$/.exec(location.hash);
+    if (grm) {
+      body.setAttribute('data-view', 'chat');
+      if (String(ansichtKey).indexOf('chat|') === 0) ansichtKey = null;   // Gruppenchat immer frisch aufbauen
+      zeigeAnsicht('chat|#g' + grm[1], function () { renderChat('#g' + grm[1]); }); renderSide(null, true);
+      document.title = 'Gruppe – Leif Game Hub';
       window.scrollTo(0, 0);
       return;
     }

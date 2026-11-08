@@ -141,6 +141,17 @@ Im Chat (oben rechts) und in der Freundesliste gibt es **Einladen**: man wählt 
 
 **Sortierung** (Auswahl neben den Kategorien, wird auf dem Gerät gemerkt): Empfohlen (Reihenfolge in `games.json`, Favoriten zuerst), A–Z (Favoriten zuerst), Zuletzt gespielt, Meine Spielzeit, Beste Bewertung (`GET /api/bewertungen`: Durchschnitt und Anzahl aller Spiele), Zuletzt aktualisiert, Neueste Spiele. Nur bei Empfohlen und A–Z stehen Favoriten oben; Spiele ohne „Spielen“ (Bald, Wartung) stehen sonst immer hinten. Zuletzt gespielt, Spielzeit und Bewertung brauchen das Konto.
 
+## Chat-Gruppen
+
+Auf der Freunde-Seite gibt es den Abschnitt **Gruppen** mit **Neue Gruppe** (Name und Freunde auswählen). Der Gruppenchat (`#gruppe/<id>`) funktioniert wie der Freunde-Chat (neue Nachrichten alle paar Sekunden, eigene löschen, Einladungskarten), zeigt aber den Absender über den Nachrichten; ungelesene Gruppennachrichten zählen im Abzeichen am Freunde-Knopf mit, und im Spiel erscheint dieselbe kleine Karte mit „Antworten“ („Name: Text“). Tippen auf den Gruppennamen öffnet die Gruppeninfo.
+
+Regeln (Server: `src/gruppen.js`, Tabellen `chat_groups`, `chat_group_members`, `chat_group_messages`):
+- Wer die Gruppe anlegt, ist **Besitzer**: nur er fügt Mitglieder hinzu (nur eigene bestätigte Freunde), entfernt sie, benennt um oder löscht die Gruppe.
+- Jedes Mitglied kann jederzeit **austreten**. Verlässt der Besitzer die Gruppe, wird das am längsten dabeigebliebene Mitglied Besitzer; ist niemand mehr drin, verschwindet die Gruppe mit allen Nachrichten.
+- Endet die Freundschaft zwischen Besitzer und Mitglied, ist das Mitglied draußen. Beim Löschen eines Kontos tritt es aus allen Gruppen aus, seine Nachrichten verschwinden.
+- Grenzen: 12 Mitglieder pro Gruppe, 20 Gruppen pro Konto, 10 neue Gruppen pro Stunde, 500 Nachrichten pro Gruppe, 500 Zeichen pro Nachricht, gemeinsames Tempolimit mit dem Freunde-Chat (30 Nachrichten pro Minute). Wer neu in eine Gruppe kommt, sieht alte Nachrichten, sie zählen aber nicht als ungelesen.
+- API: `GET/POST /api/gruppen`, `GET /api/gruppen/<id>`, `POST …/<id>/mitglied|entfernen|umbenennen|verlassen|loeschen`, `GET/POST …/<id>/chat` (und `…/chat/loeschen`). Im Client steht `#g<id>` an der Stelle des Freundesnamens (`LghKonto.chat.lesen('#g12')`).
+
 ## Konten, Freunde und mitgeschriebene Spielstände
 
 Der Hub ist ohne Konto gesperrt (Name und Passwort, keine E-Mail). Konten, Freunde und Spielstand-Verlauf liegen in einer Cloudflare-D1-Datenbank `lgh`; der Server ist `src/worker.js` (Logik in `src/konten.js`, Tabellen in `src/schema.js`, Tests mit `npm test`). Er läuft im selben Worker wie die statischen Dateien, nur `/api/*` kommt an (`wrangler.jsonc`, `run_worker_first`). Die Oberfläche ist `public/konto.js` (Anmeldung, Konto-Dialog, Herzschlag, stilles Mitschreiben) und der Abschnitt "Freunde" in `public/app.js` (Route `#freunde`).

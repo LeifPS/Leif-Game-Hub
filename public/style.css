@@ -1010,3 +1010,30 @@ body.pseudo-voll .voll-aus { display: flex; }
 .sortierung select { appearance: none; -webkit-appearance: none; height: 34px; padding: 0 34px 0 14px; border-radius: 17px; border: 1px solid var(--line-2); background: var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239aa4b8' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 13px center; color: var(--text); font: inherit; font-size: 13.5px; cursor: pointer; }
 .sortierung select:hover { border-color: rgba(255, 255, 255, .28); }
 .sortierung select:focus-visible { outline: 2px solid var(--accent-hi); outline-offset: 2px; }
+
+/* Chat-Gruppen */
+.fr-gr-kopf { display: flex; align-items: center; gap: 0; }
+.fr-gr-kopf .fr-gr-neu { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 600; }
+.fr-gr-text { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ch-person.ch-gruppe { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 12px; min-width: 0; cursor: pointer; color: var(--text); border-radius: 12px; padding: 2px 8px 2px 2px; }
+.ch-person.ch-gruppe:hover { background: rgba(255, 255, 255, .05); }
+.ch-person.ch-gruppe:focus-visible { outline: 2px solid var(--accent-hi); outline-offset: 2px; }
+.ch-person.ch-gruppe .avatar { width: 40px; height: 40px; }
+.ch-pname { text-align: left; }
+.ch-absender { margin: 0 0 2px 12px; font-size: 12px; color: var(--muted); }
+.dlg-gr .gr-name { width: 100%; box-sizing: border-box; height: 42px; margin: 0 0 12px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--text); font: inherit; font-size: 15px; }
+.dlg-gr .gr-umb { display: flex; gap: 8px; align-items: flex-start; }
+.dlg-gr .gr-umb .gr-name { margin-bottom: 12px; flex: 1; min-width: 0; }
+.dlg-gr .gr-umb .btn { height: 42px; flex: none; }
+.dlg-gr .gr-liste { max-height: 40dvh; overflow-y: auto; }
+.gr-wahl, .gr-mitglied { display: flex; align-items: center; gap: 12px; padding: 10px 14px; min-height: 52px; }
+.gr-wahl { cursor: pointer; }
+.gr-wahl:hover { background: rgba(255, 255, 255, .05); }
+.gr-wahl + .gr-wahl, .gr-mitglied + .gr-mitglied { border-top: 1px solid var(--line); }
+.gr-wahl input { width: 18px; height: 18px; flex: none; accent-color: var(--accent); }
+.gr-wahl .avatar, .gr-mitglied .avatar { width: 34px; height: 34px; flex: none; }
+.gr-wname { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.gr-wname b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gr-wname small { font-size: 12px; color: var(--muted); }
+.dlg-gr .dlg-fuss { display: flex; align-items: center; margin-top: 12px; }
+.dlg-gr .gr-fuss { gap: 8px; flex-wrap: wrap; justify-content: flex-start; }

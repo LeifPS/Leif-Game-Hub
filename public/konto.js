@@ -816,7 +816,18 @@
     entfernen: function (n) { return freundePost('entfernen', n); },
   };
   /* Chat unter Freunden: lesen (nach = nur Neueres, vor = Älteres, gelesen = als gelesen markieren), senden, eigene Nachricht löschen */
-  function chatPfad(n) { return '/api/chat/' + encodeURIComponent(n); }
+  // "#g12" meint die Gruppe 12 (Gruppenchat), alles andere einen Freund
+  function chatPfad(n) { var g = /^#g(\d{1,9})$/.exec(n); return g ? '/api/gruppen/' + g[1] + '/chat' : '/api/chat/' + encodeURIComponent(n); }
+  var gruppen = {
+    liste: function () { return api('GET', '/api/gruppen'); },
+    details: function (id) { return api('GET', '/api/gruppen/' + id); },
+    anlegen: function (name, mitglieder) { return api('POST', '/api/gruppen', { name: name, mitglieder: mitglieder }); },
+    mitglied: function (id, name) { return api('POST', '/api/gruppen/' + id + '/mitglied', { name: name }); },
+    entfernen: function (id, name) { return api('POST', '/api/gruppen/' + id + '/entfernen', { name: name }); },
+    umbenennen: function (id, name) { return api('POST', '/api/gruppen/' + id + '/umbenennen', { name: name }); },
+    verlassen: function (id) { return api('POST', '/api/gruppen/' + id + '/verlassen', {}); },
+    loeschen: function (id) { return api('POST', '/api/gruppen/' + id + '/loeschen', {}); },
+  };
   var chat = {
     lesen: function (n, o) {
       o = o || []; var q = [];
@@ -968,7 +979,7 @@
     bereit: bereit, name: function () { return konto ? konto.name : null; }, anzeige: anzeigeName, angemeldet: function () { return !!konto; },
     stand: stand, beimVerlassen: beimVerlassen, spiel: setzeSpiel, raum: setzeRaum,
     einladung: einladung, chatKurz: chatKurz, raumFuer: raumFuer, spielNamen: function (f) { spielNamen = f; },
-    freunde: freunde, chat: chat, setzeOffene: setzeOffene, avatarStil: avatarStil, avatar: avatarHtml, dialog: dialog,
+    freunde: freunde, chat: chat, gruppen: gruppen, setzeOffene: setzeOffene, avatarStil: avatarStil, avatar: avatarHtml, dialog: dialog,
     bewertungen: function () { return api('GET', '/api/bewertungen'); },
     bewertung: { laden: function (id) { return api('GET', '/api/bewertung/' + encodeURIComponent(id)); }, setzen: function (id, sterne) { return api('POST', '/api/bewertung/' + encodeURIComponent(id), { sterne: sterne }); } },
     favoriten: { laden: function () { return api('GET', '/api/favoriten'); }, setzen: function (id, an) { return api('POST', '/api/favoriten', { spiel: id, an: !!an }); } },
