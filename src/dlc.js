@@ -13,6 +13,13 @@ export const KATALOG = [
     text: 'Zwei neue ultrastarke Waffen (Level 88 und 89), Runenwaffen mit 50 % mehr Schaden, die zufällig dabei sind, und das neue Verzauberungs-System: Flamme, Frost, Glück und Blitz.',
     preis: 500,
   },
+  {
+    id: 'brutjagd-welt3',
+    spiel: 'brutjagd',
+    name: 'Welt 3: Das Jenseits',
+    text: 'Eine extrem schwere dritte Welt hinter dem Siegel von Welt 2: drei neue Gebiete mit neuen Bossen, Eiern und Haustieren und je einer eigenen Regel, die dich zum Planen zwingt.',
+    preis: 500,
+  },
 ];
 
 export const GESCHENK = 1000;
