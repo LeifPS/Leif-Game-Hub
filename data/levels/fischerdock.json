@@ -1,15 +1,15 @@
 {
 "c69153cb9508": "skip",
 "46749bce9750": "build",
-"dbd2dd49f4c1": "minor",
-"292938d59b61": "minor",
+"dbd2dd49f4c1": "build",
+"292938d59b61": "build",
 "ffa25dee9e4d": "minor",
 "5442545985fd": "minor",
-"c02f70e23f3b": "patch",
+"c02f70e23f3b": "minor",
 "d9cd07fe1249": "minor",
-"88951cccd4d0": "build",
+"88951cccd4d0": "minor",
 "4b4e3c92d908": "build",
-"03e62e4ef79b": "patch",
-"c21c6dc8d2f0": "patch",
-"23537f0365e3": "minor"
+"03e62e4ef79b": "build",
+"c21c6dc8d2f0": "build",
+"23537f0365e3": "build"
 }

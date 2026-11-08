@@ -6,6 +6,7 @@ Aufruf:
   python3 tools/changelog.py --freeze        Einstufung aller noch nicht eingefrorenen Commits festschreiben
   python3 tools/changelog.py --cache DIR     vorhandene Klone in DIR wiederverwenden (DIR/<repo>.git)
   python3 tools/changelog.py --force         alles neu berechnen, auch wenn es keine neuen Commits gibt
+  python3 tools/changelog.py --freeze --force --reklassify   alte Historie nach geänderten Regeln neu einstufen (einmalig)
 
 Version: Major.Großes.Kleines.Patch (alle Spiele starten bei 0.1.0.0 = Beta).
   Major          riesige Hauptversion / Wechsel zur Veröffentlichung (nur von Hand: "Major:" oder offiziell_ab)
@@ -18,9 +19,16 @@ nur die Namen für Menschen haben sich geändert: Großes Update = minor, Kleine
 Einstufung eines Commits (erste passende Regel gewinnt):
   1. eingefroren: Stufe steht in data/levels/<id>.json (alte Historie, ändert sich nie wieder)
   2. Marker am Anfang der Commit-Nachricht: "Großes Update: Text" / "Kleines Update: ..." / "Patch: ..." / "Major: ..."
-     (alte Schreibweisen "Minor:" und "Build:" gelten weiter; "Patch:" meint seit November 2026 die unterste Stufe)
+     ("Patch:" meint seit November 2026 die unterste Stufe; die alten "Minor:"/"Build:" zählen nicht mehr als Vorgabe,
+     dann entscheiden die Regeln unter 3.)
      oder eine ausgeschriebene Nummer "1.2.0.0: Text" (überschreibt die Berechnung)
-  3. Regeln nach Schlüsselwörtern und Länge der Nachricht (Upload-Commits nach Zeilenumfang)
+  3. Regeln nach Spielerumfang (nicht nach Code, Aufwand oder Länge der Nachricht):
+       Patch          alles, was der Spieler kaum merkt: Technik, Tests, Doku, Admin, "noch nicht freigeschaltet", sofortiges
+                      Aktualisieren, reine Optik/Feinschliff, einzelne Fehlerbehebungen, Zahlen/Texte
+       Kleines Update sichtbare, aber kleine Verbesserungen: Balance, kleine Ergänzungen, Hilfsmittel (Spielstand, Konto,
+                      Einstellungen), wenige neue Dinge, Neues mit Kleinmengen, mehrere Fehler zugleich
+       Großes Update  nur wirklich Neues: neuer Modus, neue Box/Pack/Event/Gebiet/Welt/Boss/Waffen, größere neue Mechanik
+     Upload-Commits ("Update hochgeladen") sind höchstens Kleines Update (ab 500 Zeilen), sonst Patch.
 """
 import argparse
 from datetime import datetime
@@ -60,60 +68,80 @@ def marker_stufe(name):
 MARKER_NUM = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)\.(\d+)\s*[:\-–—]\s*(.*)$", re.S)
 
 REVERT = re.compile(r"^revert\b", re.I)
-FIX = re.compile(r"\b(fix|fehler|bug|bugfix|bugfixing|behoben|korrigiert|repariert|verhindert|hotfix|crash|absturz)\b", re.I)
-# starke Signale für neue Inhalte
-STRONG = re.compile(
-    r"\b(neu|neue|neuer|neues|neuen|neuem|hinzugefügt|hinzugefuegt|eingebaut|eingeführt|eingefuehrt|etappe|schritt|"
-    r"spielmodus|modus|event|editor|boss|bosse|saison|mehrspieler|multiplayer|marktplatz|kapitel)\b",
+FIX = re.compile(r"\b(fix|fixes|fehler|bug|bugfix|bugfixing|behoben|korrigiert|repariert|verhindert|hotfix|crash|absturz)\b", re.I)
+
+# Maßstab: Wie viel ist für den SPIELER neu? Nicht Code, nicht Aufwand, nicht Länge der Nachricht.
+# 1. Unsichtbares (Technik, Tests, Doku, Admin, noch nicht freigeschaltet, sofort aktualisieren ...)  -> Patch
+INVISIBLE = re.compile(
+    r"\b(test|tests|getestet|verifiziert|readme|doku|dokumentation|kommentar|refactor\w*|intern\w*|cache|caching|sync|"
+    r"synchron\w*|echtzeit|performance|leistung|lazy|server|absicherung|protokoll|forensisch\w*|debug\w*|log|logs|"
+    r"admin|admin-only|admin-button|prototyp|vorerst|"
+    r"aktualisiert sich|aktualisiert|aktualisierung|sofort|automatisch\w*|im hintergrund|"
+    r"wartung\w*|migration|migriert|aufgeräumt|aufgeraeumt|vereinfacht|typo|tippfehler|rechtschreib\w*|wortlaut|"
+    r"beschriftung|umbenannt|favicon|manifest|stückweise|gestaffelt|lazy loading|cloudflare|workers|konfiguration|"
+    r"plan|wiki|datenstruktur|datenmodell|ki-effekte?|effekt-hooks|kalibriert|berechnet|hooks?)\b"
+    r"|nicht (?:kaufbar|freigeschaltet|sichtbar)|noch nicht (?:kaufbar|freigeschaltet)|\bpx\b|\d\s?%|\bci\b",
     re.I,
 )
-# schwächere Signale, zählen nur bei langen Nachrichten
-WEAK = re.compile(
-    r"\b(ergänzt|ergaenzt|erweitert|umgebaut|überarbeitet|ueberarbeitet|komplett|tutorial|shop|quest|quests|level|gebiet|"
-    r"system|rangliste|handel|aufträge|forschung|abteilung|ansicht|menü|menue|kampf|musik|sound)\b",
+# 2. Nur Optik/Feinschliff -> Patch (außer "komplett neu" / "Design-Update", dann höchstens Kleines)
+KOSMETIK = re.compile(
+    r"\b(polish\w*|politur|feinschliff|optik|farbe|farben|schrift|abstand|symbol|icon|icons|badge|badges|animation\w*|"
+    r"glanz|schatten|design|layout|gegliedert|aussehen|handgezeichnet\w*|kleiner|größer|groesser|dezent\w*|ui|oberfläche)\b",
     re.I,
 )
-PATCH = re.compile(
-    r"\b(angepasst|balance|tempo|schneller|langsamer|stärker|staerker|schwächer|schwaecher|reduziert|erhöht|erhoeht|"
-    r"verbessert|optimiert|entfernt|rückgängig|rueckgaengig|zurückgenommen|zurueckgenommen|wieder|statt|"
-    r"nicht mehr|nur noch|kein|keine|sofort|gleich|geändert|geaendert|umgestellt|vereinfacht|jetzt)\b",
+# Verwaltung des Kontos/Spielstands: nützlich, aber kein neues Spielerlebnis -> höchstens Kleines
+HILFSMITTEL = re.compile(
+    r"\b(spielstand|sicherung|backup|konto|account|accounts|login|passwort|profil|einstellung\w*|steuerung|filter|"
+    r"suche|sortier\w*|tastatur|touch|mobile|qol|komfort)\b",
     re.I,
 )
-BUILD = re.compile(
-    r"\b(test|typo|tippfehler|readme|doku|kommentar|favicon|icon|manifest|abstand|kleiner|größer|groesser|farbe|"
-    r"schrift|umbenannt|aufgeräumt|aufgeraeumt|wortlaut|beschriftung|text|texte)\b|\bpx\b|\d\s?%",
+# 3. Wirklich Neues für den Spieler (Großes Update): neue Inhalte oder ein neuer Spielmodus / neue Mechanik
+INHALT = (r"modus|spielmodus|modi|box|boxen|pack|packs|event|events|gebiet|gebiete|welt|welten|boss|bosse|bälle|skins?|"
+          r"waffen?|gegner|kapitel|saison|mehrspieler|multiplayer|system|mechanik|fähigkeit\w*|charakter\w*|inseln?|level|"
+          r"karten|sorten|rezepte|spiel|liga|ligen|turnier\w*|cup|sbc|aufgaben|quests?|marktplatz|handel|tauschen")
+NEU_INHALT = re.compile(r"\b(neu\w*|komplett neu\w*|neubau|hinzugefügt|hinzugefuegt|eingebaut|eingeführt|eingefuehrt)\b.{0,50}\b(" + INHALT + r")\b"
+                        r"|\b(" + INHALT + r")\b[^:]{0,30}\bkomplett neu\b|\bneuer?\s+(?:spiel)?modus\b|\b(?:etappe|schritt|phase)\s+\d", re.I)
+# Kleine Mengen oder Nebensächliches bleiben unter "Großes Update"
+KLEIN_INHALT = re.compile(
+    r"\b(?:ein|eine|einen|zwei|drei|[1-3])\s+neue\w*\b|\b(wochenpass|nametag\w*|logos?|fotos?|commands?|erfolg\w*|abzeichen|"
+    r"rating|ratings|kader|karte|bild|bilder|photos?|position\w*|untertab|tab|ansicht|tabelle|balanc\w*|odds|abgestimmt|"
+    r"stellschrauben|sim)\b", re.I)
+# 4. Sichtbare, aber kleinere Verbesserungen -> Kleines Update
+SICHTBAR = re.compile(
+    r"\b(neu|neue|neuer|neues|neuen|neuem|ergänzt|ergaenzt|erweitert|überarbeitet|ueberarbeitet|umgebaut|balancing|balance|"
+    r"abgestimmt|angepasst|angehoben|gesenkt|schneller|langsamer|stärker|staerker|schwächer|schwaecher|reduziert|erhöht|"
+    r"erhoeht|verbessert|ersetzt|neu designt|nerf|buff|buffs|kosten|preis|preise|belohnung\w*|odds|chancen)\b",
     re.I,
 )
+
+
+def anzahl_punkte(msg: str) -> int:
+    return len([p for p in re.split(r"[;,]| und |\+", msg) if p.strip()])
 
 
 def level_by_text(msg: str) -> str:
-    n = len(msg)
-    items = len([p for p in re.split(r"[;,]| und |\+", msg) if p.strip()])
+    """major gibt es nie automatisch; minor = Großes Update, patch = Kleines Update, build = Patch."""
     if REVERT.match(msg):
         return "build"
-    if FIX.search(msg):
-        return "patch" if n >= 30 else "build"
-    if STRONG.search(msg) and (n >= 65 or items >= 4):
-        return "minor"
-    if items >= 5 or n >= 140:
-        return "minor"
-    if WEAK.search(msg) and n >= 100 and items >= 3:
-        return "minor"
-    if PATCH.search(msg):
-        return "patch" if n >= 40 else "build"
-    if BUILD.search(msg):
+    if INVISIBLE.search(msg):
         return "build"
-    if n >= 60:
+    if FIX.search(msg):
+        return "patch" if anzahl_punkte(msg) >= 4 else "build"
+    kosmetisch = bool(KOSMETIK.search(msg))
+    if NEU_INHALT.search(msg) and not KLEIN_INHALT.search(msg) and not HILFSMITTEL.search(msg):
+        # reine Optik-Nachricht ohne neuen Inhalt wird nicht zum Großen Update
+        if not kosmetisch or re.search(r"\b(modus|spielmodus|box|boxen|pack|packs|event|gebiet|gebiete|welt|boss|waffen?|skins?|bälle|kapitel|saison)\b", msg, re.I):
+            return "minor"
+    if kosmetisch and not re.search(r"komplett neu|neu designt|design-update|großes design", msg, re.I):
+        return "build"
+    if SICHTBAR.search(msg) or NEU_INHALT.search(msg):
         return "patch"
     return "build"
 
 
 def level_by_lines(changed: int) -> str:
-    if changed >= 400:
-        return "minor"
-    if changed >= 40:
-        return "patch"
-    return "build"
+    # Hochgeladene Dateien verraten nichts über den Spielerumfang: nie "Großes Update", nur sehr viele Zeilen = Kleines
+    return "patch" if changed >= 500 else "build"
 
 
 # ---------- Git ----------
@@ -188,7 +216,7 @@ def vstr(v):
     return ".".join(str(x) for x in v)
 
 
-def process_game(game, base: Path, freeze: bool):
+def process_game(game, base: Path, freeze: bool, reklass: bool = False):
     gid, repo = game["id"], game["repo"]
     path = ensure_clone(repo, base)
     commits = read_commits(path)
@@ -212,10 +240,10 @@ def process_game(game, base: Path, freeze: bool):
         sha12, subject = c["sha"][:12], c["subject"]
         text, level, explicit = subject, None, None
 
-        if sha12 in frozen:
+        if sha12 in frozen and frozen[sha12] == "skip":
+            continue
+        if sha12 in frozen and not reklass:
             level = frozen[sha12]
-            if level == "skip":
-                continue
         else:
             if IGNORE.match(subject):
                 if freeze:
@@ -226,7 +254,13 @@ def process_game(game, base: Path, freeze: bool):
                 explicit = tuple(int(m_num.group(i)) for i in range(1, 5))
                 text = m_num.group(5).strip()
             elif m_art:
-                level, text = marker_stufe(m_art.group(1)), m_art.group(2).strip()
+                text = m_art.group(2).strip()
+                # Die alten Marker "Minor:"/"Build:" sind nur ein Hinweis und wurden oft zu hoch gesetzt:
+                # sie zählen nicht mehr, die Regeln nach Spielerumfang entscheiden. Die neuen Namen gelten fest.
+                if m_art.group(1).lower() in ("minor", "build"):
+                    level = level_by_text(text)
+                else:
+                    level = marker_stufe(m_art.group(1))
             elif GENERIC.match(subject):
                 lines = changed_lines(path, c["sha"])
                 level = level_by_lines(lines)
@@ -285,6 +319,8 @@ def main():
     ap.add_argument("--freeze", action="store_true", help="Einstufung noch nicht eingefrorener Commits festschreiben")
     ap.add_argument("--cache", help="Ordner mit vorhandenen Klonen (<repo>.git)")
     ap.add_argument("--only", help="nur dieses Spiel (id)")
+    ap.add_argument("--reklassify", action="store_true",
+                    help="eingefrorene Stufen mit den aktuellen Regeln neu berechnen (nur mit --freeze, einmalig nach Regeländerung)")
     ap.add_argument("--force", action="store_true", help="alles neu berechnen, auch ohne neue Commits")
     args = ap.parse_args()
 
@@ -308,7 +344,7 @@ def main():
             print(f"{g['id']:16} unverändert")
             continue
         try:
-            data = process_game(g, base, args.freeze)
+            data = process_game(g, base, args.freeze, args.reklassify)
         except Exception as e:  # ein kaputtes Repo darf die anderen nicht blockieren
             print(f"WARNUNG {g['id']}: {e}", file=sys.stderr)
             failed.append(g["id"])

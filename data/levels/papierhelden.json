@@ -1,15 +1,15 @@
 {
 "2ad2696d5824": "skip",
-"dc4c9d402925": "minor",
+"dc4c9d402925": "patch",
 "9e07728a5575": "minor",
-"12e0e1f38862": "minor",
+"12e0e1f38862": "build",
 "e6c7f3e46832": "minor",
-"ceea2d4dee17": "patch",
-"9fd8db00020d": "minor",
-"7f04d62e5960": "patch",
-"714c3c5867a3": "minor",
-"4593538c003f": "patch",
-"9a0a57dbe5c0": "patch",
-"56c22f9b3f36": "patch",
-"c995173cceec": "patch"
+"ceea2d4dee17": "build",
+"9fd8db00020d": "patch",
+"7f04d62e5960": "build",
+"714c3c5867a3": "build",
+"4593538c003f": "build",
+"9a0a57dbe5c0": "build",
+"56c22f9b3f36": "build",
+"c995173cceec": "build"
 }

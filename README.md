@@ -43,11 +43,11 @@ Jedes Spiel hat eine Version **Major.Großes Update.Kleines Update.Patch** (z. B
 | Stelle | Bedeutung |
 | --- | --- |
 | Major | riesige Hauptversionen, z. B. Beta zu Release (`1.0.0.0`) |
-| Großes Update | neuer Inhalt oder neue Funktionen |
-| Kleines Update | Bugfixes, Balancing, kleine Verbesserungen |
+| Großes Update | wirklich Neues für den Spieler: neuer Modus, neue Box/Pack/Event/Gebiet/Welt/Boss/Waffen, größere neue Mechanik |
+| Kleines Update | sichtbare, aber kleine Verbesserungen: Balancing, kleine Ergänzungen, Spielstand/Konto/Einstellungen, mehrere Fehler zugleich |
 | Patch | Kleinkram, Feinschliff, schnelle Hotfixes |
 
-Intern (in `data/levels/*.json`, `public/changelog/*.json`) heißen die Stufen weiter `major` / `minor` / `patch` / `build`; „Großes Update“ ist `minor`, „Kleines Update“ ist `patch`, „Patch“ ist `build`. Nur die Namen für Menschen haben sich im November 2026 geändert, bestehende Einträge und Versionsnummern bleiben unverändert.
+Intern (in `data/levels/*.json`, `public/changelog/*.json`) heißen die Stufen weiter `major` / `minor` / `patch` / `build`; „Großes Update“ ist `minor`, „Kleines Update“ ist `patch`, „Patch“ ist `build`. Maßstab ist immer, **wie viel für den Spieler neu ist**, nicht Code, Aufwand oder Länge der Nachricht: alles, was der Spieler kaum merkt (Technik, Tests, Admin, sofortiges Aktualisieren, reine Optik, einzelne Fehlerbehebungen), ist ein Patch. Die Regeln stehen im Kopf von `tools/changelog.py`. Im November 2026 wurde die gesamte Historie danach neu eingestuft (`--freeze --force --reklassify`); die alten Marker `Minor:`/`Build:` zählen seitdem nicht mehr als Vorgabe.
 
 Alle Spiele starten bei `0.1.0.0` (Beta). Mit `"offiziell_seit": "0.1.0.0"` in `games.json` gilt ein Spiel von Anfang an als offiziell, dann beginnt die Zählung bei `1.1.0.0` (nur mit `python3 tools/changelog.py --force --only <id>` neu berechnen). Angezeigt werden Versionen ohne Nullen am Ende (mindestens zwei Stellen): `0.1.0.0` als `0.1`, `1.2.4.0` als `1.2.4`, `0.1.0.1` bleibt `0.1.0.1`.
 
@@ -76,7 +76,7 @@ Die alten Schreibweisen `Minor:` und `Build:` werden weiter erkannt; `Patch:` me
 
 Für ein privates Spiel-Repo braucht die Action ein Secret `GAME_REPOS_TOKEN` (GitHub-Token mit Lesezugriff auf Inhalte dieses Repos).
 
-Lokal: `python3 tools/changelog.py --freeze` (optional `--force`, `--only <id>`).
+Lokal: `python3 tools/changelog.py --freeze` (optional `--force`, `--only <id>`). Nach einer Regeländerung die Historie einmalig mit `--freeze --force --reklassify` neu einstufen.
 
 ## Logo
 

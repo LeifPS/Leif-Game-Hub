@@ -1,8 +1,8 @@
 {
 "378f664f6b57": "skip",
-"647e110f4ab8": "patch",
-"449d3da75da6": "patch",
-"e39a455931eb": "patch",
-"1125bb1e3a72": "patch",
-"7f42cf8889de": "patch"
+"647e110f4ab8": "build",
+"449d3da75da6": "build",
+"e39a455931eb": "build",
+"1125bb1e3a72": "build",
+"7f42cf8889de": "build"
 }

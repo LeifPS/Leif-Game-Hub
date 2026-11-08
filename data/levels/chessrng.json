@@ -1,13 +1,13 @@
 {
 "9249cf53222d": "skip",
-"16d58a268ed6": "minor",
+"16d58a268ed6": "patch",
 "5c8be5ccbbf6": "build",
-"dd3f6c3cfb7c": "patch",
-"a59c1d9a590e": "patch",
+"dd3f6c3cfb7c": "build",
+"a59c1d9a590e": "build",
 "9bc84c8219f8": "build",
-"5d4b49b624fa": "patch",
-"5db1fdf14fa1": "patch",
-"eb2fae66f784": "patch",
-"be86d1c6534b": "patch",
-"91157f818dbf": "patch"
+"5d4b49b624fa": "build",
+"5db1fdf14fa1": "build",
+"eb2fae66f784": "build",
+"be86d1c6534b": "build",
+"91157f818dbf": "build"
 }
