@@ -288,7 +288,7 @@
     menue.hidden = true; box.hidden = false;
     box.innerHTML = '<p class="konto-regel">Der Hub sichert deine Spielstände laufend auf dem Server (neueste Stände, ein Stand pro Tag der letzten 14 Tage und Stände vor einem plötzlichen Einbruch). Hier holst du einen älteren zurück. Vorher wird der aktuelle Stand gesichert, du kannst also wieder zurück.</p>' +
       '<div class="st-liste" id="st-liste"><div class="st-leer">Lädt …</div></div><div class="st-meld" id="st-meld" role="status"></div>' +
-      '<div class="btn-row"><button class="btn btn-ghost" type="button" data-zurueck>Zurück</button></div>';
+      '<div class="btn-row"><button class="btn btn-primary" type="button" data-alle>Fehlende Stände vom Server holen</button><button class="btn btn-ghost" type="button" data-zurueck>Zurück</button></div>';
     box.querySelector('[data-zurueck]').onclick = function () { box.hidden = true; menue.hidden = false; };
     var liste = box.querySelector('#st-liste'), meld = box.querySelector('#st-meld');
     function msg(t, fehler) { meld.textContent = t || ''; meld.className = 'st-meld' + (fehler ? ' fehler' : ''); }
@@ -342,6 +342,28 @@
       if (btn) btn.disabled = true;
       zurueckholen(id, d).then(function (r) { msg(name(id) + ': ' + r.text, !r.ok); if (btn) btn.disabled = false; if (r.ok) laden(); });
     }
+    // Holt für alle Spiele, die auf diesem Gerät noch keinen Stand haben, den neuesten vom Server. Vorhandene Stände bleiben unberührt.
+    box.querySelector('[data-alle]').onclick = function () {
+      var b = this; b.disabled = true; msg('Hole Stände vom Server …');
+      api('GET', '/api/staende').then(function (res) {
+        if (!res.ok || !window.LghStand) { msg('Der Server ist gerade nicht erreichbar.', true); b.disabled = false; return; }
+        var fehlt = (res.j.staende || []).filter(function (x) { return !window.LghStand.lokal(x.spiel); }), pos = 0, ok = 0, bad = [];
+        (function weiter() {
+          if (pos >= fehlt.length) {
+            var t = !fehlt.length ? 'Auf diesem Gerät fehlt kein Stand. Bei Spielen, die hier schon einen Stand haben, nutzt du „Zurückholen" beim jeweiligen Spiel.' : ok + ' Stände zurückgeholt.' + (bad.length ? ' Nicht geklappt: ' + bad.join(', ') + '.' : '');
+            msg(t, bad.length > 0); b.disabled = false; laden(); return;
+          }
+          var x = fehlt[pos++];
+          quelle(x.spiel, 'server:' + x.rev).then(function (d) {
+            if (standGueltig(d) && window.LghStand.anwenden(x.spiel, d)) {
+              var j = JSON.stringify(d), sp = spur[x.spiel] || (spur[x.spiel] = {});
+              sp.daten = j; sp.letzter = j; sp.dirty = false; ok++;
+            } else bad.push(name(x.spiel));
+            weiter();
+          });
+        })();
+      });
+    };
     box.addEventListener('click', function (e) {
       var kopf = e.target.closest('.st-kopf');
       if (kopf) {
