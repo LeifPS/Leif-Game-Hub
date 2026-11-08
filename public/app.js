@@ -1651,7 +1651,7 @@
   var dlcDaten = null;
   function zahlText(n) { return Number(n || 0).toLocaleString('de-DE'); }
   function dlcTitel(name) { return name + ' (Zusatzinhalt)'; }   // Titel von Zusatzinhalten tragen immer diesen Zusatz
-  function dlcMarke() { return '<span class="dlc-marke" title="Zusatzinhalt" role="img" aria-label="Zusatzinhalt"><svg aria-hidden="true"><use href="#i-dlc"/></svg></span>'; }
+  function dlcMarke() { return '<span class="dlc-marke" role="img" aria-label="Zusatzinhalt"><svg aria-hidden="true"><use href="#i-dlc"/></svg>Zusatzinhalt</span>'; }
   function wabeSvg() { return '<svg aria-hidden="true"><use href="#i-wabe"/></svg>'; }
   function betrag(n) { return '<span class="betrag">' + wabeSvg() + zahlText(n) + '</span>'; }   // Die Währung wird nirgends mit Namen genannt, nur mit dem Symbol
   function dlcChip(puls) {

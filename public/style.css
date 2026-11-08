@@ -1079,9 +1079,9 @@ body.pseudo-voll .voll-aus { display: flex; }
 .dlc-preis.gross .betrag { font-size: 20px; }
 .dlc-besitz.gross { font-size: 15px; padding: 8px 16px; }
 
-/* Marke "Zusatzinhalt" oben links im Banner einer DLC-Seite */
-.dlc-marke { position: absolute; z-index: 3; top: 12px; left: 12px; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 10px;
-  color: #eef1f6; background: rgba(10, 12, 17, .62); border: 1px solid rgba(255, 255, 255, .16); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
-.dlc-marke svg { width: 20px; height: 20px; }
-.detail-banner:not(.titel) .dlc-marke { top: 62px; left: 28px; }
-@media (max-width: 900px) { .detail-banner:not(.titel) .dlc-marke { left: 16px; } .dlc-marke { top: 8px; left: 8px; width: 28px; height: 28px; border-radius: 8px; } .dlc-marke svg { width: 17px; height: 17px; } }
+/* Marke "Zusatzinhalt" in der Ecke oben links im Banner einer DLC-Seite: flaches Etikett, kein Knopf */
+.dlc-marke { position: absolute; z-index: 3; top: 0; left: 0; display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px 7px 11px; border-radius: 0 0 12px 0;
+  font-size: 12px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; line-height: 1; color: #f4f6fa; background: #0d1016; pointer-events: none; user-select: none; }
+.dlc-marke svg { width: 15px; height: 15px; }
+.detail-banner:not(.titel) .dlc-marke { left: auto; right: 0; border-radius: 0 0 0 12px; }
+@media (max-width: 900px) { .dlc-marke { font-size: 10px; padding: 5px 10px 5px 8px; gap: 5px; border-radius: 0 0 9px 0; } .dlc-marke svg { width: 13px; height: 13px; } }
