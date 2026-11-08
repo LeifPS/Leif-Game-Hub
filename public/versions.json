@@ -7,11 +7,11 @@
   "version": "0.5.0.11"
  },
  "brutjagd": {
-  "anzahl": 49,
-  "datum": "2026-11-07T14:10:26+01:00",
+  "anzahl": 52,
+  "datum": "2026-11-08T18:47:07+01:00",
   "erste": "2026-10-04T18:15:04+02:00",
   "offiziell": false,
-  "version": "0.1.4.8"
+  "version": "0.2.0.0"
  },
  "businessempire": {
   "anzahl": 5,
@@ -111,11 +111,11 @@
   "version": "0.1.12.7"
  },
  "schleimmerge": {
-  "anzahl": 26,
-  "datum": "2026-11-08T17:56:52+01:00",
+  "anzahl": 27,
+  "datum": "2026-11-08T18:46:25+01:00",
   "erste": "2026-11-01T13:53:16+01:00",
   "offiziell": false,
-  "version": "0.3.0.0"
+  "version": "0.4.0.0"
  },
  "spells": {
   "anzahl": 21,
