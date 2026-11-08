@@ -41,7 +41,9 @@
   var datumFmt = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Berlin' });
   var tagFmt = new Intl.DateTimeFormat('de-DE', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Europe/Berlin' });
   function tagKey(iso) { return tagFmt.format(new Date(iso)); }
+  var datumZeitFmt = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
   function datumText(iso) { return datumFmt.format(new Date(iso)); }
+  function datumZeitText(iso) { return datumZeitFmt.format(new Date(iso)) + ' Uhr'; }
   // Ohne Repo (kein Eintrag in versions.json) kann games.json Version und Datum von Hand liefern: "version": "0.1", "aktualisiert": "2026-11-08"
   function ver(sp) {
     if (versionen[sp.id]) return versionen[sp.id];
@@ -130,7 +132,7 @@
     var s = '<article class="tile' + (offen ? '' : ' off') + '">';
     s += detail ? '<a class="tile-link" href="#spiel/' + id + '" aria-label="' + esc(sp.name) + '">' : '<div class="tile-link">';
     s += '<div class="tile-art">' + art(sp, 400, 400);
-    if (!offen) s += '<span class="badge"' + cdAttr(sp, 'In ') + '>' + (sp.wartung ? sperrText(sp, 'In ') : 'Bald') + '</span>';
+    if (!offen) s += '<span class="badge"' + cdAttr(sp, '') + '>' + (sp.wartung ? sperrText(sp, '') : 'Bald') + '</span>';
     else if (!v && sp.phase === 'alpha') s += '<span class="ver-tag">Alpha</span>';
     else if (v) s += '<span class="ver-tag">' + (v.offiziell ? '' : phaseName(sp, v) + ' ') + esc(vz(v.version)) + '</span>';
     s += '</div>';
@@ -164,7 +166,7 @@
     s += '<div class="nav-label">Bibliothek</div>';
     alphabetisch().forEach(function (sp) {
       var offen = !!sp.url;
-      var inner = '<span class="lib-icon">' + art(sp, 100, 100) + '</span><span class="name">' + esc(sp.name) + '</span>' + (offen ? '' : '<small' + cdAttr(sp, 'In ') + '>' + (sp.wartung ? sperrText(sp, 'In ') : 'Bald') + '</small>');
+      var inner = '<span class="lib-icon">' + art(sp, 100, 100) + '</span><span class="name">' + esc(sp.name) + '</span>' + (offen ? '' : '<small' + cdAttr(sp, '') + '>' + (sp.wartung ? sperrText(sp, '') : 'Bald') + '</small>');
       s += offen || sp.wartung
         ? '<a class="lib-item' + (offen ? '' : ' off') + (sp.id === aktivId ? ' aktiv' : '') + '" href="#spiel/' + encodeURIComponent(sp.id) + '">' + inner + '</a>'
         : '<div class="lib-item off">' + inner + '</div>';
@@ -382,13 +384,14 @@
     var online = kategorien(sp).indexOf('Online') >= 0;
     var h = '<div class="detail-banner' + (titel ? ' titel' : '') + '">' + (titel ? '<div class="titelrahmen"><img class="titelhg" src="' + esc(sp.wallpaper) + '" alt="" aria-hidden="true" decoding="async"><img class="titelbild titelfg" src="' + esc(sp.wallpaper) + '" alt="' + esc(sp.name) + '" decoding="async"></div>' : art(sp, 1400, 420)) + '<a class="zurueck-link" href="#"><svg aria-hidden="true"><use href="#i-back"/></svg>Alle Spiele</a></div>';
     h += '<div class="shop' + (titel ? ' titel' : '') + '">';
-    h += '<div class="shop-titelzeile">' + titelHtml(sp) + '<div class="spiel-aktion"><div class="spielinfo" hidden></div>' + (sp.url ? '<a class="btn btn-primary btn-spielen" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a>' : '<span class="btn btn-spielen gesperrt" aria-disabled="true"' + cdAttr(sp, 'Startet in ') + '>' + (sp.wartung ? sperrText(sp, 'Startet in ') : 'Bald') + '</span>') + '</div></div>';
+    h += '<div class="shop-titelzeile">' + titelHtml(sp) + '<div class="spiel-aktion"><div class="spielinfo" hidden></div>' + (sp.url ? '<a class="btn btn-primary btn-spielen" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a>' : '<span class="btn btn-spielen gesperrt" aria-disabled="true"' + cdAttr(sp, '') + '>' + (sp.wartung ? sperrText(sp, '') : 'Bald') + '</span>') + '</div></div>';
     var gal = galerieHtml(sp);
     var text = (sp.beschreibung && sp.beschreibung !== sp.text) ? '<section class="shop-text"><h2>Über dieses Spiel</h2><p>' + esc(sp.beschreibung) + '</p></section>' : '';
     h += '<div class="shop-oben' + (gal ? '' : ' ohne-galerie') + '">' + (gal ? '<div class="shop-haupt">' + gal + text + '</div>' : '');
     h += '<aside class="shop-info"><div class="shop-kopf"><div class="shop-icon">' + art(sp, 300, 300) + '</div><p class="kurz">' + esc(sp.text) + '</p></div><dl class="fakten">';
-    var erschienen = v && v.erste ? v.erste : (sp.erschienen ? sp.erschienen + 'T12:00:00+02:00' : null);   // ohne Repo: Datum von Hand (games.json: "erschienen")
-    if (erschienen) h += faktZeile('Erschienen', esc(datumText(erschienen)));
+    var erschienen = sp.release ? sp.release : v && v.erste ? v.erste : (sp.erschienen ? sp.erschienen + 'T12:00:00+02:00' : null);   // ohne Repo: Datum von Hand (games.json: "erschienen"); mit "release" gilt dessen Zeitpunkt
+    if (sp.cd) h += faktZeile('Wird veröffentlicht', esc(datumZeitText(sp.release)));   // noch nicht freigegeben: Zeitpunkt statt "Erschienen"
+    else if (erschienen) h += faktZeile('Erschienen', esc(datumText(erschienen)));
     if (sp.offiziell_ab) {
       var vorbei = sp.offiziell_ab <= new Date().toISOString().slice(0, 10);
       h += faktZeile(vorbei ? 'Offiziell seit' : 'Offiziell ab', esc(datumText(sp.offiziell_ab + 'T12:00:00+02:00')));
@@ -1287,6 +1290,13 @@
   });
 
   window.LghStand = { spielName: function (id) { return spielName(id); }, anwenden: standAnwenden, lokal: standLokal, sicherungen: standSicherungen };
+
+  // Alte Adresse: Hinweis auf den Umzug zu hub.leifps.de (ab Dienstag 15:00 leitet der Worker automatisch weiter, siehe src/umzug.js)
+  if (location.hostname === 'lgh.leifps.workers.dev') {
+    var ub = document.getElementById('umzug-banner'), ul = document.getElementById('umzug-link');
+    if (ub) ub.hidden = false;
+    if (ul) { var ulh = function () { ul.href = 'https://hub.leifps.de/' + location.hash; }; ulh(); window.addEventListener('hashchange', ulh); }
+  }
 
   var BILD_V = '4';
   function json(url) { return fetch(url, { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); }

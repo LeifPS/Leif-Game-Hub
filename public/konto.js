@@ -162,6 +162,7 @@
       '<svg class="brand-mark" aria-hidden="true"><use href="#logo"/></svg>' +
       '<h1>Leif Game Hub</h1>' +
       '<p class="konto-sub">Mit einem Konto siehst du, was deine Freunde gerade spielen, und kannst Freunde hinzufügen.</p>' +
+      (location.hostname === ALT_HOST ? '<div class="konto-alt"><b>Diese Adresse wird bald nicht mehr unterstützt.</b> Bitte wechsle zu <a href="https://hub.leifps.de/">hub.leifps.de</a>. Ab Dienstag, 10. November, 15:00 Uhr wirst du automatisch weitergeleitet. Melde dich dort an, dann werden deine Spielstände einmalig übernommen.</div>' : '') +
       '<div class="konto-tabs" role="tablist"><button type="button" class="aktiv" data-m="an" role="tab">Anmelden</button><button type="button" data-m="neu" role="tab">Konto erstellen</button></div>' +
       '<form id="konto-form" novalidate>' +
       '<label>Benutzername<input name="username" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="20" placeholder="@benutzername" required></label>' +
