@@ -740,6 +740,32 @@ test('Chat: Freundschaft entfernen löscht den Verlauf, Konto löschen ebenfalls
   assert.equal(lesen.n, 0);
 });
 
+test('Chat: /api/ungelesen liefert je Freund Zahl und neueste Nachricht, nur für den Empfänger', async () => {
+  const env = umgebung();
+  const [a, b] = await freunde2(env);   // Anna, Ben
+  const c = await neuesKonto(env, 'Carl');
+  assert.equal((await call(env, 'GET', '/api/ungelesen')).status, 401);
+  assert.deepEqual((await call(env, 'GET', '/api/ungelesen', undefined, b)).j.von, []);
+  await call(env, 'POST', '/api/chat/Ben', { text: 'erste' }, a);
+  const z = (await call(env, 'POST', '/api/chat/Ben', { text: 'Kommst du ins Spiel?' }, a)).j.nachricht;
+  let u = (await call(env, 'GET', '/api/ungelesen', undefined, b)).j.von;
+  assert.equal(u.length, 1); assert.equal(u[0].name, 'Anna'); assert.equal(u[0].n, 2); assert.equal(u[0].neu, z.id); assert.equal(u[0].text, 'Kommst du ins Spiel?');
+  assert.ok('anzeige' in u[0] && 'av' in u[0]);
+  // Der Absender selbst und Fremde sehen nichts
+  assert.deepEqual((await call(env, 'GET', '/api/ungelesen', undefined, a)).j.von, []);
+  assert.deepEqual((await call(env, 'GET', '/api/ungelesen', undefined, c)).j.von, []);
+  // Antworten markiert alles bis dahin als gelesen
+  await call(env, 'POST', '/api/chat/Anna', { text: 'gleich' }, b);
+  assert.deepEqual((await call(env, 'GET', '/api/ungelesen', undefined, b)).j.von, []);
+  // Neue Nachricht danach: wieder da, nur die neue zählt
+  await call(env, 'POST', '/api/chat/Ben', { text: 'noch eine' }, a);
+  u = (await call(env, 'GET', '/api/ungelesen', undefined, b)).j.von;
+  assert.equal(u[0].n, 1); assert.equal(u[0].text, 'noch eine');
+  // Nach dem Entfernen der Freundschaft nichts mehr
+  await call(env, 'POST', '/api/freunde/entfernen', { name: 'Anna' }, b);
+  assert.deepEqual((await call(env, 'GET', '/api/ungelesen', undefined, b)).j.von, []);
+});
+
 test('Chat: Ungelesenes zählt nur von Freunden und nur für den Empfänger', async () => {
   const env = umgebung();
   const [a, b] = await freunde2(env);

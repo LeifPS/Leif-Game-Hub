@@ -504,6 +504,19 @@ async function chatLesen(db, s, name, url, jetzt) {
   return antwort({ nachrichten: rows.map((r) => chatNachricht(s, r)), mehr, jetzt });
 }
 
+// Ungelesene Nachrichten je Freund (neueste zuerst, höchstens 5 Freunde): der Hub fragt das alle paar Sekunden ab, solange man in einem Spiel ist,
+// und zeigt über dem Spiel eine kleine Karte mit Antwortmöglichkeit. Nur von bestätigten Freunden, nur die neueste Nachricht je Freund.
+async function chatUngelesen(db, s, jetzt) {
+  const r = await db.prepare(
+    `SELECT u.name AS name, u.display AS display, u.avatar AS avatar, COUNT(*) AS n, MAX(m.id) AS neu, m.text AS text FROM messages m
+     JOIN friends f ON f.a = m.a AND f.b = m.b AND f.status = 'accepted'
+     JOIN users u ON u.id = m.sender
+     WHERE (m.a = ? OR m.b = ?) AND m.sender <> ? AND m.id > COALESCE((SELECT last_id FROM chat_read r WHERE r.user_id = ? AND r.other = m.sender), 0)
+     GROUP BY m.sender ORDER BY neu DESC LIMIT 5`
+  ).bind(s.id, s.id, s.id, s.id).all();
+  return antwort({ von: r.results.map((x) => ({ name: x.name, anzeige: x.display || x.name, av: avParse(x.avatar), n: x.n, neu: x.neu, text: x.text })), jetzt });
+}
+
 async function chatSenden(request, db, s, name, jetzt) {
   const { b } = await lies(request);
   if (!b) return fehler(400, 'eingabe');
@@ -689,6 +702,7 @@ export async function handle(request, env, jetztMs = Date.now()) {
     if (pfad === '/api/freunde/annehmen' && m === 'POST') return await freundAnnehmen(request, db, s);
     if (pfad === '/api/freunde/ablehnen' && m === 'POST') return await freundLoeschen(request, db, s, true);
     if (pfad === '/api/freunde/entfernen' && m === 'POST') return await freundLoeschen(request, db, s, false);
+    if (pfad === '/api/ungelesen' && m === 'GET') return await chatUngelesen(db, s, jetzt);
     const cm = /^\/api\/chat\/([^/]+)(?:\/(loeschen))?$/.exec(pfad);
     if (cm) {
       let n; try { n = decodeURIComponent(cm[1]); } catch (e) { return fehler(400, 'eingabe'); }

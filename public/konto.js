@@ -835,6 +835,110 @@
     lauscher.forEach(function (f) { try { f(); } catch (e) { } });
   }
 
+  /* ---------- Nachrichten im Spiel ----------
+     Solange ein Spiel läuft (body[data-view=play]), fragt der Hub alle paar Sekunden ungelesene Chat-Nachrichten ab (/api/ungelesen).
+     Kommt eine neue, erscheint oben rechts über dem Spiel (auch im Vollbild, denn die Karte liegt in der Bühne) eine kleine Karte mit
+     "Antworten" direkt im Spiel. Nachrichten, die schon vor dem Spielstart ungelesen waren, lösen keine Karte aus (nur die Zahl am Freunde-Knopf). */
+  var sc = { basis: null, bekannt: {}, letzte: 0, laeuft: false };
+  function imSpiel() { return document.body.getAttribute('data-view') === 'play'; }
+  function scBox() {
+    var b = document.getElementById('sp-toasts');
+    if (b) return b;
+    var bue = document.getElementById('buehne');
+    if (!bue) return null;
+    b = document.createElement('div'); b.id = 'sp-toasts'; b.className = 'sp-toasts'; b.setAttribute('aria-live', 'polite');
+    bue.appendChild(b); return b;
+  }
+  function scAufraeumen() { var b = document.getElementById('sp-toasts'); if (b) b.innerHTML = ''; sc.basis = null; sc.bekannt = {}; sc.laeuft = false; }
+  function scSchliessen(k) {
+    if (!k || !k.parentNode) return;
+    clearTimeout(k._t); k.parentNode.removeChild(k);
+    var r = document.getElementById('rahmen'); if (r && imSpiel() && !document.querySelector('#sp-toasts .sp-karte')) { try { r.focus(); } catch (e) { } }
+  }
+  function scTimer(k) {
+    clearTimeout(k._t);
+    k._t = setTimeout(function () { if (!k.matches(':hover') && !k.classList.contains('antwort') && !k.contains(document.activeElement)) scSchliessen(k); else scTimer(k); }, 10000);
+  }
+  function scKarte(v) {
+    var box = scBox(); if (!box) return;
+    var k = null, alle = box.querySelectorAll('.sp-karte');
+    for (var i = 0; i < alle.length; i++) if (alle[i].getAttribute('data-n') === v.name) k = alle[i];
+    if (!k) {
+      k = document.createElement('div'); k.className = 'sp-karte'; k.setAttribute('data-n', v.name);
+      k.innerHTML = '<div class="sp-kopf">' + avatarHtml('sp-av', v.name, v.anzeige, v.av) + '<b class="sp-name"></b><span class="sp-n" hidden></span>' +
+        '<button type="button" class="sp-x" data-sp="zu" aria-label="Schließen">✕</button></div>' +
+        '<div class="sp-text"></div>' +
+        '<div class="sp-aktion"><button type="button" class="btn btn-primary" data-sp="antw">Antworten</button></div>' +
+        '<form class="sp-form" hidden><input type="text" maxlength="500" autocomplete="off" placeholder="Antwort schreiben" aria-label="Antwort schreiben"><button type="submit" class="btn btn-primary">Senden</button></form>' +
+        '<div class="sp-meld" role="status"></div>';
+      box.appendChild(k);
+      while (box.querySelectorAll('.sp-karte').length > 3) scSchliessen(box.querySelector('.sp-karte'));
+    }
+    k.querySelector('.sp-name').textContent = v.anzeige || v.name;
+    var n = k.querySelector('.sp-n'); n.hidden = !(v.n > 1); n.textContent = v.n > 1 ? v.n + ' neue' : '';
+    k.querySelector('.sp-text').textContent = v.text;
+    scTimer(k);
+  }
+  function scVerarbeiten(liste) {
+    if (sc.basis === null) {   // erste Antwort nach dem Spielstart: nur merken, nichts anzeigen
+      sc.basis = true; liste.forEach(function (v) { sc.bekannt[v.name] = v.neu; }); return;
+    }
+    var box = document.getElementById('sp-toasts');
+    liste.forEach(function (v) {
+      if (v.neu > (sc.bekannt[v.name] || 0)) { sc.bekannt[v.name] = v.neu; scKarte(v); }
+    });
+    // Karten von Freunden, deren Chat inzwischen anderswo gelesen wurde, verschwinden (außer man tippt gerade)
+    if (box) [].forEach.call(box.querySelectorAll('.sp-karte'), function (k) {
+      var n = k.getAttribute('data-n');
+      if (!liste.some(function (v) { return v.name === n; }) && !k.classList.contains('antwort') && !k.classList.contains('fertig')) scSchliessen(k);
+    });
+  }
+  function scTick() {
+    if (!konto || document.hidden) return;
+    if (!imSpiel()) { if (sc.basis !== null || document.getElementById('sp-toasts')) scAufraeumen(); return; }
+    var jetzt = Date.now();
+    if (sc.laeuft || (sc.basis !== null && jetzt - sc.letzte < 8000)) return;
+    sc.laeuft = true; sc.letzte = jetzt;
+    api('GET', '/api/ungelesen').then(function (res) {
+      sc.laeuft = false;
+      if (res.ok && imSpiel() && res.j.von) scVerarbeiten(res.j.von);
+    });
+  }
+  setInterval(scTick, 2000);
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('#sp-toasts [data-sp]') : null; if (!b) return;
+    var k = b.closest('.sp-karte'), was = b.getAttribute('data-sp');
+    if (was === 'zu') scSchliessen(k);
+    else if (was === 'antw') {
+      k.classList.add('antwort'); k.querySelector('.sp-form').hidden = false; k.querySelector('.sp-aktion').hidden = true;
+      var inp = k.querySelector('.sp-form input'); try { inp.focus(); } catch (x) { }
+    }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    var k = e.target.closest ? e.target.closest('#sp-toasts .sp-karte') : null; if (k) { e.stopPropagation(); scSchliessen(k); }
+  }, true);
+  document.addEventListener('submit', function (e) {
+    var f = e.target.closest ? e.target.closest('#sp-toasts .sp-form') : null; if (!f) return;
+    e.preventDefault();
+    var k = f.closest('.sp-karte'), inp = f.querySelector('input'), text = inp.value.trim(), meld = k.querySelector('.sp-meld');
+    if (!text) return;
+    inp.disabled = true; f.querySelector('button').disabled = true; meld.textContent = '';
+    chat.senden(k.getAttribute('data-n'), text).then(function (res) {
+      if (res.ok) {
+        f.hidden = true; k.classList.remove('antwort'); k.classList.add('fertig');
+        meld.textContent = 'Gesendet'; meld.className = 'sp-meld ok';
+        pruefeFreunde();
+        k._t = setTimeout(function () { scSchliessen(k); }, 1300);
+      } else {
+        inp.disabled = false; f.querySelector('button').disabled = false;
+        meld.className = 'sp-meld fehler';
+        meld.textContent = res.status === 429 ? 'Bitte kurz warten.' : res.status === 404 ? 'Diese Person ist kein Freund mehr.' : 'Das hat nicht geklappt. Bitte noch einmal versuchen.';
+        try { inp.focus(); } catch (x) { }
+      }
+    });
+  });
+
   /* ---------- Start ---------- */
   function start() {
     konto = ladeKonto();
