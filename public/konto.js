@@ -35,7 +35,7 @@
     return 'Browser';
   }
 
-  // Zufällige Kennung dieses Geräts (Browser-Speicher). Ein Konto gilt vorerst nur auf dem Gerät, auf dem es erstellt wurde (siehe src/konten.js, EIN_GERAET).
+  // Zufällige Kennung dieses Geräts (Browser-Speicher). Wird nur gebraucht, falls die Gerätesperre wieder an ist (siehe src/konten.js, EIN_GERAET).
   var gidMerk = null;
   function geraetId() {
     if (gidMerk) return gidMerk;
@@ -171,7 +171,7 @@
       '<label>Passwort<input name="password" type="password" autocomplete="current-password" required></label>' +
       '<label class="nur-neu">Passwort wiederholen<input name="password2" type="password" autocomplete="new-password"></label>' +
       '<div class="konto-regel nur-neu">Mindestens 6 Zeichen. Merk es dir gut: Es gibt keine E-Mail zum Zurücksetzen.</div>' +
-      '<div class="konto-regel nur-neu"><b>Wichtig:</b> Ein Konto gilt vorerst nur auf diesem Gerät. Anmelden auf mehreren Geräten kommt später, wenn die Spielstände zwischen Geräten abgeglichen werden.</div>' +
+      '<div class="konto-regel nur-neu">Du kannst dich mit dem Konto auf mehreren Geräten anmelden. Spielstände werden mitgeschrieben und lassen sich im Konto-Menü unter „Spielstände“ auf einem anderen Gerät zurückholen.</div>' +
       (umzugOffen() ? '<label class="konto-umzug"><input type="checkbox" name="umzug" checked><span><b>Daten von der alten Adresse übernehmen</b> (einmalig). Beim Anmelden öffnet sich kurz ein Fenster von ' + ALT_HOST + ', das deine Spielstände herüberschickt. Bitte Pop-ups erlauben.</span></label>' : '') +
       '<div class="konto-fehler" id="konto-fehler" role="alert"></div>' +
       '<button class="btn btn-primary konto-los" type="submit">Anmelden</button>' +

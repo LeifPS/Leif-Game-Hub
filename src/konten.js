@@ -34,10 +34,11 @@ export const VERSIONEN = 6;            // so viele Stände pro Spiel bleiben hö
 export const MAX_ZEILEN = 40;         // so viele Stände pro Spiel höchstens (inklusive Tagesstände und geschützter Stände)
 export const TAGE = 14;               // so viele Kalendertage zurück bleibt je Tag der letzte Stand erhalten
 const SCHRUMPF = 0.4, SCHRUMPF_AB = 3000;   // ein Stand über 3000 Byte ist geschützt, wenn danach einer unter 40 % seiner Größe kam
-// Solange die Spielstände nicht zwischen Geräten abgeglichen werden, gilt ein Konto nur auf dem Gerät, auf dem es erstellt wurde
-// (sonst loggt man sich woanders ein und hat dort keine Stände). Zum Aufheben später auf false setzen.
-// Ein einzelnes Konto wieder freigeben: node tools/lgh-geraet.mjs <Name>
-export const EIN_GERAET = true;
+// Gerätesperre: Ist sie an (true), gilt ein Konto nur auf dem Gerät, auf dem es erstellt wurde (Anmelden woanders: 403 anderes_geraet).
+// Aktuell aus: man kann sich auf mehreren Geräten anmelden. Spielstände werden dabei mitgeschrieben und lassen sich im Konto-Menü
+// unter "Spielstände" auf einem anderen Gerät zurückholen. Zum Wiedereinschalten auf true setzen.
+// Ein einzelnes Konto bei eingeschalteter Sperre freigeben: node tools/lgh-geraet.mjs <Name>
+export const EIN_GERAET = false;
 const GID_RE = /^[0-9a-f]{32}$/;
 const gidVon = (v) => (typeof v === 'string' && GID_RE.test(v) ? v : null);
 export const ABSTAND = 1800;           // ältere Stände werden höchstens alle 30 Minuten festgehalten, sonst gäbe es nach wenigen Minuten Spielzeit nur noch ganz junge

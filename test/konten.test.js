@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { handle, VERSIONEN, MAX_BYTES, TAGE, MAX_ZEILEN, NAME_SPERRE } from '../src/konten.js';
+import { handle, EIN_GERAET, VERSIONEN, MAX_BYTES, TAGE, MAX_ZEILEN, NAME_SPERRE } from '../src/konten.js';
 import { makeD1 } from './helpers/d1.js';
 
 // Schlüssel wie im Browser: PBKDF2(Passwort, "lgh1:" + kleingeschriebener Name), SHA-256, 256 Bit
@@ -406,7 +406,7 @@ test('Spielzeit und Profil: eigene Zeiten, Freunde sehen sie, Fremde nicht', asy
   uhr = start;
 });
 
-test('Ein Konto gilt nur auf dem Gerät, auf dem es erstellt wurde', async () => {
+test('Ein Konto gilt nur auf dem Gerät, auf dem es erstellt wurde', { skip: !EIN_GERAET }, async () => {
   const env = umgebung();
   const G1 = 'a'.repeat(32), G2 = 'b'.repeat(32);
   const key = await schluessel('Nele', 'geheim123');
@@ -428,7 +428,19 @@ test('Ein Konto gilt nur auf dem Gerät, auf dem es erstellt wurde', async () =>
   assert.equal((await call(env, 'POST', '/api/anmelden', { name: 'Nele', key, gid: G1 })).j.fehler, 'anderes_geraet');
 });
 
-test('Ältere Konten ohne Gerätekennung: erstes meldendes Gerät wird gebunden, bestehende Anmeldungen bleiben', async () => {
+test('Ohne Gerätesperre: Anmelden auf mehreren Geräten und ohne Kennung geht', { skip: EIN_GERAET }, async () => {
+  const env = umgebung();
+  const G1 = 'a'.repeat(32), G2 = 'b'.repeat(32);
+  const key = await schluessel('Nele', 'geheim123');
+  assert.equal((await call(env, 'POST', '/api/registrieren', { name: 'Nele', key, geraet: 'iPhone', gid: G1 })).status, 200);
+  for (const gid of [G1, G2, undefined, 'kaputt']) {
+    assert.equal((await call(env, 'POST', '/api/anmelden', { name: 'Nele', key, gid })).status, 200);
+  }
+  const falsch = await call(env, 'POST', '/api/anmelden', { name: 'Nele', key: await schluessel('Nele', 'falsch'), gid: G2 });
+  assert.deepEqual([falsch.status, falsch.j.fehler], [401, 'login']);
+});
+
+test('Ältere Konten ohne Gerätekennung: erstes meldendes Gerät wird gebunden, bestehende Anmeldungen bleiben', { skip: !EIN_GERAET }, async () => {
   const env = umgebung();
   const G1 = 'c'.repeat(32), G2 = 'd'.repeat(32);
   const t1 = await neuesKonto(env, 'Alt');     // ohne gid, wie vor der Änderung
