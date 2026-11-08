@@ -740,11 +740,22 @@
     ablehnen: function (n) { return freundePost('ablehnen', n); },
     entfernen: function (n) { return freundePost('entfernen', n); },
   };
+  /* Chat unter Freunden: lesen (nach = nur Neueres, vor = Älteres, gelesen = als gelesen markieren), senden, eigene Nachricht löschen */
+  function chatPfad(n) { return '/api/chat/' + encodeURIComponent(n); }
+  var chat = {
+    lesen: function (n, o) {
+      o = o || []; var q = [];
+      if (o.nach) q.push('nach=' + o.nach); if (o.vor) q.push('vor=' + o.vor); if (o.gelesen) q.push('gelesen=1');
+      return api('GET', chatPfad(n) + (q.length ? '?' + q.join('&') : ''));
+    },
+    senden: function (n, text) { return api('POST', chatPfad(n), { text: text }); },
+    loeschen: function (n, id) { return api('POST', chatPfad(n) + '/loeschen', { id: id }); },
+  };
   function pruefeFreunde() {
     if (!konto) return;
     api('GET', '/api/freunde').then(function (res) {
       if (!res.ok) return;
-      var n = (res.j.eingehend || []).length;
+      var n = (res.j.eingehend || []).length + (res.j.chat || 0);   // offene Anfragen plus ungelesene Nachrichten
       if (n !== offeneAnfragen) { offeneAnfragen = n; benachrichtige(); }
     });
   }
@@ -777,7 +788,7 @@
   window.LghKonto = {
     bereit: bereit, name: function () { return konto ? konto.name : null; }, anzeige: anzeigeName, angemeldet: function () { return !!konto; },
     stand: stand, beimVerlassen: beimVerlassen, spiel: setzeSpiel, raum: setzeRaum,
-    freunde: freunde, setzeOffene: setzeOffene, avatarStil: avatarStil, avatar: avatarHtml, dialog: dialog,
+    freunde: freunde, chat: chat, setzeOffene: setzeOffene, avatarStil: avatarStil, avatar: avatarHtml, dialog: dialog,
     kontoDialog: kontoDialog, profil: function (name) { return api('GET', '/api/profil' + (name ? '/' + encodeURIComponent(name) : '')); }, abmelden: abmelden, abzeichen: benachrichtige, beiAenderung: function (f) { lauscher.push(f); },
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();

@@ -578,6 +578,8 @@
         } else if (f.online) status = '<span class="punkt an"></span>Im Hub';
         else if (f.privat) status = '<span class="punkt"></span>Status privat';
         else status = '<span class="punkt"></span>' + (f.zuletzt ? 'Zuletzt online ' + relZeit(Math.max(0, d.jetzt - f.zuletzt)) : 'Noch nie online');
+        if (f.ungelesen) status += '<span class="fr-vorschau">' + n(f.vorschau || '') + '</span>';
+        akt = '<a class="btn ' + (f.ungelesen ? 'btn-primary' : 'btn-ghost') + ' fr-btn" href="#chat/' + encodeURIComponent(f.name) + '">Chat' + (f.ungelesen ? '<span class="fr-chatzahl">' + (f.ungelesen > 9 ? '9+' : f.ungelesen) + '</span>' : '') + '</a>' + akt;
         akt += entfernenFrage === f.name
           ? '<button type="button" class="btn btn-ghost fr-btn gefahr" data-a="entfernen" data-n="' + n(f.name) + '">Wirklich entfernen?</button>'
           : '<button type="button" class="btn btn-ghost fr-btn leise" data-a="frage" data-n="' + n(f.name) + '" aria-label="' + n(anz(f)) + ' entfernen">Entfernen</button>';
@@ -601,7 +603,7 @@
       if (body.getAttribute('data-view') !== 'freunde' || !z) return;
       if (!res.ok) { if (!freundeDaten) z.innerHTML = '<div class="fr-leer">Die Freunde konnten gerade nicht geladen werden.</div>'; return; }
       freundeDaten = leisteDaten = res.j;
-      LghKonto.setzeOffene(res.j.eingehend.length);
+      LghKonto.setzeOffene(res.j.eingehend.length + (res.j.chat || 0));
       zeichneFreunde(z, res.j);
     });
   }
@@ -621,13 +623,13 @@
     h += '<div class="fr-reihe">';
     h += '<a class="fr-karte" href="#freunde"><span class="fr-kreis fr-plus"><svg aria-hidden="true" width="34" height="34"><use href="#i-people"/></svg></span><span class="fr-n">Hinzufügen</span><span class="fr-s">&nbsp;</span></a>';
     liste.forEach(function (f) {
-      var ziel = '#freunde', status = '&nbsp;';
+      var ziel = f.ungelesen ? '#chat/' + encodeURIComponent(f.name) : '#freunde', status = '&nbsp;';
       if (f.spiel) {
         if (spielbar().some(function (s) { return s.id === f.spiel; })) ziel = '#spiel/' + encodeURIComponent(f.spiel);
         status = esc(spielName(f.spiel));
       } else if (f.online) status = 'Im Hub';
       h += '<a class="fr-karte' + (f.spiel || f.online ? '' : ' aus') + '" href="' + ziel + '"' + (f.spiel ? ' data-fr="' + n(f.name) + '"' : '') + ' title="' + n(anz(f)) + ' (@' + n(f.name) + ')' + (f.spiel ? ' spielt ' + n(spielName(f.spiel)) : f.online ? ' ist im Hub' : '') + '">' +
-        LghKonto.avatar('fr-kreis', f.name, anz(f), f.av, f.spiel || f.online ? '<span class="fr-punkt"></span>' : '') +
+        LghKonto.avatar('fr-kreis', f.name, anz(f), f.av, (f.spiel || f.online ? '<span class="fr-punkt"></span>' : '') + (f.ungelesen ? '<span class="fr-chatpunkt">' + (f.ungelesen > 9 ? '9+' : f.ungelesen) + '</span>' : '')) +
         '<span class="fr-n">' + n(anz(f)) + '</span><span class="fr-s">' + status + '</span></a>';
     });
     z.innerHTML = h + '</div>';
@@ -680,7 +682,7 @@
     LghKonto.freunde.liste().then(function (res) {
       if (!res.ok) return;
       leisteDaten = res.j;
-      LghKonto.setzeOffene(res.j.eingehend.length);
+      LghKonto.setzeOffene(res.j.eingehend.length + (res.j.chat || 0));
       zeichneLeiste();
     });
   }
@@ -732,6 +734,227 @@
       if (!res.ok) frMeldung('Das hat nicht geklappt.', true);
       ladeFreunde();
     });
+  });
+
+  /* ---------- Chat unter Freunden ---------- */
+  /* Eine Unterhaltung pro Freund (#chat/name). Neue Nachrichten werden alle paar Sekunden abgeholt, solange der Tab sichtbar ist.
+     Nur Text; Links werden nicht angeklickbar gemacht. Der Server prüft alles noch einmal (nur Freunde, 500 Zeichen, Tempo). */
+  var chat = null;
+  var CHAT_FEHLER = {
+    zu_viele: 'Du schreibst sehr schnell. Warte einen Moment.', unbekannt: 'Ihr seid nicht (mehr) befreundet, die Nachricht ging nicht raus.',
+    zu_lang: 'Die Nachricht ist zu lang (höchstens 500 Zeichen).', leer: 'Die Nachricht ist leer.', zeichen: 'Die Nachricht enthält unerlaubte Zeichen.',
+    netz: 'Keine Verbindung zum Server.', server: 'Der Server hatte ein Problem. Bitte gleich noch einmal versuchen.',
+  };
+  function chatStopp() { if (chat) { clearTimeout(chat.timer); chat.tot = true; } chat = null; document.body.style.removeProperty('--ch-hoehe'); }
+  function chatHoehe() {
+    var w = document.querySelector('.ch-wrap');
+    if (!w) return;
+    var vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    var top = w.getBoundingClientRect().top + window.scrollY;
+    w.style.height = Math.max(240, vh - top) + 'px';
+  }
+  window.addEventListener('resize', chatHoehe);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', function () { chatHoehe(); chatUnten(true); });
+  function uhrzeit(sek) { return new Date(sek * 1000).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); }
+  function tagLabel(sek) {
+    var d = new Date(sek * 1000), h = new Date(), g = new Date(); g.setDate(h.getDate() - 1);
+    var gleich = function (x, y) { return x.getFullYear() === y.getFullYear() && x.getMonth() === y.getMonth() && x.getDate() === y.getDate(); };
+    if (gleich(d, h)) return 'Heute'; if (gleich(d, g)) return 'Gestern';
+    return d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
+  }
+  function chatNah() { var l = document.getElementById('ch-liste'); return !l || l.scrollHeight - l.scrollTop - l.clientHeight < 90; }
+  function chatUnten(nurWennNah) { var l = document.getElementById('ch-liste'); if (l && (!nurWennNah || chat && chat.nah)) l.scrollTop = l.scrollHeight; }
+  function chatZeichne() {
+    var l = document.getElementById('ch-liste');
+    if (!l || !chat) return;
+    var h = '', tag = '';
+    if (chat.mehr) h += '<button type="button" class="ch-aelter" data-ch="aelter">Ältere Nachrichten laden</button>';
+    if (!chat.msgs.length) h += '<div class="ch-leer">Noch keine Nachrichten. Schreib die erste!</div>';
+    chat.msgs.forEach(function (m, i) {
+      var t = tagLabel(m.zeit);
+      if (t !== tag) { tag = t; h += '<div class="ch-tag"><span>' + esc(t) + '</span></div>'; }
+      var davor = chat.msgs[i - 1], danach = chat.msgs[i + 1];
+      var gruppeStart = !davor || davor.von !== m.von || m.zeit - davor.zeit > 300 || tagLabel(davor.zeit) !== t;
+      var gruppeEnde = !danach || danach.von !== m.von || danach.zeit - m.zeit > 300 || tagLabel(danach.zeit) !== t;
+      h += '<div class="ch-msg ' + (m.von === 'ich' ? 'ich' : 'er') + (gruppeStart ? ' start' : '') + (gruppeEnde ? ' ende' : '') + (chat.offen === m.id ? ' offen' : '') + '" data-id="' + m.id + '">' +
+        '<div class="ch-blase">' + esc(m.text) + '</div>' +
+        (gruppeEnde ? '<div class="ch-zeit">' + uhrzeit(m.zeit) + '</div>' : '') +
+        (m.von === 'ich' && chat.offen === m.id ? '<button type="button" class="ch-weg" data-ch="weg" data-id="' + m.id + '">Nachricht löschen</button>' : '') + '</div>';
+    });
+    l.innerHTML = h;
+  }
+  function chatStatus(f) {
+    var z = document.getElementById('ch-status');
+    if (!z || !f) return;
+    var jetzt = Math.floor(Date.now() / 1000);
+    z.innerHTML = f.spiel ? '<span class="punkt an"></span>Spielt ' + esc(spielName(f.spiel)) : f.online ? '<span class="punkt an"></span>Im Hub' : f.privat ? 'Status privat' : f.zuletzt ? 'Zuletzt online ' + relZeit(Math.max(0, jetzt - f.zuletzt)) : '@' + esc(f.name);
+  }
+  function chatNeue(res) {
+    if (!chat || !res.ok) return;
+    var neu = res.j.nachrichten.filter(function (m) { return !chat.msgs.some(function (x) { return x.id === m.id; }); });
+    if (!neu.length) return;
+    chat.nah = chatNah();
+    var vonIhm = neu.some(function (m) { return m.von === 'er'; });
+    chat.msgs = chat.msgs.concat(neu);
+    chat.letzte = chat.msgs[chat.msgs.length - 1].id;
+    chat.aktiv = Date.now();
+    chatZeichne();
+    if (chat.nah || neu.some(function (m) { return m.von === 'ich'; })) chatUnten(false);
+    else { var n = document.getElementById('ch-neu'); if (n) n.hidden = false; }
+    if (vonIhm) abzeichenNeu();
+  }
+  function chatAbgleich(batch) {
+    if (!chat) return;
+    var minId = batch.length ? batch[0].id : Infinity;
+    var alt = chat.msgs.filter(function (m) { return batch.length >= 50 && m.id < minId; });   // weniger als 50: der Server hat alles geliefert
+    var neu = alt.concat(batch);
+    var gleich = neu.length === chat.msgs.length && neu.every(function (m, i) { return m.id === chat.msgs[i].id; });
+    if (gleich) return;
+    var vorher = chat.msgs.length;
+    chat.nah = chatNah();
+    chat.msgs = neu; chat.letzte = neu.length ? neu[neu.length - 1].id : 0;
+    if (chat.offen && !neu.some(function (m) { return m.id === chat.offen; })) chat.offen = 0;
+    chatZeichne();
+    if (neu.length > vorher) { if (chat.nah) chatUnten(false); else { var n = document.getElementById('ch-neu'); if (n) n.hidden = false; } }
+    abzeichenNeu();
+  }
+  function abzeichenNeu() {
+    LghKonto.freunde.liste().then(function (r) {
+      if (!r.ok) return;
+      freundeDaten = leisteDaten = r.j;
+      LghKonto.setzeOffene(r.j.eingehend.length + (r.j.chat || 0));
+      if (chat) chatStatus(r.j.freunde.filter(function (f) { return f.name === chat.name; })[0]);
+    });
+  }
+  function chatTick() {
+    if (!chat || chat.tot) return;
+    var c = chat;
+    clearTimeout(c.timer);
+    var weiter = function () { if (chat === c && !c.tot) c.timer = setTimeout(chatTick, Date.now() - c.aktiv < 120000 ? 3000 : 8000); };
+    if (document.hidden || c.lauf) return weiter();
+    c.lauf = true;
+    // Etwa alle 20 Sekunden werden die neuesten 50 Nachrichten komplett abgeglichen, damit auch Löschungen der anderen Seite ankommen
+    var abgleich = c.zaehler % 7 === 6;
+    LghKonto.chat.lesen(c.name, abgleich ? { gelesen: true } : { nach: c.letzte, gelesen: true }).then(function (res) {
+      c.lauf = false;
+      if (chat !== c) return;
+      if (res.status === 404) { chatNichtMehr(); return; }
+      if (abgleich && res.ok) chatAbgleich(res.j.nachrichten);
+      else chatNeue(res);
+      if (++c.zaehler % 7 === 0) abzeichenNeu();   // Online-Status und Abzeichen etwa alle 20 Sekunden
+      weiter();
+    });
+  }
+  function chatNichtMehr() {
+    var w = document.querySelector('.ch-wrap');
+    if (w) w.innerHTML = '<div class="ch-fehl"><h1 class="fr-titel">Chat</h1><div class="fr-leer">Diesen Chat gibt es nicht oder ihr seid nicht mehr befreundet.</div><a class="btn btn-ghost" href="#freunde">Zu den Freunden</a></div>';
+    chatStopp();
+  }
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && chat) { chat.aktiv = Date.now(); chatTick(); } });
+  function renderChat(name) {
+    chatStopp();
+    inhalt.innerHTML = '<div class="ch-wrap"><div class="fr-leer">Lädt …</div></div>';
+    if (!window.LghKonto || !LghKonto.angemeldet()) { inhalt.querySelector('.ch-wrap').innerHTML = '<div class="fr-leer">Melde dich an, um zu chatten.</div>'; return; }
+    var c = chat = { name: name, msgs: [], letzte: 0, mehr: false, nah: true, aktiv: Date.now(), zaehler: 0, offen: 0, timer: null, lauf: false, tot: false };
+    LghKonto.freunde.liste().then(function (res) {
+      if (chat !== c) return;
+      var f = res.ok ? res.j.freunde.filter(function (x) { return x.name.toLowerCase() === name.toLowerCase(); })[0] : null;
+      if (!res.ok) { inhalt.querySelector('.ch-wrap').innerHTML = '<div class="fr-leer">Der Chat konnte gerade nicht geladen werden.</div><a class="btn btn-ghost" href="#freunde">Zu den Freunden</a>'; return; }
+      if (!f) return chatNichtMehr();
+      freundeDaten = leisteDaten = res.j;
+      c.name = f.name; c.anzeige = anz(f);
+      LghKonto.setzeOffene(res.j.eingehend.length + (res.j.chat || 0));
+      var w = inhalt.querySelector('.ch-wrap');
+      w.innerHTML = '<div class="ch-kopf"><a class="ch-zurueck" href="#freunde" aria-label="Zurück zu den Freunden"><svg aria-hidden="true" width="22" height="22"><use href="#i-back"/></svg></a>' +
+        '<a class="ch-person" href="#profil/' + encodeURIComponent(f.name) + '">' + LghKonto.avatar('avatar', f.name, anz(f), f.av) +
+        '<span class="ch-pname"><b>' + esc(anz(f)) + '</b><small id="ch-status"></small></span></a></div>' +
+        '<div class="ch-liste" id="ch-liste" role="log" aria-live="polite" aria-label="Nachrichten mit ' + esc(anz(f)) + '"></div>' +
+        '<button type="button" class="ch-neu" id="ch-neu" data-ch="unten" hidden>Neue Nachricht ↓</button>' +
+        '<div class="ch-meld" id="ch-meld" role="status"></div>' +
+        '<form class="ch-form" id="ch-form" novalidate><textarea id="ch-text" rows="1" maxlength="500" placeholder="Nachricht an ' + esc(anz(f)) + '" aria-label="Nachricht" autocomplete="off" enterkeyhint="send"></textarea>' +
+        '<button class="btn btn-primary ch-senden" type="submit">Senden</button></form>';
+      chatHoehe(); chatStatus(f);
+      LghKonto.chat.lesen(c.name, { gelesen: true }).then(function (r) {
+        if (chat !== c) return;
+        if (r.status === 404) return chatNichtMehr();
+        if (!r.ok) { chatMeld('Die Nachrichten konnten nicht geladen werden.', true); }
+        else { c.msgs = r.j.nachrichten; c.mehr = !!r.j.mehr; c.letzte = c.msgs.length ? c.msgs[c.msgs.length - 1].id : 0; }
+        chatZeichne(); chatUnten(false);
+        if (c.letzte) abzeichenNeu();
+        c.timer = setTimeout(chatTick, 3000);
+      });
+      var ta = document.getElementById('ch-text');
+      if (ta && matchMedia('(hover: hover)').matches) ta.focus();
+    });
+  }
+  function chatMeld(t, fehler) { var m = document.getElementById('ch-meld'); if (m) { m.textContent = t || ''; m.className = 'ch-meld' + (fehler ? ' fehler' : ''); } }
+  function chatWachsen(ta) { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 130) + 'px'; }
+  function chatSenden() {
+    var ta = document.getElementById('ch-text');
+    if (!ta || !chat || chat.sendet) return;
+    var text = ta.value.replace(/\s+$/, '');
+    if (!text.trim()) return;
+    var c = chat; c.sendet = true; chatMeld('');
+    LghKonto.chat.senden(c.name, text).then(function (res) {
+      c.sendet = false;
+      if (chat !== c) return;
+      if (res.ok) {
+        ta.value = ''; chatWachsen(ta); c.aktiv = Date.now();
+        chatNeue({ ok: true, j: { nachrichten: [res.j.nachricht] } });
+        chatUnten(false);
+      } else if (res.status === 404 && res.j.fehler === 'unbekannt') chatNichtMehr();
+      else chatMeld(CHAT_FEHLER[res.j.fehler] || 'Das hat nicht geklappt.', true);
+      ta.focus();
+    });
+  }
+  inhalt.addEventListener('submit', function (e) {
+    if (!e.target || e.target.id !== 'ch-form') return;
+    e.preventDefault(); chatSenden();
+  });
+  inhalt.addEventListener('keydown', function (e) {
+    if (!e.target || e.target.id !== 'ch-text') return;
+    if (chat) chat.aktiv = Date.now();
+    // Am Rechner sendet Enter, Umschalt+Enter macht eine neue Zeile; am Handy bleibt Enter eine neue Zeile (dort gibt es den Senden-Knopf)
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && matchMedia('(hover: hover)').matches) { e.preventDefault(); chatSenden(); }
+  });
+  inhalt.addEventListener('input', function (e) { if (e.target && e.target.id === 'ch-text') chatWachsen(e.target); });
+  inhalt.addEventListener('scroll', function (e) { if (e.target && e.target.id === 'ch-liste' && chatNah()) { var n = document.getElementById('ch-neu'); if (n) n.hidden = true; } }, true);
+  inhalt.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-ch]') : null;
+    if (b && chat) {
+      var a = b.getAttribute('data-ch');
+      if (a === 'unten') { chatUnten(false); b.hidden = true; return; }
+      if (a === 'aelter') {
+        var c = chat, l = document.getElementById('ch-liste'), alt = l ? l.scrollHeight : 0;
+        b.disabled = true;
+        LghKonto.chat.lesen(c.name, { vor: c.msgs.length ? c.msgs[0].id : 0 }).then(function (r) {
+          if (chat !== c) return;
+          if (!r.ok) { b.disabled = false; return chatMeld('Ältere Nachrichten konnten nicht geladen werden.', true); }
+          c.msgs = r.j.nachrichten.concat(c.msgs); c.mehr = !!r.j.mehr; chatZeichne();
+          if (l) l.scrollTop = l.scrollHeight - alt;
+        });
+        return;
+      }
+      if (a === 'weg') {
+        var id = parseInt(b.getAttribute('data-id'), 10), cc = chat;
+        b.disabled = true;
+        LghKonto.chat.loeschen(cc.name, id).then(function (r) {
+          if (chat !== cc) return;
+          cc.offen = 0;
+          if (r.ok || r.status === 404) cc.msgs = cc.msgs.filter(function (m) { return m.id !== id; });
+          else chatMeld('Das Löschen hat nicht geklappt.', true);
+          cc.letzte = cc.msgs.length ? cc.msgs[cc.msgs.length - 1].id : 0;
+          chatZeichne();
+        });
+        return;
+      }
+    }
+    // Eigene Nachricht antippen: "Nachricht löschen" ein- oder ausblenden
+    var m = chat && e.target.closest ? e.target.closest('.ch-msg.ich') : null;
+    if (m && !e.target.closest('.ch-weg')) {
+      var mid = parseInt(m.getAttribute('data-id'), 10);
+      chat.offen = chat.offen === mid ? 0 : mid; chat.nah = chatNah(); chatZeichne();
+    }
   });
 
   /* ---------- Profil ---------- */
@@ -833,6 +1056,7 @@
       w.innerHTML = '<div class="pf-kopf">' + LghKonto.avatar('avatar gross', p.name, p.anzeige, p.av) +
         '<div class="pf-kopftext"><h1 class="pf-name">' + esc(p.anzeige) + '</h1><div class="pf-at">@' + esc(p.name) + (seit ? ' · dabei seit ' + esc(seit) : '') + '</div><div class="pf-status">' + status + '</div></div></div>' +
         '<div class="pf-zahlen">' + (p.eigen ? '<div><b>' + esc(dauer(gesamt)) + '</b><small>Spielzeit gesamt</small></div>' : '') + '<div><b>' + (p.spielePrivat ? '–' : gespielt) + '</b><small>' + (gespielt === 1 ? 'Spiel gespielt' : 'Spiele gespielt') + '</small></div><div><b>' + p.freunde + '</b><small>' + (p.freunde === 1 ? 'Freund' : 'Freunde') + '</small></div></div>' +
+        (!p.eigen ? '<div class="pf-aktionen"><a class="btn btn-primary" href="#chat/' + encodeURIComponent(p.name) + '">Nachricht schreiben</a></div>' : '') +
         (p.eigen ? '<div class="pf-aktionen"><button type="button" class="btn btn-ghost" data-pf="bild">Profilbild ändern</button><button type="button" class="btn btn-ghost" data-pf="anz">Anzeigename ändern</button><button type="button" class="btn btn-ghost" data-pf="stand">Spielstände sichern und zurückholen</button><button type="button" class="btn btn-ghost" data-pf="konto">Konto</button></div>' : '') +
         '<h2 class="fr-abschnitt">' + (p.eigen ? 'Zuletzt gespielt' : 'Gespielte Spiele') + '</h2>' +
         (zeilen ? '<div class="pf-liste">' + zeilen + '</div>' : '<div class="fr-leer">' + (p.spielePrivat ? 'Diese Person zeigt ihre gespielten Spiele nicht.' : p.eigen ? 'Noch nichts gespielt. Die Spielzeit wird ab jetzt gezählt.' : 'Noch nichts gespielt.') + '</div>');
@@ -852,7 +1076,7 @@
   function homeKey() { return 'home|' + filter + '|' + suche; }
   function zeigeAnsicht(key, rendern) {
     if (ansichtKey === key && inhalt.firstChild) return;
-    if (ansichtKey === 'freunde' || String(ansichtKey).indexOf('profil|') === 0) inhalt.innerHTML = '';
+    if (ansichtKey === 'freunde' || String(ansichtKey).indexOf('profil|') === 0 || String(ansichtKey).indexOf('chat|') === 0) inhalt.innerHTML = '';
     else if (ansichtKey !== null) { var alt = document.createElement('div'); while (inhalt.firstChild) alt.appendChild(inhalt.firstChild); var vs = alt.querySelectorAll('video'); for (var vi = 0; vi < vs.length; vi++) { vs[vi].pause(); vs[vi]._lief = false; } ansichtSpeicher[ansichtKey] = alt; }
     var neu = ansichtSpeicher[key];
     if (neu) { delete ansichtSpeicher[key]; while (neu.firstChild) inhalt.appendChild(neu.firstChild); }
@@ -889,6 +1113,17 @@
     var vorher = body.getAttribute('data-view');
     if (vorher === 'play') { stoppeSpiel(); alphaOk = null; }
     if (vorher === 'freunde' && location.hash !== '#freunde') { clearInterval(freundeTimer); freundeTimer = null; }
+    var cm = /^#chat\/([^\/]+)$/.exec(location.hash), cn = '';
+    if (cm) { try { cn = decodeURIComponent(cm[1]); } catch (x) { cn = ''; } }
+    if (vorher === 'chat' && (!cm || !chat || chat.name.toLowerCase() !== cn.toLowerCase())) chatStopp();
+    if (cm && cn) {
+      body.setAttribute('data-view', 'chat');
+      if (String(ansichtKey).indexOf('chat|') === 0) ansichtKey = null;   // Chat immer frisch aufbauen
+      zeigeAnsicht('chat|' + cn.toLowerCase(), function () { renderChat(cn); }); renderSide(null, true);
+      document.title = 'Chat – Leif Game Hub';
+      window.scrollTo(0, 0);
+      return;
+    }
     var pm = /^#profil(?:\/([^\/]+))?$/.exec(location.hash);
     if (pm) {
       var pn = pm[1] ? decodeURIComponent(pm[1]) : '';
