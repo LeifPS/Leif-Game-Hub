@@ -6,6 +6,7 @@
 // (der Server hat pro Anfrage nur sehr wenig Rechenzeit) und das Klartext-Passwort erreicht den Server nie.
 import { SCHEMA } from './schema.js';
 import { gruppenModul } from './gruppen.js';
+import { dlcModul } from './dlc.js';
 
 const enc = new TextEncoder();
 const hex = (u8) => [...u8].map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -281,6 +282,7 @@ async function kontoLoeschen(request, db, s, jetzt) {
   const r = await pruefeSchluessel(db, s.name, b.key, jetzt, request);
   if (r.fehler) return r.fehler;
   await G.kontoWeg(db, s.id);
+  await D.kontoWeg(db, s.id);
   await db.batch([
     db.prepare('DELETE FROM saves WHERE user_id = ?').bind(s.id),
     db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(s.id),
@@ -729,6 +731,7 @@ async function profil(db, s, name, jetzt, entw) {
 
 /* ---------- Verteilung ---------- */
 const G = gruppenModul({ antwort, fehler, lies, gesperrt, zaehle, suche, paar, avParse, chatText, chatVorschau });
+const D = dlcModul({ antwort, fehler, lies, gesperrt, zaehle });
 
 export async function handle(request, env, jetztMs = Date.now()) {
   const url = new URL(request.url);
@@ -776,6 +779,8 @@ export async function handle(request, env, jetztMs = Date.now()) {
     if (pfad === '/api/favoriten' && m === 'GET') return await favoritenListe(db, s);
     if (pfad === '/api/favoriten' && m === 'POST') return await favoritSetzen(request, db, s, jetzt);
     if (pfad === '/api/ungelesen' && m === 'GET') return await chatUngelesen(db, s, jetzt);
+    const dm = /^\/api\/dlc(?:\/([a-z]+))?$/.exec(pfad);
+    if (dm) return await D.route(request, db, s, jetzt, m, dm[1] || '');
     const gm = /^\/api\/gruppen(?:\/(\d{1,9}))?(?:\/([a-z]+))?(?:\/([a-z]+))?$/.exec(pfad);
     if (gm) return await G.route(request, db, s, jetzt, m, gm[1] ? Number(gm[1]) : 0, gm[2] || '', gm[3] || '', url);
     const cm = /^\/api\/chat\/([^/]+)(?:\/(loeschen))?$/.exec(pfad);

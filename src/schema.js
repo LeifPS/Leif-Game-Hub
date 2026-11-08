@@ -113,6 +113,25 @@ export const SCHEMA = [
     created INTEGER NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS chat_group_messages_gruppe ON chat_group_messages(group_id, id)`,
+  // Hub-Währung und Zusatzinhalte (DLCs), siehe src/dlc.js
+  `CREATE TABLE IF NOT EXISTS wallet (
+    user_id INTEGER PRIMARY KEY,
+    amount INTEGER NOT NULL DEFAULT 0
+  )`,
+  `CREATE TABLE IF NOT EXISTS wallet_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    delta INTEGER NOT NULL,
+    grund TEXT NOT NULL,
+    created INTEGER NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS dlc_owned (
+    user_id INTEGER NOT NULL,
+    dlc TEXT NOT NULL,
+    price INTEGER NOT NULL,
+    bought INTEGER NOT NULL,
+    PRIMARY KEY (user_id, dlc)
+  )`,
   // Zähler gegen Raten von Passwörtern und Massenanmeldungen
   `CREATE TABLE IF NOT EXISTS limits (
     k TEXT PRIMARY KEY,

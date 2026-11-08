@@ -1051,3 +1051,37 @@ test('Gruppen: Freundschaft beendet = raus aus Gruppen des anderen; Konto lösch
   assert.equal(ok.j.gruppe.mitglieder.length, 12);
   assert.equal((await call(env, 'POST', '/api/gruppen/' + ok.j.gruppe.id + '/mitglied', { name: viele[11] }, a)).j.fehler, 'zu_viele');
 });
+
+test('Zusatzinhalte: ohne Guthaben nichts kaufbar, mit Guthaben einmal, Konto löschen räumt auf', async () => {
+  const env = umgebung();
+  const t = await neuesKonto(env, 'Dlc');
+  const st = await call(env, 'GET', '/api/dlc', undefined, t);
+  assert.equal(st.status, 200);
+  assert.equal(st.j.guthaben, 0);
+  assert.equal(typeof st.j.waehrung, 'string');
+  const d = st.j.katalog.find((x) => x.id === 'schleimmerge-runen');
+  assert.ok(d && d.preis > 0 && d.besitz === false && d.spiel === 'schleimmerge');
+  assert.equal((await call(env, 'POST', '/api/dlc/kaufen', { id: 'gibtsnicht' }, t)).status, 404);
+  assert.equal((await call(env, 'POST', '/api/dlc/kaufen', { id: '../x' }, t)).status, 400);
+  const zu = await call(env, 'POST', '/api/dlc/kaufen', { id: d.id }, t);
+  assert.equal(zu.status, 402);
+  assert.equal((await call(env, 'GET', '/api/dlc', undefined, t)).j.katalog[0].besitz, false);
+  const uid = (await env.DB.prepare('SELECT id FROM users WHERE name_lc = ?').bind('dlc').first()).id;
+  await env.DB.prepare('INSERT INTO wallet (user_id, amount) VALUES (?, ?)').bind(uid, d.preis + 120).run();
+  const ok = await call(env, 'POST', '/api/dlc/kaufen', { id: d.id }, t);
+  assert.equal(ok.status, 200);
+  assert.equal(ok.j.guthaben, 120);
+  assert.equal(ok.j.katalog.find((x) => x.id === d.id).besitz, true);
+  const nochmal = await call(env, 'POST', '/api/dlc/kaufen', { id: d.id }, t);
+  assert.equal(nochmal.status, 409);
+  assert.equal((await call(env, 'GET', '/api/dlc', undefined, t)).j.guthaben, 120);   // nicht doppelt abgebucht
+  assert.equal((await env.DB.prepare('SELECT COUNT(*) AS n FROM wallet_log WHERE user_id = ?').bind(uid).first()).n, 1);
+  // Ein anderes Konto sieht den Besitz nicht
+  const t2 = await neuesKonto(env, 'Anderer');
+  assert.equal((await call(env, 'GET', '/api/dlc', undefined, t2)).j.katalog[0].besitz, false);
+  // Konto löschen
+  const key = await schluessel('Dlc', 'geheim123');
+  assert.equal((await call(env, 'POST', '/api/loeschen', { key }, t)).status, 200);
+  assert.equal((await env.DB.prepare('SELECT COUNT(*) AS n FROM dlc_owned WHERE user_id = ?').bind(uid).first()).n, 0);
+  assert.equal((await env.DB.prepare('SELECT COUNT(*) AS n FROM wallet WHERE user_id = ?').bind(uid).first()).n, 0);
+});
