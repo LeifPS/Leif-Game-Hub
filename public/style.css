@@ -929,9 +929,11 @@ body.pseudo-voll .voll-aus { display: flex; }
 /* Favoriten */
 .lib-stern { margin-left: auto; flex: none; color: #ffd36b; font-size: 12px; line-height: 1; }
 .lib-stern + small { margin-left: 6px; }
-.tile .fav { all: unset; box-sizing: border-box; position: absolute; z-index: 4; top: 8px; right: 8px; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; cursor: pointer; color: #e8ecf4; background: rgba(8, 10, 15, .62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); opacity: 0; transition: opacity .15s, background .15s; }
+.tile .fav { all: unset; box-sizing: border-box; position: absolute; z-index: 4; top: 12px; right: 10px; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; cursor: pointer; color: #e8ecf4; background: rgba(8, 10, 15, .62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); opacity: 0; transition: opacity .15s, background .15s, right .18s; }
 .tile:hover .fav, .tile .fav:focus-visible, .tile .fav.an { opacity: 1; }
-@media (hover: none) { .tile .fav { opacity: .9; } }
+/* Mit Maus: der Spielen-Knopf erscheint oben rechts beim Darüberfahren, der Stern rückt dann links daneben */
+@media (hover: hover) { .tile:hover .fav, .tile:focus-within .fav { right: 54px; } }
+@media (hover: none) { .tile .fav { opacity: .9; right: 10px; } }
 .tile .fav:hover { background: rgba(8, 10, 15, .85); }
 .tile .fav:focus-visible { outline: 2px solid var(--accent-hi); outline-offset: 1px; }
 .fav svg, .fav-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; }
