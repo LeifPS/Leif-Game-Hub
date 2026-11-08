@@ -10,7 +10,7 @@ export const KATALOG = [
     id: 'schleimmerge-runen',
     spiel: 'schleimmerge',
     name: 'Runenschmiede',
-    text: 'Zwölf neue Runenwaffen und das neue Verzauberungs-System: Verzaubere deine Bahnen mit Flamme, Frost, Glück und Blitz und werte die Verzauberungen mit Münzen auf.',
+    text: 'Runenwaffen mit 50 % mehr Schaden, die zufällig dabei sind, und das neue Verzauberungs-System: Flamme, Frost, Glück und Blitz, bezahlt mit Runensplittern.',
     preis: 500,
   },
 ];
