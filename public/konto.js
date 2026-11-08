@@ -786,10 +786,17 @@
     sende(false);
     herzTimer = setInterval(function () { if (!document.hidden) sende(false); }, 45000);
   }
+  /* ---------- Einladungen: die Chat-Nachricht "[einladung:spiel]" oder "[einladung:spiel:RAUM]" zeigt der Hub als Karte ---------- */
+  var EINL_RE = /^\[einladung:([a-z0-9_-]{1,40})(?::([A-Za-z0-9_-]{1,16}))?\]$/;
+  function einladung(text) { var m = EINL_RE.exec(String(text || '').trim()); return m ? { spiel: m[1], raum: m[2] || null } : null; }
+  var spielNamen = function (id) { return id; }, letzterRaum = null;
+  function chatKurz(text) { var e = einladung(text); return e ? 'Einladung zu ' + spielNamen(e.spiel) : text; }   // für Vorschauen und die Karte im Spiel
+  function raumFuer(id) { return letzterRaum && letzterRaum.spiel === id && Date.now() - letzterRaum.ts < 3600000 ? letzterRaum.raum : null; }
   function setzeSpiel(id) { var neu = id || null; if (neu !== spielId) { spielId = neu; raum = null; sende(false); } }
   function setzeRaum(r) {
     r = typeof r === 'string' ? r.slice(0, 40).replace(/[\u0000-\u001f<>]/g, '') : null;
     r = r || null;
+    if (r && spielId && /^[A-Za-z0-9_-]{1,16}$/.test(r)) letzterRaum = { spiel: spielId, raum: r, ts: Date.now() };
     if (r !== raum) { raum = r; sende(false); }
   }
 
@@ -876,7 +883,7 @@
     }
     k.querySelector('.sp-name').textContent = v.anzeige || v.name;
     var n = k.querySelector('.sp-n'); n.hidden = !(v.n > 1); n.textContent = v.n > 1 ? v.n + ' neue' : '';
-    k.querySelector('.sp-text').textContent = v.text;
+    k.querySelector('.sp-text').textContent = chatKurz(v.text);
     scTimer(k);
   }
   function scVerarbeiten(liste) {
@@ -960,6 +967,7 @@
   window.LghKonto = {
     bereit: bereit, name: function () { return konto ? konto.name : null; }, anzeige: anzeigeName, angemeldet: function () { return !!konto; },
     stand: stand, beimVerlassen: beimVerlassen, spiel: setzeSpiel, raum: setzeRaum,
+    einladung: einladung, chatKurz: chatKurz, raumFuer: raumFuer, spielNamen: function (f) { spielNamen = f; },
     freunde: freunde, chat: chat, setzeOffene: setzeOffene, avatarStil: avatarStil, avatar: avatarHtml, dialog: dialog,
     bewertung: { laden: function (id) { return api('GET', '/api/bewertung/' + encodeURIComponent(id)); }, setzen: function (id, sterne) { return api('POST', '/api/bewertung/' + encodeURIComponent(id), { sterne: sterne }); } },
     favoriten: { laden: function () { return api('GET', '/api/favoriten'); }, setzen: function (id, an) { return api('POST', '/api/favoriten', { spiel: id, an: !!an }); } },

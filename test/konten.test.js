@@ -882,3 +882,16 @@ test('Anzeigenamen der Entwickler: nur für Entwickler-Konten aus games.json, oh
   assert.deepEqual((await call(env2, 'GET', '/api/entwickler', undefined, t2)).j.entwickler, []);
   assert.equal((await call(env, 'GET', '/api/entwickler')).status, 401);
 });
+
+test('Einladung: "[einladung:spiel:RAUM]" geht als normale Chat-Nachricht durch und erscheint unverändert in Vorschau und Verlauf', async () => {
+  const env = umgebung();
+  const [a, b] = await freunde2(env);
+  for (const t of ['[einladung:spells]', '[einladung:spells:ABC123]']) {
+    const r = await call(env, 'POST', '/api/chat/Ben', { text: t }, a);
+    assert.equal(r.status, 200);
+    assert.equal(r.j.nachricht.text, t);
+  }
+  const l = (await call(env, 'GET', '/api/freunde', undefined, b)).j;
+  assert.deepEqual([l.freunde[0].ungelesen, l.freunde[0].vorschau], [2, '[einladung:spells:ABC123]']);
+  assert.deepEqual((await call(env, 'GET', '/api/chat/Anna', undefined, b)).j.nachrichten.map((m) => m.text), ['[einladung:spells]', '[einladung:spells:ABC123]']);
+});

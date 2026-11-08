@@ -990,3 +990,17 @@ body.pseudo-voll .voll-aus { display: flex; }
 .neu-tag { display: inline-block; margin-right: 7px; padding: 0 7px; border-radius: 6px; background: rgba(255, 255, 255, .1); color: var(--text); font-size: 11px; font-weight: 650; letter-spacing: .02em; line-height: 17px; vertical-align: 1px; }
 .neu-tag.neu { background: var(--accent); color: #fff; }
 @media (max-width: 700px) { .neu-liste { padding: 0 16px; grid-template-columns: 1fr; } .neu .abschnitt { padding-left: 16px; padding-right: 16px; } }
+
+/* Einladungen */
+.ch-kopf .ch-einladen { margin-left: auto; height: 36px; padding: 0 14px; font-size: 14px; border-radius: 10px; box-shadow: none; flex: none; }
+.ch-msg .ch-blase.ch-einl { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); white-space: normal; min-width: min(280px, 100%); }
+.ch-msg.ich .ch-blase.ch-einl { border-color: var(--accent); }
+.ch-einl .pf-icon { flex: none; }
+.ch-einl-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left; }
+.ch-einl-text b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ch-einl-text small { color: var(--muted); font-size: 12.5px; }
+.ch-einl-text code { padding: 0 5px; border-radius: 5px; background: rgba(255, 255, 255, .08); }
+.ch-einl-los { flex: none; height: 36px; padding: 0 14px; font-size: 14px; border-radius: 10px; box-shadow: none; text-decoration: none; }
+.dlg-einl .einl-liste { max-height: 52dvh; overflow-y: auto; }
+.einl-icon { width: 36px; height: 36px; border-radius: 9px; }
+.dlg-einl .dlg-fuss { margin-top: 12px; }

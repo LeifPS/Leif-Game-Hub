@@ -813,8 +813,8 @@
         } else if (f.online) status = '<span class="punkt an"></span>Im Hub';
         else if (f.privat) status = '<span class="punkt"></span>Status privat';
         else status = '<span class="punkt"></span>' + (f.zuletzt ? 'Zuletzt online ' + relZeit(Math.max(0, d.jetzt - f.zuletzt)) : 'Noch nie online');
-        if (f.ungelesen) status += '<span class="fr-vorschau">' + n(f.vorschau || '') + '</span>';
-        akt = '<a class="btn ' + (f.ungelesen ? 'btn-primary' : 'btn-ghost') + ' fr-btn" href="#chat/' + encodeURIComponent(f.name) + '">Chat' + (f.ungelesen ? '<span class="fr-chatzahl">' + (f.ungelesen > 9 ? '9+' : f.ungelesen) + '</span>' : '') + '</a>' + akt;
+        if (f.ungelesen) status += '<span class="fr-vorschau">' + n(LghKonto.chatKurz(f.vorschau || '')) + '</span>';
+        akt = '<a class="btn ' + (f.ungelesen ? 'btn-primary' : 'btn-ghost') + ' fr-btn" href="#chat/' + encodeURIComponent(f.name) + '">Chat' + (f.ungelesen ? '<span class="fr-chatzahl">' + (f.ungelesen > 9 ? '9+' : f.ungelesen) + '</span>' : '') + '</a><button type="button" class="btn btn-ghost fr-btn" data-a="einladen" data-n="' + n(f.name) + '">Einladen</button>' + akt;
         akt += entfernenFrage === f.name
           ? '<button type="button" class="btn btn-ghost fr-btn gefahr" data-a="entfernen" data-n="' + n(f.name) + '">Wirklich entfernen?</button>'
           : '<button type="button" class="btn btn-ghost fr-btn leise" data-a="frage" data-n="' + n(f.name) + '" aria-label="' + n(anz(f)) + ' entfernen">Entfernen</button>';
@@ -960,6 +960,11 @@
     if (!b || !window.LghKonto) return;
     var a = b.getAttribute('data-a'), nm = b.getAttribute('data-n');
     if (a === 'kopie') { try { navigator.clipboard.writeText(nm); frMeldung('Code kopiert.'); } catch (x) { frMeldung('Code: ' + nm); } return; }
+    if (a === 'einladen') {
+      var fz = freundeDaten && freundeDaten.freunde.filter(function (y) { return y.name === nm; })[0], an = fz ? anz(fz) : nm;
+      einladenDialog(nm, an, function () { frMeldung('Einladung an ' + an + ' gesendet.'); ladeFreunde(); });
+      return;
+    }
     if (a === 'frage') { entfernenFrage = nm; zeichneFreunde(document.getElementById('fr-liste'), freundeDaten); setTimeout(function () { if (entfernenFrage === nm) { entfernenFrage = null; if (freundeDaten && document.getElementById('fr-liste')) zeichneFreunde(document.getElementById('fr-liste'), freundeDaten); } }, 5000); return; }
     var f = { annehmen: 'annehmen', ablehnen: 'ablehnen', entfernen: 'entfernen' }[a];
     if (!f) return;
@@ -970,6 +975,57 @@
       ladeFreunde();
     });
   });
+
+  /* ---------- Einladungen: Karte im Chat und Auswahl des Spiels ---------- */
+  function einlBlase(m) {
+    var e = window.LghKonto && LghKonto.einladung(m.text), sp = e && spielbar().filter(function (g) { return g.id === e.spiel; })[0];
+    if (!sp) return '<div class="ch-blase">' + esc(m.text) + '</div>';
+    var wer = m.von === 'ich' ? 'Du hast ' + esc(chat ? chat.anzeige || chat.name : '') + ' eingeladen' : esc(chat ? chat.anzeige || chat.name : '') + ' lädt dich ein';
+    return '<div class="ch-blase ch-einl"><span class="pf-icon">' + art(sp, 100, 100) + '</span><span class="ch-einl-text"><b>' + esc(sp.name) + '</b><small>' + wer + (e.raum ? ' · Raum <code>' + esc(e.raum) + '</code>' : '') + '</small></span>' +
+      '<a class="btn btn-primary ch-einl-los" href="#spiel/' + encodeURIComponent(sp.id) + '/play"' + (e.raum ? ' data-raum="' + esc(e.raum) + '"' : '') + '>Spielen</a></div>';
+  }
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest ? e.target.closest('a.ch-einl-los[data-raum]') : null;
+    if (a) { try { navigator.clipboard.writeText(a.getAttribute('data-raum')); } catch (x) { } }   // Raumcode liegt dann in der Zwischenablage, das Spiel startet über den Link
+  });
+  function einlSpiele() {
+    var zul = zuletztLokal(), alle = {};
+    Object.keys(weiterServer).forEach(function (i) { alle[i] = weiterServer[i]; });
+    Object.keys(zul).forEach(function (i) { if (!(alle[i] > zul[i])) alle[i] = zul[i]; });
+    return spielbar().slice().sort(function (x, y) {
+      return (favIst(y.id) - favIst(x.id)) || ((alle[y.id] || 0) - (alle[x.id] || 0)) || x.name.localeCompare(y.name, 'de', { numeric: true, sensitivity: 'base' });
+    });
+  }
+  function einladenDialog(name, anzeige, fertig) {
+    if (document.querySelector('.dlg-einl') || !window.LghKonto) return;
+    var pfeil = '<svg class="pfeil" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6.5L15 12l-5.5 5.5"/></svg>';
+    var zeilen = einlSpiele().map(function (sp) {
+      var r = LghKonto.raumFuer(sp.id);
+      return '<button type="button" class="dlg-zeile" data-sp="' + esc(sp.id) + '"><span class="pf-icon einl-icon">' + art(sp, 100, 100) + '</span><span class="dlg-ztext"><b>' + esc(sp.name) + '</b>' + (r ? '<small>Raum ' + esc(r) + ' wird mitgeschickt</small>' : '') + '</span>' + pfeil + '</button>';
+    }).join('');
+    var hinter = document.createElement('div');
+    hinter.className = 'dlg-hinter dlg-einl';
+    hinter.innerHTML = '<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="einl-t"><div class="dlg-titel" id="einl-t">' + esc(anzeige) + ' einladen</div><div class="dlg-sub" style="margin:2px 0 12px">Zu welchem Spiel? ' + esc(anzeige) + ' bekommt eine Nachricht mit Knopf zum Spielen.</div>' +
+      '<div class="dlg-gruppe einl-liste">' + (zeilen || '<div class="fr-leer">Es gibt noch kein spielbares Spiel.</div>') + '</div><div class="fr-meldung fehler" id="einl-meld" role="status"></div>' +
+      '<div class="dlg-fuss"><button type="button" class="btn btn-ghost" data-zu>Abbrechen</button></div></div>';
+    function zu() { hinter.remove(); document.removeEventListener('keydown', taste); }
+    function taste(ev) { if (ev.key === 'Escape') zu(); }
+    hinter.addEventListener('click', function (ev) {
+      if (ev.target === hinter || (ev.target.closest && ev.target.closest('[data-zu]'))) return zu();
+      var b = ev.target.closest ? ev.target.closest('[data-sp]') : null;
+      if (!b || b.disabled) return;
+      var id = b.getAttribute('data-sp'), r = LghKonto.raumFuer(id), m = hinter.querySelector('#einl-meld');
+      m.textContent = ''; [].forEach.call(hinter.querySelectorAll('[data-sp]'), function (x) { x.disabled = true; });
+      LghKonto.chat.senden(name, '[einladung:' + id + (r ? ':' + r : '') + ']').then(function (res) {
+        if (res.ok) { zu(); fertig(res); return; }
+        [].forEach.call(hinter.querySelectorAll('[data-sp]'), function (x) { x.disabled = false; });
+        m.textContent = res.status === 404 && res.j.fehler === 'unbekannt' ? CHAT_FEHLER.unbekannt : (CHAT_FEHLER[res.j.fehler] || 'Das hat nicht geklappt.');
+      });
+    });
+    document.addEventListener('keydown', taste);
+    document.body.appendChild(hinter);
+    var erst = hinter.querySelector('[data-sp]'); if (erst) erst.focus();
+  }
 
   /* ---------- Chat unter Freunden ---------- */
   /* Eine Unterhaltung pro Freund (#chat/name). Neue Nachrichten werden alle paar Sekunden abgeholt, solange der Tab sichtbar ist.
@@ -1012,7 +1068,7 @@
       var gruppeStart = !davor || davor.von !== m.von || m.zeit - davor.zeit > 300 || tagLabel(davor.zeit) !== t;
       var gruppeEnde = !danach || danach.von !== m.von || danach.zeit - m.zeit > 300 || tagLabel(danach.zeit) !== t;
       h += '<div class="ch-msg ' + (m.von === 'ich' ? 'ich' : 'er') + (gruppeStart ? ' start' : '') + (gruppeEnde ? ' ende' : '') + (chat.offen === m.id ? ' offen' : '') + '" data-id="' + m.id + '">' +
-        '<div class="ch-blase">' + esc(m.text) + '</div>' +
+        einlBlase(m) +
         (gruppeEnde ? '<div class="ch-zeit">' + uhrzeit(m.zeit) + '</div>' : '') +
         (m.von === 'ich' && chat.offen === m.id ? '<button type="button" class="ch-weg" data-ch="weg" data-id="' + m.id + '">Nachricht löschen</button>' : '') + '</div>';
     });
@@ -1102,7 +1158,8 @@
       var w = inhalt.querySelector('.ch-wrap');
       w.innerHTML = '<div class="ch-kopf"><a class="ch-zurueck" href="#freunde" aria-label="Zurück zu den Freunden"><svg aria-hidden="true" width="22" height="22"><use href="#i-back"/></svg></a>' +
         '<a class="ch-person" href="#profil/' + encodeURIComponent(f.name) + '">' + LghKonto.avatar('avatar', f.name, anz(f), f.av) +
-        '<span class="ch-pname"><b>' + esc(anz(f)) + '</b><small id="ch-status"></small></span></a></div>' +
+        '<span class="ch-pname"><b>' + esc(anz(f)) + '</b><small id="ch-status"></small></span></a>' +
+        '<button type="button" class="btn btn-ghost ch-einladen" data-ch="einladen">Einladen</button></div>' +
         '<div class="ch-liste" id="ch-liste" role="log" aria-live="polite" aria-label="Nachrichten mit ' + esc(anz(f)) + '"></div>' +
         '<button type="button" class="ch-neu" id="ch-neu" data-ch="unten" hidden>Neue Nachricht ↓</button>' +
         '<div class="ch-meld" id="ch-meld" role="status"></div>' +
@@ -1159,6 +1216,11 @@
     if (b && chat) {
       var a = b.getAttribute('data-ch');
       if (a === 'unten') { chatUnten(false); b.hidden = true; return; }
+      if (a === 'einladen') {
+        var ce = chat;
+        einladenDialog(ce.name, ce.anzeige || ce.name, function (res) { if (chat !== ce) return; chatNeue({ ok: true, j: { nachrichten: [res.j.nachricht] } }); chatUnten(false); });
+        return;
+      }
       if (a === 'aelter') {
         var c = chat, l = document.getElementById('ch-liste'), alt = l ? l.scrollHeight : 0;
         b.disabled = true;
@@ -1186,7 +1248,7 @@
     }
     // Eigene Nachricht antippen: "Nachricht löschen" ein- oder ausblenden
     var m = chat && e.target.closest ? e.target.closest('.ch-msg.ich') : null;
-    if (m && !e.target.closest('.ch-weg')) {
+    if (m && !e.target.closest('.ch-weg') && !e.target.closest('.ch-einl-los')) {
       var mid = parseInt(m.getAttribute('data-id'), 10);
       chat.offen = chat.offen === mid ? 0 : mid; chat.nah = chatNah(); chatZeichne();
     }
@@ -1548,6 +1610,7 @@
       if (spiele.some(function (sp) { return sp.cd; })) releaseTimer = setInterval(releaseTick, 1000);
       spiele.forEach(function (sp) { ['bild', 'banner', 'icon', 'wallpaper'].forEach(function (k) { if (typeof sp[k] === 'string' && sp[k].indexOf('?') < 0) sp[k] += '?v=' + BILD_V; }); });
       favoriten = favLokal();
+      if (window.LghKonto) LghKonto.spielNamen(spielName);
       route();
       if (window.LghKonto) LghKonto.bereit().then(favLaden);
     })
