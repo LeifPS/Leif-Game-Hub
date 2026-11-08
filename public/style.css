@@ -716,13 +716,14 @@ body.konto-offen { overflow: hidden; }
 
 /* ---------- Spielstände zurückholen ---------- */
 .st-liste { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; max-height: 52vh; overflow: auto; }
-.st-spiel { border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line); overflow: hidden; }
+.st-spiel { flex: none; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line); overflow: hidden; }
 .st-kopf { all: unset; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 10px 12px; cursor: pointer; }
 .st-kopf:focus-visible { outline: 2px solid var(--accent, #4f8cff); outline-offset: -2px; }
 .st-kopf small { color: var(--muted); font-size: 12px; }
 .st-detail { padding: 2px 12px 12px; display: flex; flex-direction: column; gap: 6px; }
 .st-abschnitt { margin-top: 8px; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
 .st-zeile { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; flex-wrap: wrap; }
+.st-detail[hidden] { display: none; }
 .st-knoepfe { display: flex; gap: 6px; }
 .st-btn { padding: 6px 10px; font-size: 12px; }
 .st-leer { color: var(--muted); font-size: 13px; padding: 4px 0; }
