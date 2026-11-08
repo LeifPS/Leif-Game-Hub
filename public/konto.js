@@ -440,15 +440,16 @@
       return gruppen.every(function (alt) { return alt.some(function (t) { return n.indexOf(t) >= 0; }); });
     });
   }
-  /* ---------- Sichtbarkeit: wer sieht Online-Status und gespielte Spiele (1 = Freunde, 0 = niemand) ---------- */
+  /* ---------- Sichtbarkeit: wer sieht Online-Status und gespielte Spiele (2 = alle, 1 = Freunde, 0 = niemand) ---------- */
   function sichtAnsicht(el, menue) {
     var box = el.querySelector('#dlg-sicht');
     menue.hidden = true; box.hidden = false;
     var wahl = function (feld, titel, text, wert) {
       return '<div class="sicht-block"><div class="sicht-titel">' + titel + '</div><div class="sicht-text">' + text + '</div>' +
         '<div class="dlg-wahl" role="radiogroup" aria-label="' + titel + '">' +
+        '<button type="button" role="radio" data-f="' + feld + '" data-w="0" aria-checked="' + (wert === 0) + '">Niemand</button>' +
         '<button type="button" role="radio" data-f="' + feld + '" data-w="1" aria-checked="' + (wert === 1) + '">Freunde</button>' +
-        '<button type="button" role="radio" data-f="' + feld + '" data-w="0" aria-checked="' + (wert === 0) + '">Niemand</button></div></div>';
+        '<button type="button" role="radio" data-f="' + feld + '" data-w="2" aria-checked="' + (wert === 2) + '">Alle</button></div></div>';
     };
     box.innerHTML = '<div class="st-leer">Lädt …</div>';
     api('GET', '/api/ich').then(function (res) {
@@ -457,7 +458,7 @@
       box.innerHTML =
         wahl('online', 'Online-Status', 'Ob du gerade online bist und wann du zuletzt online warst. Bei „Niemand“ siehst du für andere immer offline aus.', sicht.online) +
         wahl('spiele', 'Gespielte Spiele', 'Welche Spiele du schon gespielt hast und welches du gerade spielst. Bei „Niemand“ können Freunde dir auch nicht in ein Spiel folgen.', sicht.spiele) +
-        '<div class="konto-regel">Sehen können es nur deine Freunde, andere Personen sehen dein Profil nie. Spielzeit und das Datum des letzten Spielens sieht ohnehin nur du selbst.</div>' +
+        '<div class="konto-regel">Standard ist „Freunde“. Bei „Alle“ sieht es jede angemeldete Person, die dein Profil öffnet, bei „Niemand“ nicht einmal deine Freunde. Spielzeit und das Datum des letzten Spielens sieht ohnehin nur du selbst.</div>' +
         '<div class="st-meld" id="si-meld" role="status"></div>' +
         '<div class="btn-row"><button class="btn btn-ghost" type="button" data-zurueck>Zurück</button></div>';
       box.querySelector('[data-zurueck]').onclick = function () { box.hidden = true; menue.hidden = false; };

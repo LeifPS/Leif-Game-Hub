@@ -1077,10 +1077,17 @@
           return '<a class="pf-spiel" href="#spiel/' + encodeURIComponent(sp.id) + '"><span class="pf-icon">' + art(sp, 100, 100) + '</span><span class="pf-text"><b>' + esc(sp.name) + '</b>' + (sp.wartung ? '<small>In Wartung</small>' : '') + '</span></a>';
         }).join('') + '</div>';
       }
-      if (p.nurOeffentlich) {   // Entwickler, mit denen man nicht befreundet ist: nur Name, Bild und ihre Spiele
+      if (p.nurOeffentlich) {   // Kein Freund: Entwickler (nur Name, Bild, Spiele) und alles, was die Person für „Alle“ freigegeben hat
+        var oStatus = p.zeigeStatus ? (p.online ? '<span class="pf-punkt"></span>Online' + (p.spiel ? ' · spielt ' + esc(spielName(p.spiel)) : '') : (p.zuletzt ? 'Zuletzt online ' + relZeit(Math.max(0, jetzt - p.zuletzt)) : 'Noch nie online')) : (p.entwickler ? 'Entwickler im Hub' : '');
+        var oZeilen = '';
+        (p.spiele || []).forEach(function (x) {
+          var sp = spiele.filter(function (g) { return g.id === x.spiel; })[0];
+          if (sp) oZeilen += '<a class="pf-spiel" href="#spiel/' + encodeURIComponent(sp.id) + '"><span class="pf-icon">' + art(sp, 100, 100) + '</span><span class="pf-text"><b>' + esc(sp.name) + '</b></span></a>';
+        });
         w.innerHTML = '<div class="pf-kopf">' + LghKonto.avatar('avatar gross', p.name, p.anzeige, p.av) +
-          '<div class="pf-kopftext"><h1 class="pf-name">' + esc(p.anzeige) + '</h1><div class="pf-at">@' + esc(p.name) + (seit ? ' · dabei seit ' + esc(seit) : '') + '</div><div class="pf-status">Entwickler im Hub</div></div></div>' +
-          '<div class="pf-aktionen"><button type="button" class="btn btn-primary" data-pf-anfrage="' + esc(p.name) + '">Freundschaftsanfrage senden</button></div><div class="pf-meld" id="pf-meld" role="status"></div>' + spieleHtml;
+          '<div class="pf-kopftext"><h1 class="pf-name">' + esc(p.anzeige) + '</h1><div class="pf-at">@' + esc(p.name) + (seit ? ' · dabei seit ' + esc(seit) : '') + '</div>' + (oStatus ? '<div class="pf-status">' + oStatus + '</div>' : '') + '</div></div>' +
+          '<div class="pf-aktionen"><button type="button" class="btn btn-primary" data-pf-anfrage="' + esc(p.name) + '">Freundschaftsanfrage senden</button></div><div class="pf-meld" id="pf-meld" role="status"></div>' +
+          (p.zeigeSpiele ? '<h2 class="fr-abschnitt">Gespielte Spiele</h2>' + (oZeilen ? '<div class="pf-liste">' + oZeilen + '</div>' : '<div class="fr-leer">Noch nichts gespielt.</div>') : '') + spieleHtml;
         return;
       }
       var sicher = {}; (p.staende || []).forEach(function (x) { sicher[x.spiel] = x; });

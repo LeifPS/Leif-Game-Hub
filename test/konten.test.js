@@ -535,7 +535,8 @@ test('Sichtbarkeit: Online-Status und Spiele getrennt verbergbar, serverseitig d
   let x = await sehen();
   assert.equal(x.f.online, true); assert.equal(x.f.spiel, 'spells'); assert.equal(x.f.raum, 'XY'); assert.deepEqual(x.p.spiele, [{ spiel: 'spells' }]);
   // Eingaben prüfen
-  assert.equal((await call(env, 'POST', '/api/sichtbarkeit', { online: 2 }, b)).status, 400);
+  assert.equal((await call(env, 'POST', '/api/sichtbarkeit', { online: 3 }, b)).status, 400);
+  assert.equal((await call(env, 'POST', '/api/sichtbarkeit', { online: '2' }, b)).status, 400);
   assert.equal((await call(env, 'POST', '/api/sichtbarkeit', {}, b)).status, 400);
   assert.equal((await call(env, 'POST', '/api/sichtbarkeit', { online: 0 })).status, 401);
   // Spiele verbergen: online bleibt sichtbar, aber kein aktuelles Spiel, kein Raum, keine Liste
@@ -551,6 +552,41 @@ test('Sichtbarkeit: Online-Status und Spiele getrennt verbergbar, serverseitig d
   // Das eigene Profil bleibt vollständig und zeigt die Einstellung
   const ich = (await call(env, 'GET', '/api/profil', undefined, b)).j;
   assert.equal(ich.online, true); assert.equal(ich.spiel, 'spells'); assert.deepEqual(ich.sicht, { online: 0, spiele: 1 });
+});
+
+test('Sichtbarkeit "Alle": Fremde sehen genau das, was freigegeben ist; Standard bleibt Freunde', async () => {
+  const env = umgebung();
+  const a = await neuesKonto(env, 'Anna'), b = await neuesKonto(env, 'Ben'), c = await neuesKonto(env, 'Carl');
+  await call(env, 'POST', '/api/freunde/anfrage', { name: 'Ben' }, a);
+  await call(env, 'POST', '/api/freunde/annehmen', { name: 'Anna' }, b);
+  await call(env, 'POST', '/api/praesenz', { spiel: 'spells', raum: 'XY' }, b);
+  // Standard: Freunde. Ein Fremder sieht nichts, nicht einmal, dass es das Konto gibt
+  assert.deepEqual((await call(env, 'GET', '/api/ich', undefined, b)).j.sicht, { online: 1, spiele: 1 });
+  assert.equal((await call(env, 'GET', '/api/profil/Ben', undefined, c)).status, 404);
+  // Nur der Status für alle: Fremde sehen online, aber weder Spiel noch Liste
+  assert.deepEqual((await call(env, 'POST', '/api/sichtbarkeit', { online: 2 }, b)).j.sicht, { online: 2, spiele: 1 });
+  let p = (await call(env, 'GET', '/api/profil/Ben', undefined, c)).j;
+  assert.equal(p.nurOeffentlich, true); assert.equal(p.freund, false); assert.equal(p.online, true); assert.equal('spiel' in p, false);
+  assert.equal(p.zeigeStatus, true); assert.equal(p.zeigeSpiele, false); assert.equal('spiele' in p, false); assert.equal(p.spielePrivat, true);
+  for (const k of ['freunde', 'staende', 'sicht', 'raum']) assert.equal(k in p, false, k);
+  // Spiele auch für alle: Spiel und Liste, aber weiter keine Zeiten
+  await call(env, 'POST', '/api/sichtbarkeit', { spiele: 2 }, b);
+  p = (await call(env, 'GET', '/api/profil/Ben', undefined, c)).j;
+  assert.equal(p.spiel, 'spells'); assert.deepEqual(p.spiele, [{ spiel: 'spells' }]); assert.equal(p.zeigeSpiele, true);
+  // Freunde sehen weiterhin alles, auch bei "Alle"; die Freundesliste liefert denselben Stand
+  const f = (await call(env, 'GET', '/api/freunde', undefined, a)).j.freunde[0];
+  assert.equal(f.online, true); assert.equal(f.privat, false); assert.equal(f.spiel, 'spells');
+  assert.equal((await call(env, 'GET', '/api/profil/Ben', undefined, a)).j.freund, true);
+  // Nur Spiele für alle, Status nur Freunde: Fremde sehen die Liste, aber keinen Status
+  await call(env, 'POST', '/api/sichtbarkeit', { online: 1 }, b);
+  p = (await call(env, 'GET', '/api/profil/Ben', undefined, c)).j;
+  assert.equal(p.zeigeStatus, false); assert.equal(p.statusPrivat, true); assert.equal('online' in p, false); assert.equal(p.spiel, null); assert.deepEqual(p.spiele, [{ spiel: 'spells' }]);
+  // Zurück auf Freunde: wieder unsichtbar
+  await call(env, 'POST', '/api/sichtbarkeit', { spiele: 1 }, b);
+  assert.equal((await call(env, 'GET', '/api/profil/Ben', undefined, c)).status, 404);
+  // Niemand gilt auch für Freunde, "Alle" hebt das nicht auf
+  await call(env, 'POST', '/api/sichtbarkeit', { online: 0 }, b);
+  assert.equal((await call(env, 'GET', '/api/profil/Ben', undefined, a)).j.statusPrivat, true);
 });
 
 async function freunde2(env, n1 = 'Anna', n2 = 'Ben') {
