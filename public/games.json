@@ -710,6 +710,23 @@
         "screens/shots/nebelmeertiefe/1.webp",
         "screens/shots/nebelmeertiefe/2.webp"
       ]
+    },
+    {
+      "id": "mosaik",
+      "name": "Mosaik",
+      "text": "Zahlen, die Bilder verraten: Jede Zahl zählt die gefüllten Felder in ihrem 3×3-Block. Löse das Raster Schritt für Schritt, und ein Bild kommt zum Vorschein.",
+      "url": "https://alva-van-wilk.de/mosaik/",
+      "phase": "beta",
+      "entwickler": ["Alva"],
+      "farbe": "#5f8a57",
+      "kategorien": ["Rätsel", "Logik"],
+      "icon": "screens/mosaik-icon.webp",
+      "wallpaper": "screens/mosaik-wallpaper.webp",
+      "screenshots": [
+        "screens/shots/mosaik/1.webp",
+        "screens/shots/mosaik/2.webp",
+        "screens/shots/mosaik/3.webp"
+      ]
     }
   ]
 }
