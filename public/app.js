@@ -274,6 +274,58 @@
     });
   }
 
+  /* ---------- Neu im Hub: neue Spiele (die letzten 14 Tage) und frische Updates (die letzten 7 Tage), neueste zuerst ---------- */
+  var NEU_TAGE = 14, UPD_TAGE = 7, NEU_MAX = 6, NEU_STUFE = { start: 5, major: 4, minor: 3, patch: 2, build: 1 };
+  function erstesDatum(sp) {
+    var v = ver(sp), t = sp.release ? Date.parse(sp.release) : v && v.erste ? Date.parse(v.erste) : sp.erschienen ? Date.parse(sp.erschienen + 'T12:00:00+02:00') : NaN;
+    return t || 0;
+  }
+  function neuListe() {
+    var jetzt = jetztMs(), neu = [], upd = [], neuIds = {};
+    spielbar().forEach(function (sp) {
+      var t = erstesDatum(sp);
+      if (t && jetzt - t >= 0 && jetzt - t < NEU_TAGE * 864e5) { neu.push({ art: 'neu', sp: sp, ts: t }); neuIds[sp.id] = 1; }
+    });
+    spielbar().forEach(function (sp) {
+      var v = ver(sp), t = v && v.datum ? Date.parse(v.datum) : 0;
+      if (!neuIds[sp.id] && t && jetzt - t < UPD_TAGE * 864e5) upd.push({ art: 'upd', sp: sp, ts: Math.min(t, jetzt) });
+    });
+    var nach = function (a, b) { return b.ts - a.ts; };
+    return neu.sort(nach).slice(0, 3).concat(upd.sort(nach)).slice(0, NEU_MAX).sort(nach);
+  }
+  // Die wichtigste Änderung der letzten Tage aus dem Update-Log (höchste Stufe, bei Gleichstand die neueste)
+  function neuUpdateText(sp) {
+    var d = logCache[sp.id], v = ver(sp);
+    if (!d || !d.eintraege) return v ? 'Version ' + vz(v.version) : 'Aktualisiert';
+    var grenze = jetztMs() - UPD_TAGE * 864e5, beste = null;
+    d.eintraege.forEach(function (e) {
+      if (Date.parse(e.datum) < grenze) return;
+      if (!beste || (NEU_STUFE[e.art] || 1) > (NEU_STUFE[beste.art] || 1)) beste = e;
+    });
+    if (!beste) beste = d.eintraege[0];
+    if (!beste) return 'Aktualisiert';
+    var t = String(beste.text || '').replace(/^\s*(major|gro(?:ß|ss)es\s+update|klein(?:es)?\s+update|patch|minor|build)\s*[:\-–—]\s*/i, '');
+    return (ARTEN[beste.art] || 'Update') + ': ' + t;
+  }
+  function neuZeichne() {
+    var el = document.getElementById('neu'); if (!el) return;
+    var l = neuListe();
+    if (!l.length) { el.hidden = true; el.innerHTML = ''; return; }
+    var jetzt = jetztMs();
+    el.innerHTML = '<div class="abschnitt"><h2>Neu im Hub</h2></div><div class="neu-liste">' + l.map(function (x) {
+      var wann = relZeit(Math.max(0, (jetzt - x.ts) / 1000));
+      var tag = x.art === 'neu' ? '<span class="neu-tag neu">Neu</span>' : '<span class="neu-tag">Update</span>';
+      var text = x.art === 'neu' ? 'Erschienen ' + wann : esc(neuUpdateText(x.sp)) + ' · ' + wann;
+      return '<a class="pf-spiel neu-item" href="#spiel/' + encodeURIComponent(x.sp.id) + '"><span class="pf-icon">' + art(x.sp, 100, 100) + '</span><span class="pf-text"><b>' + esc(x.sp.name) + '</b><small>' + tag + text + '</small></span></a>';
+    }).join('') + '</div>';
+    el.hidden = false;
+    l.forEach(function (x) {   // Update-Texte nachladen (Log-Dateien bleiben im Speicher)
+      if (x.art !== 'upd' || logCache[x.sp.id]) return;
+      fetch('changelog/' + encodeURIComponent(x.sp.id) + '.json').then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function (d) { logCache[x.sp.id] = d; neuZeichne(); }).catch(function () { });
+    });
+  }
+
   function renderHome() {
     var liste = sortiert().filter(passt);
     var hero = null;
@@ -291,7 +343,7 @@
       h += '<div class="btn-row"><a class="btn btn-primary" href="#spiel/' + encodeURIComponent(hero.id) + '/play">' + playIcon() + 'Jetzt spielen</a>';
       h += '<a class="btn btn-ghost" href="#spiel/' + encodeURIComponent(hero.id) + '">Mehr erfahren</a></div></div></section>';
     }
-    if (filter === 'Alle' && !suche) h += '<section class="weiter" id="weiter" aria-label="Weiterspielen" hidden></section>';
+    if (filter === 'Alle' && !suche) h += '<section class="weiter" id="weiter" aria-label="Weiterspielen" hidden></section><section class="neu" id="neu" aria-label="Neu im Hub" hidden></section>';
     var alle = {};
     spiele.forEach(function (sp) { kategorien(sp).forEach(function (k) { alle[k] = 1; }); });
     var chips = ['Alle'].concat(Object.keys(alle).sort(function (a, b) { return a.localeCompare(b, 'de'); }));
@@ -301,7 +353,7 @@
     }).join('') + '</div></div>';
     h += '<div class="grid">' + (liste.length ? liste.map(tile).join('') : '<div class="leer">Keine Spiele gefunden.</div>') + '</div>';
     inhalt.innerHTML = h;
-    weiterZeichne(); weiterLaden();
+    weiterZeichne(); weiterLaden(); neuZeichne();
   }
 
   var SCHRIFTEN = { fredoka: 700, cinzel: 900, lilita: 400, anton: 400, bangers: 400, marker: 400, silkscreen: 700, patrick: 400 };

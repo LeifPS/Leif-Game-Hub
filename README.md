@@ -127,6 +127,10 @@ Größere Stände (über ca. 100.000 Zeichen Base64) gehen nicht durch die Adres
 ## Screenshots hinzufügen
 Screenshots eines Spiels kommen nach `public/screens/shots/<id>/N.webp` (1600 px breit, WebP) und werden in `games.json` beim Spiel im Feld `screenshots` (Liste, erste Datei ist das Hauptbild) eingetragen. Bei Screenshots vom iPad werden Statusleiste und Browser-Leiste oben abgeschnitten (ohne Tab-Leiste 105 px, mit Tab-Leiste 265 px bei 2388 px Breite) und unten 56 px (Ecken-Markierung).
 
+## Neu im Hub (Startseite)
+
+Unter „Weiterspielen“ steht „Neu im Hub“: bis zu drei **neue Spiele** (erste Version oder `release` höchstens 14 Tage her) und **frische Updates** (letztes Update höchstens 7 Tage her), zusammen höchstens sechs, neueste zuerst. Bei Updates steht die wichtigste Änderung der letzten Tage aus dem Update-Log (höchste Stufe, bei Gleichstand die neueste). Es kommt alles aus `games.json`, `versions.json` und `changelog/*.json`, es gibt nichts zu pflegen. Wer gerade was spielt, zeigt weiter die Freunde-Leiste darüber.
+
 ## Konten, Freunde und mitgeschriebene Spielstände
 
 Der Hub ist ohne Konto gesperrt (Name und Passwort, keine E-Mail). Konten, Freunde und Spielstand-Verlauf liegen in einer Cloudflare-D1-Datenbank `lgh`; der Server ist `src/worker.js` (Logik in `src/konten.js`, Tabellen in `src/schema.js`, Tests mit `npm test`). Er läuft im selben Worker wie die statischen Dateien, nur `/api/*` kommt an (`wrangler.jsonc`, `run_worker_first`). Die Oberfläche ist `public/konto.js` (Anmeldung, Konto-Dialog, Herzschlag, stilles Mitschreiben) und der Abschnitt "Freunde" in `public/app.js` (Route `#freunde`).
