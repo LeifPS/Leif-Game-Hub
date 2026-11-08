@@ -177,6 +177,44 @@
     document.getElementById('side-fuss').innerHTML = n + (n === 1 ? ' Spiel' : ' Spiele') + ' spielbar · <a href="kontakt.html">Kontakt</a> · <a href="credits.html">Quellen</a>';
   }
 
+  /* ---------- Weiterspielen: die zuletzt gespielten Spiele, gemerkt auf dem Gerät (sofort) und im Konto (Spielzeit-Tabelle, geräteübergreifend) ---------- */
+  var WEITER_MAX = 4, weiterServer = {}, weiterGeladen = 0;
+  function zuletztKey() { var n = window.LghKonto && LghKonto.name(); return n ? 'lgh.zuletzt.' + String(n).toLowerCase() : null; }
+  function zuletztLokal() { var k = zuletztKey(); try { return (k && JSON.parse(localStorage.getItem(k))) || {}; } catch (e) { return {}; } }
+  function zuletztMerken(id) {
+    var k = zuletztKey(); if (!k) return;
+    var m = zuletztLokal(); m[id] = Date.now();
+    var ids = Object.keys(m).sort(function (a, b) { return m[b] - m[a]; }).slice(0, 12), neu = {}; ids.forEach(function (i) { neu[i] = m[i]; });
+    try { localStorage.setItem(k, JSON.stringify(neu)); } catch (e) { }
+    weiterGeladen = 0;
+  }
+  function weiterListe() {
+    var l = zuletztLokal(), alle = {}; Object.keys(weiterServer).forEach(function (i) { alle[i] = weiterServer[i]; });
+    Object.keys(l).forEach(function (i) { if (!(alle[i] > l[i])) alle[i] = l[i]; });
+    return Object.keys(alle).sort(function (a, b) { return alle[b] - alle[a]; }).map(function (i) {
+      var sp = spiele.filter(function (g) { return g.id === i && g.url; })[0]; return sp ? { sp: sp, ts: alle[i] } : null;
+    }).filter(Boolean).slice(0, WEITER_MAX);
+  }
+  function weiterZeichne() {
+    var el = document.getElementById('weiter'); if (!el) return;
+    var l = weiterListe();
+    if (!l.length) { el.hidden = true; el.innerHTML = ''; return; }
+    var jetzt = Date.now();
+    el.innerHTML = '<div class="abschnitt"><h2>Weiterspielen</h2></div><div class="weiter-liste">' + l.map(function (x) {
+      return '<a class="pf-spiel" href="#spiel/' + encodeURIComponent(x.sp.id) + '/play"><span class="pf-icon">' + art(x.sp, 100, 100) + '</span><span class="pf-text"><b>' + esc(x.sp.name) + '</b><small>Zuletzt ' + relZeit(Math.max(0, (jetzt - x.ts) / 1000)) + '</small></span><span class="weiter-play" aria-hidden="true">' + playIcon() + '</span></a>';
+    }).join('') + '</div>';
+    el.hidden = false;
+  }
+  function weiterLaden() {
+    if (!window.LghKonto || !LghKonto.angemeldet() || Date.now() - weiterGeladen < 60000) return;
+    weiterGeladen = Date.now();
+    LghKonto.profil().then(function (res) {
+      if (!res.ok || !res.j.spiele) return;
+      var m = {}; res.j.spiele.forEach(function (x) { if (x.zuletzt) m[x.spiel] = x.zuletzt * 1000; });
+      weiterServer = m; weiterZeichne();
+    });
+  }
+
   function renderHome() {
     var liste = sortiert().filter(passt);
     var hero = null;
@@ -194,6 +232,7 @@
       h += '<div class="btn-row"><a class="btn btn-primary" href="#spiel/' + encodeURIComponent(hero.id) + '/play">' + playIcon() + 'Jetzt spielen</a>';
       h += '<a class="btn btn-ghost" href="#spiel/' + encodeURIComponent(hero.id) + '">Mehr erfahren</a></div></div></section>';
     }
+    if (filter === 'Alle' && !suche) h += '<section class="weiter" id="weiter" aria-label="Weiterspielen" hidden></section>';
     var alle = {};
     spiele.forEach(function (sp) { kategorien(sp).forEach(function (k) { alle[k] = 1; }); });
     var chips = ['Alle'].concat(Object.keys(alle).sort(function (a, b) { return a.localeCompare(b, 'de'); }));
@@ -203,6 +242,7 @@
     }).join('') + '</div></div>';
     h += '<div class="grid">' + (liste.length ? liste.map(tile).join('') : '<div class="leer">Keine Spiele gefunden.</div>') + '</div>';
     inhalt.innerHTML = h;
+    weiterZeichne(); weiterLaden();
   }
 
   var SCHRIFTEN = { fredoka: 700, cinzel: 900, lilita: 400, anton: 400, bangers: 400, marker: 400, silkscreen: 700, patrick: 400 };
@@ -586,6 +626,7 @@
     bereit.then(function () {
       if (aktuell !== sp || zaehler !== startZaehler) return;
       ausKonto(function (k) { k.spiel(sp.id); });
+      zuletztMerken(sp.id);
       ladeRahmen(sp, zaehler);
     });
   }
@@ -1255,6 +1296,7 @@
     }
     body.setAttribute('data-view', 'home');
     zeigeAnsicht(homeKey(), renderHome); renderSide(null);
+    weiterZeichne(); weiterLaden();
     leisteStart();
     document.title = 'Leif Game Hub';
     window.scrollTo(0, vorher === 'home' ? window.scrollY : homeScroll);

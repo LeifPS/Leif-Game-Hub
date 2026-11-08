@@ -912,3 +912,16 @@ body[data-view="chat"] { overflow: hidden; }
 .voll-aus svg { width: 18px; height: 18px; }
 body.pseudo-voll .leiste { display: none; }
 body.pseudo-voll .voll-aus { display: flex; }
+
+/* Weiterspielen (Startseite) */
+.weiter[hidden] { display: none; }
+.weiter .abschnitt { padding-bottom: 12px; }
+.weiter-liste { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; padding: 0 32px; }
+.weiter-liste .pf-spiel { padding: 10px 12px; }
+.weiter-liste .pf-text { min-width: 0; flex: 1; }
+.weiter-liste .pf-text b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.weiter-liste .pf-text small { color: var(--muted); font-size: 12.5px; }
+.weiter-play { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; }
+.weiter-play svg { width: 16px; height: 16px; }
+@media (max-width: 700px) { .weiter-liste { padding: 0 16px; grid-template-columns: 1fr 1fr; } .weiter .abschnitt { padding-left: 16px; padding-right: 16px; } }
+@media (max-width: 480px) { .weiter-liste { grid-template-columns: 1fr; } }
