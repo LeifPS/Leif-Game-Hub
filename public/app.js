@@ -169,7 +169,7 @@
     inhalt.innerHTML = h;
   }
 
-  var SCHRIFTEN = { fredoka: 700, cinzel: 900, lilita: 400, anton: 400, bangers: 400, marker: 400, silkscreen: 700 };
+  var SCHRIFTEN = { fredoka: 700, cinzel: 900, lilita: 400, anton: 400, bangers: 400, marker: 400, silkscreen: 700, patrick: 400 };
   function schriftAttr(sp) {
     var t = sp.schrift;
     if (!t || !SCHRIFTEN[t.familie]) return null;

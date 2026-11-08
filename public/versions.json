@@ -62,6 +62,13 @@
   "offiziell": true,
   "version": "1.87.1.0"
  },
+ "manufaktur": {
+  "anzahl": 29,
+  "datum": "2026-11-08T05:09:47+01:00",
+  "erste": "2026-11-08T00:00:18+01:00",
+  "offiziell": false,
+  "version": "0.3.7.1"
+ },
  "nebelmeer": {
   "anzahl": 0,
   "datum": null,
@@ -75,11 +82,11 @@
   "version": "0.1.0.0"
  },
  "numberfactory": {
-  "anzahl": 2,
-  "datum": "2026-11-07T21:20:53+01:00",
+  "anzahl": 4,
+  "datum": "2026-11-08T00:03:34+01:00",
   "erste": "2026-11-07T20:55:15+01:00",
   "offiziell": false,
-  "version": "0.1.0.1"
+  "version": "0.1.1.1"
  },
  "papierhelden": {
   "anzahl": 12,

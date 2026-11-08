@@ -1,4 +1,5 @@
 {
+ "LeifPS/Manufaktur": "3994b07e344d30b83be7792bfc0ce34a78d4f88f",
  "LeifPS/Tonlinge": "c1f61c59259385be7172d8028bb5a1de2c253f59",
  "LeifPS/ballvsball": "1c1c9c900826de25c31b36c0aa66f65e53f93378",
  "LeifPS/brutjagd": "37294e24f1b71de943fc5ce8facbf0f78643ff77",
@@ -19,5 +20,6 @@
  "LeifPS/tierspiel": "a4d870344f727b71cb3d8aef3877edd849065110",
  "LeifPS/tippspiel": "63b8181318dab995c0905ddc981501551b1a6b4e",
  "LeifPS/wasserschlacht": "85c0f303ec34005501adaedcc9c7482ba2bd54ce",
- "LeifPS/zahlenwerk": "f7dc1feaba5f90571a356f9285b8e52469262de7"
+ "LeifPS/zahlenwerk": "f7dc1feaba5f90571a356f9285b8e52469262de7",
+ "alexander-schm/numberfactory": "305adc62c17b5c7af4797a3fcba7163b0f8f5db6"
 }

@@ -301,6 +301,7 @@ body[data-view="play"] .spiel { display: flex; }
 @font-face { font-family: 'T-bangers'; font-weight: 400; font-display: swap; src: url('fonts/bangers-400.woff2') format('woff2'); }
 @font-face { font-family: 'T-marker'; font-weight: 400; font-display: swap; src: url('fonts/permanent-marker-400.woff2') format('woff2'); }
 @font-face { font-family: 'T-silkscreen'; font-weight: 700; font-display: swap; src: url('fonts/silkscreen-700.woff2') format('woff2'); }
+@font-face { font-family: 'T-patrick'; font-weight: 400; font-display: swap; src: url('fonts/patrick-hand-400.woff2') format('woff2'); }
 /* Zwei Ebenen wie im Wallpaper: hinten Umriss + Schatten, vorn die Füllung (Verlauf möglich). Zeilenhöhe/Padding, damit g, j, p, y nicht abgeschnitten werden. */
 .shop h1.titelschrift { line-height: 1.1; margin: 0 0 8px; overflow-wrap: anywhere; }
 .titelschrift .tt { position: relative; display: inline-block; padding: .1em .1em .3em 0; }

@@ -594,8 +594,9 @@
       "id": "numberfactory",
       "name": "Number Factory",
       "text": "Zahlen-Kacheln stapeln sich in der Fabrik: Schick sie schnell über Fließbänder und Weichen zum Briefkasten, dessen Station sie in die gewünschte Zahl verwandelt, bevor die Bestellung abläuft.",
-      "url": "https://numberfactory.leifps.workers.dev",
-      "repo": "LeifPS/numberfactory",
+      "url": "https://alexander-schm.github.io/numberfactory/",
+      "repo": "alexander-schm/numberfactory",
+      "phase": "beta",
       "entwickler": "Alexander (TeleTeddy)",
       "sprache": "Englisch",
       "farbe": "#2f8f89",
@@ -617,6 +618,38 @@
         "screens/shots/numberfactory/1.webp",
         "screens/shots/numberfactory/2.webp",
         "screens/shots/numberfactory/3.webp"
+      ]
+    },
+    {
+      "id": "manufaktur",
+      "name": "Manufaktur",
+      "text": "Führe deine eigene kleine Töpfer-Manufaktur in einem Dorf mit Freunden und Familie: Entwirf Becher, Vasen und Schalen, probiere Glasuren aus und erfülle Aufträge. Alles läuft weiter, auch wenn du nicht da bist.",
+      "wartung": true,
+      "url": "https://manufaktur.leifps.workers.dev",
+      "repo": "LeifPS/Manufaktur",
+      "phase": "alpha",
+      "entwickler": "Alexander (TeleTeddy) und Ida (irgendwieida13)",
+      "farbe": "#c9764a",
+      "kategorien": [
+        "Simulation",
+        "Sammeln",
+        "Online"
+      ],
+      "icon": "screens/manufaktur-icon.webp",
+      "wallpaper": "screens/manufaktur-wallpaper.webp",
+      "schrift": {
+        "familie": "patrick",
+        "versalien": false,
+        "abstand": 0.02,
+        "fuell": "#fff6dc",
+        "rand": "#4a2c17",
+        "randbreite": 0.16
+      },
+      "screenshots": [
+        "screens/shots/manufaktur/1.webp",
+        "screens/shots/manufaktur/2.webp",
+        "screens/shots/manufaktur/3.webp",
+        "screens/shots/manufaktur/4.webp"
       ]
     },
     {
