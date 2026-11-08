@@ -462,6 +462,35 @@
       ]
     },
     {
+      "id": "erntezeitaufbruch",
+      "wartung": true,
+      "name": "Erntezeit: Aufbruch",
+      "text": "Bewirtschafte deinen Hof in Echtzeit, schicke Wagen auf Aufbruch-Reisen, handle online und besuche die Höfe anderer Spieler.",
+      "url": "https://erntezeitaufbruch.leifps.workers.dev",
+      "repo": "LeifPS/erntezeitaufbruch",
+      "phase": "alpha",
+      "farbe": "#7fb83f",
+      "kategorien": [
+        "Simulation",
+        "Sammeln",
+        "Online"
+      ],
+      "icon": "screens/erntezeitaufbruch-icon.webp",
+      "schrift": {
+        "familie": "lilita",
+        "versalien": false,
+        "abstand": 0.008,
+        "fuell": "#fff6dc",
+        "rand": "#6b3a14",
+        "randbreite": 0.169
+      },
+      "screenshots": [
+        "screens/shots/erntezeitaufbruch/1.webp",
+        "screens/shots/erntezeitaufbruch/2.webp",
+        "screens/shots/erntezeitaufbruch/3.webp"
+      ]
+    },
+    {
       "id": "tierspiel",
       "uebergabe": "msg",
       "name": "Tierspiel",
