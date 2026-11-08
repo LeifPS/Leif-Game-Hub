@@ -346,19 +346,18 @@
     var nach = function (a, b) { return b.ts - a.ts; };
     return neu.sort(nach).slice(0, 3).concat(upd.sort(nach)).slice(0, NEU_MAX).sort(nach);
   }
-  // Die wichtigste Änderung der letzten Tage aus dem Update-Log (höchste Stufe, bei Gleichstand die neueste)
+  // Die wichtigste Änderung der letzten Tage aus dem Update-Log (höchste Stufe, bei Gleichstand die neueste): { tag: 'Großes Update', text: '…' }
   function neuUpdateText(sp) {
     var d = logCache[sp.id], v = ver(sp);
-    if (!d || !d.eintraege) return v ? 'Version ' + vz(v.version) : 'Aktualisiert';
+    if (!d || !d.eintraege || !d.eintraege.length) return { tag: 'Update', text: v ? 'Version ' + vz(v.version) : 'Aktualisiert' };
     var grenze = jetztMs() - UPD_TAGE * 864e5, beste = null;
     d.eintraege.forEach(function (e) {
       if (Date.parse(e.datum) < grenze) return;
       if (!beste || (NEU_STUFE[e.art] || 1) > (NEU_STUFE[beste.art] || 1)) beste = e;
     });
     if (!beste) beste = d.eintraege[0];
-    if (!beste) return 'Aktualisiert';
     var t = String(beste.text || '').replace(/^\s*(major|gro(?:ß|ss)es\s+update|klein(?:es)?\s+update|patch|minor|build)\s*[:\-–—]\s*/i, '');
-    return (ARTEN[beste.art] || 'Update') + ': ' + t;
+    return { tag: beste.art === 'start' || !ARTEN[beste.art] ? 'Update' : ARTEN[beste.art], text: t };
   }
   function neuZeichne() {
     var el = document.getElementById('neu'); if (!el) return;
@@ -366,10 +365,10 @@
     if (!l.length) { el.hidden = true; el.innerHTML = ''; return; }
     var jetzt = jetztMs();
     el.innerHTML = '<div class="abschnitt"><h2>Neu im Hub</h2></div><div class="neu-liste">' + l.map(function (x) {
-      var wann = relZeit(Math.max(0, (jetzt - x.ts) / 1000));
-      var tag = x.art === 'neu' ? '<span class="neu-tag neu">Neu</span>' : '<span class="neu-tag">Update</span>';
-      var text = x.art === 'neu' ? 'Erschienen ' + wann : esc(neuUpdateText(x.sp)) + ' · ' + wann;
-      return '<a class="pf-spiel neu-item" href="#spiel/' + encodeURIComponent(x.sp.id) + '"><span class="pf-icon">' + art(x.sp, 100, 100) + '</span><span class="pf-text"><b>' + esc(x.sp.name) + '</b><small>' + tag + text + '</small></span></a>';
+      var wann = relZeit(Math.max(0, (jetzt - x.ts) / 1000)), u = x.art === 'upd' ? neuUpdateText(x.sp) : null;
+      var tag = x.art === 'neu' ? '<span class="neu-tag neu">Neu</span>' : '<span class="neu-tag">' + esc(u.tag) + '</span>';
+      return '<a class="pf-spiel neu-item" href="#spiel/' + encodeURIComponent(x.sp.id) + '"' + (u ? ' title="' + esc(u.tag + ': ' + u.text) + '"' : '') + '><span class="pf-icon">' + art(x.sp, 100, 100) + '</span>' +
+        '<span class="pf-text"><span class="neu-zeile"><b>' + esc(x.sp.name) + '</b><time>' + esc(wann) + '</time></span><small>' + tag + (u ? esc(u.text) : 'Jetzt spielen') + '</small></span></a>';
     }).join('') + '</div>';
     el.hidden = false;
     l.forEach(function (x) {   // Update-Texte nachladen (Log-Dateien bleiben im Speicher)
