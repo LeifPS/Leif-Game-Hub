@@ -969,3 +969,12 @@ body.pseudo-voll .voll-aus { display: flex; }
 .fav-ban svg { width: 16px; height: 16px; flex: none; }
 .detail-banner.titel .fav-ban { top: 14px; right: 32px; }
 @media (max-width: 700px) { .fav-ban { right: 16px; } .detail-banner.titel .fav-ban { top: 12px; right: 16px; } }
+
+/* Wikis */
+.wk-item { text-decoration: none; color: inherit; }
+.wk-item:hover { border-color: rgba(255, 255, 255, .22); }
+.wk-icon { width: 52px; height: 52px; border-radius: 12px; overflow: hidden; flex: none; position: relative; background: var(--panel-2); box-shadow: 0 0 0 1px rgba(255, 255, 255, .08); }
+.wk-icon .art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.wk-auf { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.fakt-link { display: inline-flex; align-items: center; gap: 5px; color: inherit; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(255, 255, 255, .35); }
+.fakt-link:hover { text-decoration-color: currentColor; }

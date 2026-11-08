@@ -208,19 +208,20 @@
 
   /* ---------- Ansichten ---------- */
   var seiteFertig = false;
-  function renderSide(aktivId, freundeAktiv) {
+  function renderSide(aktivId, freundeAktiv, wikisAktiv) {
     if (seiteFertig) {
       var as = bibliothek.querySelectorAll('.lib-item');
       for (var i = 0; i < as.length; i++) {
         var hr = as[i].getAttribute('href');
-        var ist = hr === '#freunde' ? !!freundeAktiv : hr === '#' ? (!aktivId && !freundeAktiv) : (aktivId && hr === '#spiel/' + encodeURIComponent(aktivId));
+        var ist = hr === '#freunde' ? !!freundeAktiv : hr === '#wikis' ? !!wikisAktiv : hr === '#' ? (!aktivId && !freundeAktiv && !wikisAktiv) : (aktivId && hr === '#spiel/' + encodeURIComponent(aktivId));
         as[i].classList.toggle('aktiv', !!ist);
       }
       return;
     }
     seiteFertig = true;
-    var s = '<a class="lib-item' + (aktivId ? '' : ' aktiv') + '" href="#"><span class="lib-home-icon"><svg width="20" height="20" aria-hidden="true"><use href="#i-home"/></svg></span><span class="name">Startseite</span></a>';
+    var s = '<a class="lib-item' + (aktivId || wikisAktiv ? '' : ' aktiv') + '" href="#"><span class="lib-home-icon"><svg width="20" height="20" aria-hidden="true"><use href="#i-home"/></svg></span><span class="name">Startseite</span></a>';
     s += '<a class="lib-item' + (freundeAktiv ? ' aktiv' : '') + '" href="#freunde"><span class="lib-home-icon"><svg width="20" height="20" aria-hidden="true"><use href="#i-people"/></svg></span><span class="name">Freunde</span><span class="freunde-abz" hidden></span></a>';
+    if (wikiSpiele().length) s += '<a class="lib-item' + (wikisAktiv ? ' aktiv' : '') + '" href="#wikis"><span class="lib-home-icon"><svg width="20" height="20" aria-hidden="true"><use href="#i-book"/></svg></span><span class="name">Wikis</span></a>';
     s += '<div class="nav-label">Bibliothek</div>';
     alphabetisch().forEach(function (sp) {
       var offen = !!sp.url;
@@ -501,6 +502,7 @@
     h += faktZeile(entwicklerListe(sp).length > 1 ? 'Entwickler' : 'Entwickler', entwicklerLinks(sp));   // games.json: "entwickler" = Liste von Benutzernamen
     h += faktZeile('Spielmodus', online ? 'Mehrspieler (online)' : 'Einzelspieler');
     h += faktZeile('Plattform', 'Browser · ' + esc(sp.sprache || 'Deutsch'));   // games.json: "sprache" falls nicht Deutsch
+    if (sp.wiki) h += faktZeile('Wiki', '<a class="fakt-link" href="' + esc(sp.wiki) + '" target="_blank" rel="noopener">Zum Wiki<svg width="14" height="14" aria-hidden="true"><use href="#i-external"/></svg></a>');
     if (kategorien(sp).length) h += faktZeile('Tags', pills(sp));
     h += '</dl>';
     h += '</aside></div>';
@@ -703,6 +705,23 @@
   }
 
   /* ---------- Freunde ---------- */
+  /* ---------- Wikis: jedes Spiel kann ein eigenes Wiki haben (games.json: "wiki" = Adresse), die Seite listet sie auf ---------- */
+  function wikiSpiele() { return alphabetisch().filter(function (sp) { return sp.wiki; }); }
+  function renderWikis() {
+    var l = wikiSpiele(), h = '<div class="fr-wrap"><h1 class="fr-titel">Wikis</h1><p class="fr-sub">Hier steht, was man über die Spiele wissen kann. Jedes Spiel hat sein eigenes Wiki.</p>';
+    if (!l.length) h += '<div class="fr-leer">Zu den Spielen gibt es noch keine Wikis.</div>';
+    else {
+      h += '<div class="fr-liste">';
+      l.forEach(function (sp) {
+        h += '<a class="fr-item wk-item" href="' + esc(sp.wiki) + '" target="_blank" rel="noopener"><span class="wk-icon">' + art(sp, 100, 100) + '</span>' +
+          '<div class="fr-text"><div class="fr-name">' + esc(sp.name) + ' – Wiki</div><div class="fr-status">' + esc(sp.text || '') + '</div></div>' +
+          '<span class="btn btn-ghost fr-btn wk-auf">Öffnen<svg width="16" height="16" aria-hidden="true"><use href="#i-external"/></svg></span></a>';
+      });
+      h += '</div>';
+    }
+    inhalt.innerHTML = h + '</div>';
+  }
+
   var freundeTimer = null, freundeDaten = null, entfernenFrage = null;
   function relZeit(sek) {
     if (sek < 90) return 'gerade eben';
@@ -1276,7 +1295,7 @@
         b.setAttribute('aria-label', spielName(id) + (an ? ' aus den Favoriten entfernen' : ' zu den Favoriten hinzufügen'));
       });
     }
-    renderSide(aktivIdAusHash(), location.hash === '#freunde');
+    renderSide(aktivIdAusHash(), location.hash === '#freunde', location.hash === '#wikis');
   }
   function favUmschalten(id) {
     var alt = favoriten.slice(), an = !favIst(id);
@@ -1362,6 +1381,13 @@
       if (String(ansichtKey).indexOf('profil|') === 0) ansichtKey = null;
       zeigeAnsicht('profil|' + pn, function () { renderProfil(pn); }); renderSide(null, true);
       document.title = 'Profil – Leif Game Hub';
+      window.scrollTo(0, 0);
+      return;
+    }
+    if (location.hash === '#wikis') {
+      body.setAttribute('data-view', 'wikis');
+      zeigeAnsicht('wikis', renderWikis); renderSide(null, false, true);
+      document.title = 'Wikis – Leif Game Hub';
       window.scrollTo(0, 0);
       return;
     }
