@@ -5,7 +5,6 @@
 // Der Server speichert davon noch einmal einen gesalzenen SHA-256. So bleibt der Rechenaufwand im Browser
 // (der Server hat pro Anfrage nur sehr wenig Rechenzeit) und das Klartext-Passwort erreicht den Server nie.
 import { SCHEMA } from './schema.js';
-import { kontoSichern } from './sicherung.js';
 import { gruppenModul } from './gruppen.js';
 import { dlcModul, KATALOG } from './dlc.js';
 
@@ -35,7 +34,6 @@ export const SPIEL_RE = /^[a-z0-9_-]{1,40}$/;
 export const MAX_BYTES = 1900000;      // D1 erlaubt pro Zeile 2 MB
 export const VERSIONEN = 6;            // so viele Stände pro Spiel bleiben höchstens erhalten (der aktuelle und bis zu 5 ältere)
 export const MAX_ZEILEN = 40;         // so viele Stände pro Spiel höchstens (inklusive Tagesstände und geschützter Stände)
-export const MONATE = 12;             // je Monat bleibt der letzte Stand der vergangenen 12 Monate dauerhaft erhalten (Meilensteine, zählen nicht zu MAX_ZEILEN)
 export const TAGE = 14;               // so viele Kalendertage zurück bleibt je Tag der letzte Stand erhalten
 const SCHRUMPF = 0.4, SCHRUMPF_AB = 3000;   // ein Stand über 3000 Byte ist geschützt, wenn danach einer unter 40 % seiner Größe kam
 // Gerätesperre: Ist sie an (true), gilt ein Konto nur auf dem Gerät, auf dem es erstellt wurde (Anmelden woanders: 403 anderes_geraet).
@@ -278,13 +276,11 @@ async function sichtAendern(request, db, s) {
   return antwort({ ok: true, sicht: { online: sichtWert(r.vo), spiele: sichtWert(r.vs) } });
 }
 
-async function kontoLoeschen(request, db, s, jetzt, bk) {
+async function kontoLoeschen(request, db, s, jetzt) {
   const { b } = await lies(request);
   if (!b || typeof b.key !== 'string' || !KEY_RE.test(b.key)) return fehler(400, 'eingabe');
   const r = await pruefeSchluessel(db, s.name, b.key, jetzt, request);
   if (r.fehler) return r.fehler;
-  // Erst in die Sicherung (bleibt 30 Tage); klappt das nicht, wird nichts gelöscht
-  try { await kontoSichern(db, bk, s.id, jetzt, true); } catch (e) { return fehler(503, 'sicherung_fehlt'); }
   await G.kontoWeg(db, s.id);
   await D.kontoWeg(db, s.id);
   await db.batch([
@@ -338,11 +334,6 @@ async function ausduennen(db, userId, spiel, behalten) {
   const tag = (x) => Math.floor(x.updated / 86400), heute = tag(r[0]), tage = new Set();
   for (const x of r) if (heute - tag(x) <= TAGE && !tage.has(tag(x))) { tage.add(tag(x)); schutz.add(x.rev); }
   for (let i = 1; i < r.length; i++) if (r[i].size > SCHRUMPF_AB && r[i - 1].size < r[i].size * SCHRUMPF) schutz.add(r[i].rev);
-  // Meilensteine bleiben dauerhaft: der größte Stand (meist der mit dem meisten Fortschritt) und je Monat der letzte Stand der vergangenen 12 Monate
-  let gross = r[0]; for (const x of r) if (x.size > gross.size) gross = x;
-  schutz.add(gross.rev);
-  const monate = new Set(), meil = new Set([gross.rev]), mon = (x) => { const d = new Date(x.updated * 1000); return d.getUTCFullYear() * 12 + d.getUTCMonth(); }, mHeute = mon(r[0]);
-  for (const x of r) if (mHeute - mon(x) <= MONATE && !monate.has(mon(x))) { monate.add(mon(x)); schutz.add(x.rev); meil.add(x.rev); }
   const fenster = Math.floor(r[0].updated / ABSTAND) === Math.floor(r[1].updated / ABSTAND);
   const behalte = [];
   for (let i = 0; i < r.length; i++) {
@@ -351,7 +342,7 @@ async function ausduennen(db, userId, spiel, behalten) {
     if (!bleibt && i < VERSIONEN) bleibt = !(i === 1 && fenster && !behalten);
     if (bleibt) behalte.push(x.rev);
   }
-  const weg = r.map((x) => x.rev).filter((rev) => !behalte.includes(rev) || (behalte.indexOf(rev) >= MAX_ZEILEN && !meil.has(rev)));
+  const weg = r.map((x) => x.rev).filter((rev) => !behalte.includes(rev) || behalte.indexOf(rev) >= MAX_ZEILEN);
   if (weg.length) await db.batch(weg.map((rev) => db.prepare('DELETE FROM saves WHERE user_id = ? AND game = ? AND rev = ?').bind(userId, spiel, rev)));
 }
 
@@ -365,13 +356,12 @@ async function speichern(request, db, s, spiel, jetzt) {
   const basis = Number.isInteger(b.basis) && b.basis >= 0 ? b.basis : null;
   if (basis === null && !b.erzwingen) return fehler(400, 'eingabe');
   const geraet = geraetName(b.geraet);
-  const sha = await sha256(b.daten);
 
   for (let versuch = 0; versuch < 2; versuch++) {
     const cur = await db.prepare('SELECT game, rev, data, size, updated, device FROM saves WHERE user_id = ? AND game = ? ORDER BY rev DESC LIMIT 1').bind(s.id, spiel).first();
     const curRev = cur ? cur.rev : 0;
     if (!b.erzwingen && basis !== curRev) return fehler(409, 'konflikt', { aktuell: cur ? meta(cur) : null });
-    if (cur && cur.data === b.daten) return antwort({ rev: curRev, gleich: true, aktualisiert: cur.updated, sha });
+    if (cur && cur.data === b.daten) return antwort({ rev: curRev, gleich: true, aktualisiert: cur.updated });
     const neu = curRev + 1;
     const r = await db.prepare(
       `INSERT INTO saves (user_id, game, rev, data, size, updated, device)
@@ -379,7 +369,7 @@ async function speichern(request, db, s, spiel, jetzt) {
     ).bind(s.id, spiel, neu, b.daten, groesse, jetzt, geraet, s.id, spiel, curRev).run();
     if (r.meta && r.meta.changes === 1) {
       await ausduennen(db, s.id, spiel, !!b.behalten);
-      return antwort({ rev: neu, aktualisiert: jetzt, sha });
+      return antwort({ rev: neu, aktualisiert: jetzt });
     }
     // Zwischen Lesen und Schreiben hat ein anderes Gerät gespeichert: noch einmal prüfen (bei erzwingen wird neu aufgesetzt)
   }
@@ -776,7 +766,7 @@ export async function handle(request, env, jetztMs = Date.now()) {
     if (pfad === '/api/abmelden' && m === 'POST') { await db.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(s.th).run(); return antwort({ ok: true }); }
     if (pfad === '/api/benutzername' && m === 'POST') return await benutzernameAendern(request, db, s, jetzt);
     if (pfad === '/api/passwort' && m === 'POST') return await passwortAendern(request, db, s, jetzt);
-    if (pfad === '/api/loeschen' && m === 'POST') return await kontoLoeschen(request, db, s, jetzt, env.BACKUP_DB);
+    if (pfad === '/api/loeschen' && m === 'POST') return await kontoLoeschen(request, db, s, jetzt);
     if (pfad === '/api/staende' && m === 'GET') return await liste(db, s);
     if (pfad === '/api/freunde' && m === 'GET') return await freundeListe(db, s, jetzt);
     if (pfad === '/api/freunde/anfrage' && m === 'POST') return await freundAnfrage(request, db, s, jetzt);

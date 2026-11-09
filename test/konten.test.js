@@ -7,7 +7,12 @@ import { KATALOG } from '../src/dlc.js';
 // Der echte Katalog ist leer (keine Zusatzinhalte mehr); die Kauf-Technik wird mit einem Test-Eintrag geprüft.
 KATALOG.push({ id: 'schleimmerge-runen', spiel: 'schleimmerge', name: 'Testinhalt', text: 'Nur für Tests.', preis: 500 });
 
-import { schluessel } from './helpers/schluessel.js';
+// Schlüssel wie im Browser: PBKDF2(Passwort, "lgh1:" + kleingeschriebener Name), SHA-256, 256 Bit
+export async function schluessel(name, pw, iter = 1000) { // im Test wenige Runden, im Browser 210000
+  const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw.normalize('NFKC')), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', iterations: iter, salt: new TextEncoder().encode('lgh1:' + name.normalize('NFC').toLowerCase()) }, k, 256);
+  return [...new Uint8Array(bits)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
 
 function umgebung() { return { DB: makeD1() }; }
 let uhr = 1_800_000_000_000;
@@ -72,7 +77,6 @@ test('Spielstand: speichern, laden, Versionen, Konflikt', async () => {
   const a = await neuesKonto(env);
   assert.equal((await call(env, 'GET', '/api/stand/zahlenwerk', undefined, a)).status, 404);
   const p1 = await call(env, 'PUT', '/api/stand/zahlenwerk', { basis: 0, daten: '{"t":1,"d":{"x":"1"}}', geraet: 'iPad' }, a);
-  { const soll = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('{"t":1,"d":{"x":"1"}}')))].map((x) => x.toString(16).padStart(2, '0')).join(''); assert.equal(p1.j.sha, soll, 'Server liefert die Prüfsumme des gespeicherten Stands'); }
   assert.deepEqual([p1.status, p1.j.rev], [200, 1]);
   // gleicher Inhalt: keine neue Version
   const gl = await call(env, 'PUT', '/api/stand/zahlenwerk', { basis: 1, daten: '{"t":1,"d":{"x":"1"}}' }, a);

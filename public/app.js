@@ -802,15 +802,6 @@
       buehne.appendChild(b);
     }
   }
-  function zeigeWiederHinweis(t) {
-    var d = t ? new Date(t * 1000) : null, w = d ? d.getDate() + '.' + (d.getMonth() + 1) + '. um ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ' Uhr' : '';
-    var b = document.getElementById('wieder-hinweis'); if (b) b.remove();
-    b = document.createElement('div'); b.id = 'wieder-hinweis'; b.className = 'stand-hinweis'; b.setAttribute('role', 'status');
-    b.innerHTML = '<span>Dein Spielstand' + (w ? ' vom ' + w : '') + ' wurde aus deinem Konto wiederhergestellt.</span><button type="button" class="btn btn-ghost" data-zu>OK</button>';
-    b.querySelector('[data-zu]').addEventListener('click', function () { b.remove(); });
-    buehne.appendChild(b);
-    setTimeout(function () { if (b.parentNode) b.remove(); }, 12000);
-  }
   function absender(e) {
     if (aktuell && rahmen.contentWindow && e.source === rahmen.contentWindow) return { id: aktuell.id, url: aktuell.url, abgang: false, el: rahmen };
     for (var i = 0; i < abgehende.length; i++) if (e.source === abgehende[i].fenster) return { id: abgehende[i].id, url: abgehende[i].url, abgang: true, el: abgehende[i].el };
@@ -902,19 +893,7 @@
       if (aktuell !== sp || zaehler !== startZaehler) return;
       ausKonto(function (k) { k.spiel(sp.id); });
       var warDrin = bibIst(sp.id); zuletztMerken(sp.id); bibMerken(sp.id); if (!warDrin) bibNeu();
-      // Fehlt der Stand auf diesem Gerät (neues Gerät, Browserdaten gelöscht), der Stand im Konto aber da ist: still zurückholen, bevor das Spiel startet.
-      // Ein vorhandener Stand auf dem Gerät wird nie angerührt.
-      var lok = standLokal(sp.id), leer = !lok || !lok.d || !Object.keys(lok.d).length;
-      if (leer && window.LghKonto && LghKonto.angemeldet() && LghKonto.holeNeuesten) {
-        LghKonto.holeNeuesten(sp.id).then(function (r) {
-          if (aktuell !== sp || zaehler !== startZaehler) return;
-          if (r && r.d && Object.keys(r.d).length) {
-            var nochLeer = standLokal(sp.id); if (nochLeer && nochLeer.d && Object.keys(nochLeer.d).length) { ladeRahmen(sp, zaehler); return; }
-            try { localStorage.setItem(STAND + sp.id, JSON.stringify({ t: Date.now(), d: r.d })); zeigeWiederHinweis(r.t); } catch (e) { }
-          }
-          ladeRahmen(sp, zaehler);
-        });
-      } else ladeRahmen(sp, zaehler);
+      ladeRahmen(sp, zaehler);
     });
   }
   function stoppeSpiel() {
