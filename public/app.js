@@ -276,7 +276,9 @@
     s += '<a class="lib-item' + (freundeAktiv ? ' aktiv' : '') + '" href="#freunde"><span class="lib-home-icon"><svg width="20" height="20" aria-hidden="true"><use href="#i-people"/></svg></span><span class="name">Freunde</span><span class="freunde-abz" hidden></span></a>';
     if (wikiSpiele().length) s += '<a class="lib-item' + (wikisAktiv ? ' aktiv' : '') + '" href="#wikis"><span class="lib-home-icon"><svg width="20" height="20" aria-hidden="true"><use href="#i-book"/></svg></span><span class="name">Wikis</span></a>';
     s += '<div class="nav-label">Bibliothek</div>';
-    alphabetisch().forEach(function (sp) {
+    var bibListe = alphabetisch().filter(function (sp) { return bibIst(sp.id); });
+    if (!bibListe.length) s += '<div class="lib-leer">Hier erscheinen Spiele, die du gespielt oder als Favorit markiert hast. Alle Spiele findest du auf der Startseite oder über die Suche.</div>';
+    bibListe.forEach(function (sp) {
       var offen = !!sp.url;
       var inner = '<span class="lib-icon">' + art(sp, 100, 100) + '</span><span class="name">' + esc(sp.name) + '</span>' + (favIst(sp.id) ? '<span class="lib-stern" aria-label="Favorit" title="Favorit">★</span>' : '') + (offen ? '' : '<small' + cdAttr(sp, '') + '>' + (sp.wartung ? sperrText(sp, '') : 'Bald') + '</small>');
       s += offen || sp.wartung
@@ -300,6 +302,24 @@
     try { localStorage.setItem(k, JSON.stringify(neu)); } catch (e) { }
     weiterGeladen = 0;
   }
+  /* ---------- Bibliothek: nur Spiele, die man gespielt hat (oder als Favorit markiert / von Hand hinzugefügt hat). Entfernen merkt sich den Zeitpunkt;
+     wer das Spiel danach wieder spielt, hat es automatisch wieder drin. Pro Konto auf dem Gerät gemerkt. ---------- */
+  function bibKey() { var n = window.LghKonto && LghKonto.name(); return n ? 'lgh.bibl.' + String(n).toLowerCase() : null; }
+  function bibLokal() { var k = bibKey(); try { var o = (k && JSON.parse(localStorage.getItem(k))) || {}; return { gespielt: o.gespielt || {}, aus: o.aus || {}, ein: o.ein || {} }; } catch (e) { return { gespielt: {}, aus: {}, ein: {} }; } }
+  function bibSchreiben(o) { var k = bibKey(); if (!k) return; try { localStorage.setItem(k, JSON.stringify(o)); } catch (e) { } }
+  function bibGespielt(id) { var o = bibLokal(), z = zuletztLokal(); return Math.max(o.gespielt[id] || 0, z[id] || 0, weiterServer[id] || 0); }
+  function bibIst(id) {
+    if (favIst(id)) return true;
+    var o = bibLokal(); if (o.ein[id]) return true;
+    var t = bibGespielt(id); return t > 0 && !(o.aus[id] && o.aus[id] >= t);
+  }
+  function bibMerken(id) { var o = bibLokal(); o.gespielt[id] = Date.now(); delete o.aus[id]; bibSchreiben(o); }
+  function bibUmschalten(id) {
+    var o = bibLokal();
+    if (bibIst(id)) { delete o.ein[id]; o.aus[id] = Date.now(); } else { delete o.aus[id]; o.ein[id] = 1; }
+    bibSchreiben(o); bibNeu();
+  }
+  function bibNeu() { seiteFertig = false; renderSide(aktivIdAusHash(), location.hash === '#freunde', location.hash === '#wikis'); }
   function weiterListe() {
     var l = zuletztLokal(), alle = {}; Object.keys(weiterServer).forEach(function (i) { alle[i] = weiterServer[i]; });
     Object.keys(l).forEach(function (i) { if (!(alle[i] > l[i])) alle[i] = l[i]; });
@@ -323,7 +343,7 @@
     LghKonto.profil().then(function (res) {
       if (!res.ok || !res.j.spiele) return;
       var m = {}, z = {}; res.j.spiele.forEach(function (x) { if (x.zuletzt) m[x.spiel] = x.zuletzt * 1000; z[x.spiel] = x.sekunden || 0; });
-      weiterServer = m; spielzeitServer = z; weiterZeichne();
+      weiterServer = m; spielzeitServer = z; weiterZeichne(); bibNeu();
       if (sortierung === 'zuletzt' || sortierung === 'meist') homeNeu();
     });
   }
@@ -613,6 +633,10 @@
     if (ein && ein.hasAttribute('data-fav')) return;   // Favorit: Menü bleibt offen, damit man die Änderung sieht (der Favoriten-Handler übernimmt)
     if (ein) {
       var gr = ein.closest('.spielen-gruppe');
+      if (ein.getAttribute('data-a') === 'bib') {
+        var mb = /^#spiel\/([^\/]+)/.exec(location.hash), bid = mb && decodeURIComponent(mb[1]);
+        if (bid) { bibUmschalten(bid); var bt = ein.querySelector('.bib-text'); if (bt) bt.textContent = bibIst(bid) ? 'Aus Bibliothek entfernen' : 'Zur Bibliothek hinzufügen'; spielenHinweis(gr, bibIst(bid) ? 'Zur Bibliothek hinzugefügt.' : 'Aus der Bibliothek entfernt.'); }
+      }
       if (ein.getAttribute('data-a') === 'teilen') {
         var mm = /^#spiel\/([^\/]+)/.exec(location.hash);
         var spiel = mm && spiele && spiele.filter(function (s) { return s.id === decodeURIComponent(mm[1]); })[0];
@@ -649,6 +673,7 @@
       '<div class="spielen-menue" role="menu" hidden>' +
       '<a role="menuitem" class="spielen-eintrag" data-a="tab" href="' + spielLink(sp, true) + '" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-external"/></svg>In neuem Tab öffnen</a>' +
       (function () { var an = favIst(sp.id); return '<button type="button" role="menuitem" class="spielen-eintrag fav-eintrag' + (an ? ' an' : '') + '" data-fav="' + esc(sp.id) + '" aria-pressed="' + an + '"><svg aria-hidden="true"><use href="#i-star"/></svg><span class="fav-text">' + (an ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen') + '</span></button>'; })() +
+      ('<button type="button" role="menuitem" class="spielen-eintrag" data-a="bib" data-id="' + esc(sp.id) + '"' + (favIst(sp.id) ? ' hidden' : '') + '><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4.5h4v15H5zM11 4.5h4v15h-4zM17.2 5.2l3.6.9-3.2 14-3.6-.9z"/></svg><span class="bib-text">' + (bibIst(sp.id) ? 'Aus Bibliothek entfernen' : 'Zur Bibliothek hinzufügen') + '</span></button>') +
       '<button type="button" role="menuitem" class="spielen-eintrag" data-a="teilen"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="12" r="2.4"/><circle cx="17.5" cy="6" r="2.4"/><circle cx="17.5" cy="18" r="2.4"/><path d="M8.6 10.8l6.8-3.6M8.6 13.2l6.8 3.6"/></svg>Spiel teilen</button>' +
       '</div><div class="spielen-hinweis" role="status" aria-live="polite" hidden></div></div>' : '<span class="btn btn-spielen gesperrt" aria-disabled="true"' + cdAttr(sp, '') + '>' + (sp.wartung ? sperrText(sp, '') : 'Bald') + '</span>') + '</div></div>';
     var gal = galerieHtml(sp);
@@ -867,7 +892,7 @@
     bereit.then(function () {
       if (aktuell !== sp || zaehler !== startZaehler) return;
       ausKonto(function (k) { k.spiel(sp.id); });
-      zuletztMerken(sp.id);
+      var warDrin = bibIst(sp.id); zuletztMerken(sp.id); bibMerken(sp.id); if (!warDrin) bibNeu();
       ladeRahmen(sp, zaehler);
     });
   }
@@ -1679,6 +1704,7 @@
         var id = b.getAttribute('data-fav'), an = favIst(id);
         b.classList.toggle('an', an); b.setAttribute('aria-pressed', String(an));
         b.setAttribute('aria-label', spielName(id) + (an ? ' aus den Favoriten entfernen' : ' zu den Favoriten hinzufügen'));
+        var bz = document.querySelector('[data-a="bib"]'); if (bz) { var bi2 = bz.getAttribute('data-id'); bz.hidden = favIst(bi2); var bt2 = bz.querySelector('.bib-text'); if (bt2) bt2.textContent = bibIst(bi2) ? 'Aus Bibliothek entfernen' : 'Zur Bibliothek hinzufügen'; }
         var ft = b.querySelector('.fav-text'); if (ft) ft.textContent = an ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen';
       });
     }
