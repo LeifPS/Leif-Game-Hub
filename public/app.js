@@ -610,6 +610,7 @@
       return;
     }
     var ein = e.target.closest && e.target.closest('.spielen-eintrag');
+    if (ein && ein.hasAttribute('data-fav')) return;   // Favorit: Menü bleibt offen, damit man die Änderung sieht (der Favoriten-Handler übernimmt)
     if (ein) {
       var gr = ein.closest('.spielen-gruppe');
       if (ein.getAttribute('data-a') === 'teilen') {
@@ -641,12 +642,13 @@
     var titel = !!sp.wallpaper;
     var v = ver(sp);
     var online = kategorien(sp).indexOf('Online') >= 0;
-    var h = '<div class="detail-banner' + (titel ? ' titel' : '') + '">' + (titel ? '<div class="titelrahmen"><img class="titelhg" src="' + esc(sp.wallpaper) + '" alt="" aria-hidden="true" decoding="async"><img class="titelbild titelfg" src="' + esc(sp.wallpaper) + '" alt="' + esc(sp.name) + '" decoding="async"></div>' : art(sp, 1400, 420)) + '<a class="zurueck-link" href="#"><svg aria-hidden="true"><use href="#i-back"/></svg>Alle Spiele</a>' + ((sp.url || sp.wartung) ? favKnopf(sp, 'fav-ban') : '') + '</div>';
+    var h = '<div class="detail-banner' + (titel ? ' titel' : '') + '">' + (titel ? '<div class="titelrahmen"><img class="titelhg" src="' + esc(sp.wallpaper) + '" alt="" aria-hidden="true" decoding="async"><img class="titelbild titelfg" src="' + esc(sp.wallpaper) + '" alt="' + esc(sp.name) + '" decoding="async"></div>' : art(sp, 1400, 420)) + '<a class="zurueck-link" href="#"><svg aria-hidden="true"><use href="#i-back"/></svg>Alle Spiele</a>' + ((!sp.url && sp.wartung) ? favKnopf(sp, 'fav-ban') : '') + '</div>';
     h += '<div class="shop' + (titel ? ' titel' : '') + '">';
     h += '<div class="shop-titelzeile">' + titelHtml(sp) + '<div class="spiel-aktion"><div class="spielinfo" hidden></div>' + (sp.url ? '<div class="spielen-gruppe"><a class="btn btn-primary btn-spielen" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a>' +
       '<button type="button" class="btn btn-primary btn-spielen-pfeil" aria-haspopup="menu" aria-expanded="false" aria-label="Weitere Optionen zum Spielen"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"/></svg></button>' +
       '<div class="spielen-menue" role="menu" hidden>' +
       '<a role="menuitem" class="spielen-eintrag" data-a="tab" href="' + spielLink(sp, true) + '" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-external"/></svg>In neuem Tab öffnen</a>' +
+      (function () { var an = favIst(sp.id); return '<button type="button" role="menuitem" class="spielen-eintrag fav-eintrag' + (an ? ' an' : '') + '" data-fav="' + esc(sp.id) + '" aria-pressed="' + an + '"><svg aria-hidden="true"><use href="#i-star"/></svg><span class="fav-text">' + (an ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen') + '</span></button>'; })() +
       '<button type="button" role="menuitem" class="spielen-eintrag" data-a="teilen"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="12" r="2.4"/><circle cx="17.5" cy="6" r="2.4"/><circle cx="17.5" cy="18" r="2.4"/><path d="M8.6 10.8l6.8-3.6M8.6 13.2l6.8 3.6"/></svg>Spiel teilen</button>' +
       '</div><div class="spielen-hinweis" role="status" aria-live="polite" hidden></div></div>' : '<span class="btn btn-spielen gesperrt" aria-disabled="true"' + cdAttr(sp, '') + '>' + (sp.wartung ? sperrText(sp, '') : 'Bald') + '</span>') + '</div></div>';
     var gal = galerieHtml(sp);
@@ -1677,6 +1679,7 @@
         var id = b.getAttribute('data-fav'), an = favIst(id);
         b.classList.toggle('an', an); b.setAttribute('aria-pressed', String(an));
         b.setAttribute('aria-label', spielName(id) + (an ? ' aus den Favoriten entfernen' : ' zu den Favoriten hinzufügen'));
+        var ft = b.querySelector('.fav-text'); if (ft) ft.textContent = an ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen';
       });
     }
     renderSide(aktivIdAusHash(), location.hash === '#freunde', location.hash === '#wikis');

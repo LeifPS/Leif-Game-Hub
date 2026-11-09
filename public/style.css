@@ -1200,17 +1200,17 @@ body {
 .spielen-gruppe { position: relative; display: flex; align-items: stretch; flex: none; }
 .spielen-gruppe .btn-spielen { border-radius: 9px 0 0 9px; }
 .spielen-gruppe .btn-spielen-pfeil {
-  width: 40px; min-width: 40px; padding: 0; height: 46px; border-radius: 0 9px 9px 0;
+  width: 26px; min-width: 26px; padding: 0; height: 46px; border-radius: 0 9px 9px 0;
   background: var(--akzent-verlauf); color: var(--auf-akzent); border: 0; border-left: 1px solid rgba(26, 18, 8, .28);
   display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
   box-shadow: 0 0 0 1px rgba(255, 220, 150, .35) inset, 0 6px 22px var(--glow), 0 0 40px var(--glow-weich);
 }
 .spielen-gruppe .btn-spielen-pfeil:hover, .spielen-gruppe .btn-spielen-pfeil[aria-expanded="true"] { filter: brightness(1.08) saturate(1.05); }
-.spielen-gruppe .btn-spielen-pfeil svg { width: 18px; height: 18px; color: var(--auf-akzent); transition: transform .15s; }
+.spielen-gruppe .btn-spielen-pfeil svg { width: 16px; height: 16px; color: var(--auf-akzent); transition: transform .15s; }
 .spielen-gruppe .btn-spielen-pfeil[aria-expanded="true"] svg { transform: rotate(180deg); }
 .shop-titelzeile .spielen-gruppe .btn-spielen { min-width: 148px; }
 .spielen-menue {
-  position: absolute; z-index: 20; top: calc(100% + 8px); right: 0; min-width: 230px; padding: 6px;
+  position: absolute; z-index: 20; top: calc(100% + 8px); right: 0; min-width: 250px; padding: 6px;
   background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px;
   box-shadow: 0 18px 44px rgba(0, 0, 0, .55), 0 0 30px var(--glow-weich);
 }
@@ -1231,3 +1231,6 @@ body {
   .spielen-gruppe { width: 100%; }
   .spielen-gruppe .btn-spielen, .shop-titelzeile .spielen-gruppe .btn-spielen { flex: 1; width: auto; }
 }
+.spielen-eintrag.fav-eintrag svg { fill: none; stroke: currentColor; }
+.spielen-eintrag.fav-eintrag.an svg { fill: #ffd36b; stroke: #ffd36b; }
+.spielen-eintrag { white-space: nowrap; }
