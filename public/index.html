@@ -36,6 +36,13 @@
     </linearGradient>
   </defs>
   <symbol id="logo" viewBox="0 0 36 36"><rect width="36" height="36" rx="10" fill="url(#logo-grad)"/><use href="#logo-pfad" transform="translate(5.76 4.00) scale(0.02182)" fill="#1a1208" fill-rule="evenodd"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M5 5h14a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 19 16h-7.5L7 19.5V16H5a1.5 1.5 0 0 1-1.5-1.5v-8A1.5 1.5 0 0 1 5 5z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></symbol>
+  <symbol id="i-volume" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M15.5 9.2a4 4 0 0 1 0 5.6M18.2 6.6a7.8 7.8 0 0 1 0 10.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+  <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="m16 9.5 5 5M21 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+  <symbol id="i-verlauf" viewBox="0 0 24 24"><path d="M12 7.5V12l3 2M4.5 12a7.5 7.5 0 1 0 2.3-5.4M4 4.2v3.6h3.6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-exit" viewBox="0 0 24 24"><path d="M10 4.5H6.5A1.5 1.5 0 0 0 5 6v12a1.5 1.5 0 0 0 1.5 1.5H10M14 8l4 4-4 4M18 12H9.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-translate" viewBox="0 0 24 24"><path d="M4 6h9M8.5 4v2M6 6c.6 3 2.6 5.4 5.5 6.6M11 6c-.6 3-3 5.8-6.5 7M13.5 19.5l3.5-8.5 3.5 8.5M14.8 16.5h4.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11 12 4l8 7v8.2a.8.8 0 0 1-.8.8H15v-5.5H9V20H4.8a.8.8 0 0 1-.8-.8z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></symbol>
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.3" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M3 19.5c.4-3.3 2.8-5.2 6-5.2s5.6 1.9 6 5.2M16.2 5.6a3.2 3.2 0 0 1 0 5.8M18 14.6c1.8.6 2.9 2.2 3.1 4.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
@@ -85,23 +92,42 @@
 </div>
 
 <div class="spiel" id="spiel" role="dialog" aria-label="Spiel">
-  <div class="leiste">
-    <button class="ibtn" id="zurueck" type="button" aria-label="Zurück zur Spielseite">
-      <svg aria-hidden="true"><use href="#i-back"/></svg><span class="text">Zurück</span>
-    </button>
-    <div class="titel" id="spieltitel"></div>
-    <button class="ibtn" id="vollbild" type="button" aria-label="Vollbild" hidden>
-      <svg aria-hidden="true"><use href="#i-full"/></svg><span class="text">Vollbild</span>
-    </button>
-    <button class="ibtn" id="neuladen" type="button" aria-label="Spiel neu laden">
-      <svg aria-hidden="true"><use href="#i-reload"/></svg><span class="text">Neu laden</span>
-    </button>
-  </div>
   <div class="buehne" id="buehne">
     <iframe id="rahmen" title="Spiel"
       allow="fullscreen; autoplay; clipboard-write; gamepad; accelerometer; gyroscope"
       sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-pointer-lock allow-modals allow-downloads allow-orientation-lock"></iframe>
-    <button class="voll-aus" id="voll-aus" type="button" aria-label="Vollbild beenden"><svg aria-hidden="true"><use href="#i-full"/></svg></button>
+    <button class="lgh-knopf" id="menue-knopf" type="button" aria-label="Menü" aria-haspopup="dialog" aria-expanded="false"><svg aria-hidden="true"><use href="#logo"/></svg><span class="lgh-punkt" id="menue-punkt" hidden></span></button>
+    <div class="menue-hinter" id="menue-hinter" hidden>
+      <aside class="menue" id="menue" role="dialog" aria-modal="true" aria-label="Spielmenü">
+        <div class="menue-ansicht" id="menue-haupt">
+          <header class="menue-kopf">
+            <svg class="menue-logo" aria-hidden="true"><use href="#logo"/></svg>
+            <div class="menue-titel"><b id="spieltitel"></b><small>Leif Game Hub</small></div>
+            <button class="menue-x" id="menue-zu" type="button" aria-label="Menü schließen"><svg aria-hidden="true"><use href="#i-x"/></svg></button>
+          </header>
+          <div class="menue-liste">
+            <button class="menue-item primaer" id="menue-weiter" type="button"><svg aria-hidden="true"><use href="#i-play"/></svg><span class="mi-text">Weiterspielen</span></button>
+            <button class="menue-item" id="menue-chat" type="button" hidden><svg aria-hidden="true"><use href="#i-chat"/></svg><span class="mi-text">Chat</span><span class="mi-abz" id="menue-chat-abz" hidden></span></button>
+            <div class="menue-ton" id="menue-ton">
+              <button class="menue-item" id="ton-stumm" type="button" aria-label="Ton aus" aria-pressed="false"><svg aria-hidden="true"><use href="#i-volume"/></svg></button>
+              <div class="mt-mitte"><label for="ton-regler">Lautstärke</label><input type="range" id="ton-regler" min="0" max="100" step="1" value="100"></div>
+              <span class="mt-zahl" id="ton-zahl">100 %</span>
+            </div>
+            <div class="menue-notiz" id="ton-notiz" hidden>Dieses Spiel kann die Lautstärke noch nicht vom Hub aus ändern.</div>
+            <div class="menue-trenner"></div>
+            <button class="menue-item" id="vollbild" type="button" aria-label="Vollbild" hidden><svg aria-hidden="true"><use href="#i-full"/></svg><span class="mi-text" id="vollbild-text">Vollbild</span></button>
+            <button class="menue-item" id="neuladen" type="button" aria-label="Spiel neu laden"><svg aria-hidden="true"><use href="#i-reload"/></svg><span class="mi-text">Neu laden</span></button>
+            <button class="menue-item" id="menue-staende" type="button"><svg aria-hidden="true"><use href="#i-verlauf"/></svg><span class="mi-text">Spielstände</span></button>
+            <a class="menue-item" id="menue-wiki" target="_blank" rel="noopener" hidden><svg aria-hidden="true"><use href="#i-book"/></svg><span class="mi-text">Wiki</span><svg class="mi-ext" aria-hidden="true"><use href="#i-external"/></svg></a>
+            <button class="menue-item" id="menue-uebersetzen" type="button" aria-expanded="false"><svg aria-hidden="true"><use href="#i-translate"/></svg><span class="mi-text">Übersetzen</span></button>
+            <div class="menue-notiz" id="uebersetzen-notiz" hidden>Der Hub kann ein Spiel nicht selbst übersetzen. Dein Browser kann es: Rechtsklick auf das Spiel, dann „Übersetzen“ – oder das Spiel in einem eigenen Tab öffnen.<a class="menue-link" id="menue-tab" target="_blank" rel="noopener">In neuem Tab öffnen</a></div>
+            <div class="menue-trenner"></div>
+            <button class="menue-item gefahr" id="zurueck" type="button" aria-label="Spiel verlassen"><svg aria-hidden="true"><use href="#i-exit"/></svg><span class="mi-text">Spiel verlassen</span></button>
+          </div>
+        </div>
+        <div class="menue-ansicht" id="menue-chatansicht" hidden></div>
+      </aside>
+    </div>
     <div class="lade-hinweis" id="hinweis">Das Spiel lädt nicht? <a id="hinweis-link" target="_blank" rel="noopener">In neuem Tab öffnen</a></div>
   </div>
 </div>
@@ -126,6 +152,7 @@
 })();
 </script>
 <script src="konto.js"></script>
+<script src="spielmenue.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

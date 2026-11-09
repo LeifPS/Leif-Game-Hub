@@ -18,3 +18,5 @@
   Cache-Control: no-cache
 /konto.js
   Cache-Control: no-cache
+/spielmenue.js
+  Cache-Control: no-cache

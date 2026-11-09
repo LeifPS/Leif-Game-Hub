@@ -726,12 +726,14 @@
   function ausKonto(f) { try { if (window.LghKonto) f(window.LghKonto); } catch (x) { } }
   window.addEventListener('message', function (e) {
     var d = e.data;
-    if (!d || (d.lgh !== 'stand' && d.lgh !== 'status' && d.lgh !== 'hallo' && d.lgh !== 'fertig' && d.lgh !== 'dlc')) return;
+    if (!d || (d.lgh !== 'stand' && d.lgh !== 'status' && d.lgh !== 'hallo' && d.lgh !== 'fertig' && d.lgh !== 'dlc' && d.lgh !== 'ton-bereit')) return;
     var q = absender(e);
     if (!q) return;
     try { if (e.origin !== new URL(q.url).origin) return; } catch (x) { return; }
     // Übergabe großer Stände: Spiel fragt nach dem Stand (hallo) und meldet, dass es ihn eingelesen hat (fertig)
     if (d.lgh === 'hallo') { var u = q.el && q.el._uebergabe; if (u && u.art === 'msg') { try { e.source.postMessage({ lgh: 'daten', json: u.json }, e.origin); } catch (x) { } } return; }
+    // Das Spiel kann die Lautstärke aus dem Spielmenü übernehmen (siehe spielmenue.js und tools/lgh-vorlade.js)
+    if (d.lgh === 'ton-bereit') { if (q.el && !q.abgang) { q.el._ton = true; if (window.LghSpielMenue) window.LghSpielMenue.ton(e.source, e.origin); } return; }
     if (d.lgh === 'fertig') { if (q.el && q.el._uebergabe) q.el._uebergabe.fertig = true; return; }
     if (d.lgh === 'dlc') {
       if (d.spiel !== q.id || q.abgang) return;
@@ -796,8 +798,7 @@
     aktuell = sp;
     document.getElementById('spieltitel').textContent = sp.name;
     document.getElementById('hinweis-link').href = sp.url;
-    document.getElementById('vollbild').hidden = false;   // ohne Fullscreen-API (iPhone) gibt es einen Ersatz: Leiste ausblenden
-    body.classList.remove('pseudo-voll');
+    document.getElementById('vollbild').hidden = !(buehne.requestFullscreen || buehne.webkitRequestFullscreen);   // das iPhone kennt keinen Vollbildmodus für Seiten; dort füllt das Spiel ohnehin die ganze Seite
     hinweis.classList.remove('sichtbar');
     clearTimeout(hinweisTimer);
     var zaehler = ++startZaehler;
@@ -819,7 +820,6 @@
     aktuell = null;
     startZaehler++;
     if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
-    body.classList.remove('pseudo-voll');
   }
 
   /* ---------- Freunde ---------- */
@@ -1980,16 +1980,16 @@
     neuerRahmen(null);        // der laufende Rahmen meldet noch seinen letzten Stand
     ladeRahmen(sp, zaehler);
   });
-  /* Vollbild: echtes Vollbild, wo der Browser es erlaubt (Desktop, Android, iPad). Das iPhone kennt die Fullscreen-API nur für Videos,
-     dort blendet der Knopf stattdessen die Leiste aus ("pseudo-voll"): das Spiel füllt die ganze Seite, ein kleiner Knopf holt die Leiste zurück. */
+  /* Vollbild: echtes Vollbild der Bühne (samt Menü), wo der Browser es erlaubt (Desktop, Android, iPad). */
   document.getElementById('vollbild').addEventListener('click', function () {
     var voll = document.fullscreenElement || document.webkitFullscreenElement;
     var an = buehne.requestFullscreen || buehne.webkitRequestFullscreen;
     if (voll) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
-    else if (an) { try { var pr = an.call(buehne); if (pr && pr.catch) pr.catch(function () { body.classList.add('pseudo-voll'); }); } catch (e) { body.classList.add('pseudo-voll'); } }
-    else body.classList.add('pseudo-voll');
+    else if (an) { try { var pr = an.call(buehne); if (pr && pr.catch) pr.catch(function () { }); } catch (e) { } }
   });
-  document.getElementById('voll-aus').addEventListener('click', function () { body.classList.remove('pseudo-voll'); });
+
+  // Für das Spielmenü (spielmenue.js): das laufende Spiel und sein Rahmen
+  window.LghSpiel = { aktuell: function () { return aktuell; }, rahmen: function () { return rahmen; }, buehne: buehne };
 
   window.LghStand = { spielName: function (id) { return spielName(id); }, anwenden: standAnwenden, lokal: standLokal, sicherungen: standSicherungen };
 

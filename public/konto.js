@@ -598,6 +598,7 @@
       '</div></div><form class="dlg-teil" id="dlg-form" hidden novalidate></form><div class="dlg-teil" id="dlg-stand" hidden></div><div class="dlg-teil" id="dlg-bild" hidden></div><div class="dlg-teil" id="dlg-sicht" hidden></div>',
       function (el, zu) {
         var menue = el.querySelector('#dlg-menue'), form = el.querySelector('#dlg-form');
+        if (start === 'stand') setTimeout(function () { standAnsicht(el, menue); }, 0);   // direkt zu den Spielständen (Spielmenü)
         function formular(html, los) {
           menue.hidden = true; form.hidden = false;
           form.innerHTML = html + '<div class="konto-fehler" role="alert"></div><div class="btn-row"><button class="btn btn-primary" type="submit">OK</button><button class="btn btn-ghost" type="button" data-zurueck>Zurück</button></div>';
