@@ -8,6 +8,8 @@
     "run_worker_first": ["/api/*"]
   },
   "d1_databases": [
-    { "binding": "DB", "database_name": "lgh", "database_id": "9582193f-3ae1-48ad-b591-2e9ee2607f4d" }
-  ]
+    { "binding": "DB", "database_name": "lgh", "database_id": "9582193f-3ae1-48ad-b591-2e9ee2607f4d" },
+    { "binding": "BACKUP_DB", "database_name": "lgh-backup", "database_id": "374d24ce-7ebb-47c4-a558-89c60c2a562c" }
+  ],
+  "triggers": { "crons": ["17 3 * * *"] }
 }

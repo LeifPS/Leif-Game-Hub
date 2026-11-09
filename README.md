@@ -181,6 +181,27 @@ Der Hub ist ohne Konto gesperrt (Name und Passwort, keine E-Mail). Konten, Freun
 - **Benutzername ändern:** Konto-Menü → „Benutzernamen ändern“ (`POST /api/benutzername`, braucht das Passwort, weil der Anmeldeschlüssel vom Namen abhängt). Höchstens einmal pro 7 Tage (`NAME_SPERRE`, Spalte `users.name_changed`), nur auf einen freien Namen; Freunde, Stände und Anmeldungen bleiben am Konto. Der alte Name wird sofort frei. Der Anzeigename ist davon unabhängig.
 - **Hinweis Gerätewechsel:** Der lokale Stand gehört dem Gerät, nicht dem Konto. Wenn zwei Konten dasselbe Gerät benutzen, landet der Gerätestand bei dem Konto, das gerade angemeldet ist. Das muss beim späteren Einbau des Abgleichs bedacht werden.
 
+## Spielstand-Sicherung (mehrere Schichten)
+
+Ziel: Wer nur ein Gerät benutzt, soll nie etwas verlieren. Ein hundertprozentiges Versprechen gibt es technisch nicht, aber mehrere unabhängige Schichten:
+
+1. **Auf dem Gerät:** Der Hub hält den Stand je Spiel in `lgh.stand.<id>` (zusätzlich zum Spiel selbst).
+2. **Online im Konto:** `LghKonto.stand()` lädt nach 10 s Ruhe hoch (`PUT /api/stand/<id>`); der Server antwortet mit dem SHA-256 der gespeicherten Daten, der Hub vergleicht und merkt sich nur bei Übereinstimmung „gesichert“ (`lgh.konto.sicher.<name>`). Klappt das 15 Minuten nicht, zeigt der Hub oben einen ruhigen Hinweis (`#sicher-warnung`, höchstens alle 6 Stunden). Im Konto-Menü steht bei „Spielstände“, wann zuletzt gesichert wurde.
+3. **Automatisch zurück:** Fehlt oder ist der lokale Stand leer (neues Gerät, geleerter Speicher), holt `starteSpiel` den neuesten Server-Stand und zeigt „Spielstand aus deinem Konto wiederhergestellt“. Ein vorhandener lokaler Stand wird nie überschrieben.
+4. **Versionen:** Der Server hält Verlaufsstände (`ausduennen` in `src/konten.js`); dauerhaft bleiben der größte Stand und je Monat der letzte Stand der letzten 12 Monate (`MONATE`).
+5. **Zweite Datenbank:** `src/sicherung.js` kopiert jede Nacht (Cron `17 3 * * *`, Handler `scheduled` in `src/worker.js`) neue Stände, Konten und kleine Tabellen in die D1-Datenbank `lgh-backup` (Binding `BACKUP_DB`). Ältere Stände fallen nach 90 Tagen heraus (der neueste je Konto und Spiel bleibt). Fehlt das Binding, läuft alles wie vorher.
+6. **Konto löschen:** wird erst in die Sicherung geschrieben; klappt das nicht, wird nichts gelöscht (503 `sicherung_fehlt`). Gelöschte Konten bleiben 30 Tage in `lgh-backup` (`LOESCH_TAGE`) und werden dann von der Nachtsicherung entfernt.
+7. **D1 Time Travel** für `lgh` (je nach Cloudflare-Tarif 7 oder 30 Tage): `npx wrangler d1 time-travel info lgh` und `... restore lgh --timestamp=<ISO>`.
+
+**Konto oder Stände zurückholen:** `node tools/lgh-konto-zurueck.mjs <Name> [Spiel]` zeigt, was die Sicherung hat (Trockenlauf); mit `--los` wird zurückgeschrieben (Konto wird neu angelegt, vorhandene Stände bleiben unberührt).
+
+**Grenzen:** `lgh-backup` liegt im selben Cloudflare-Konto (R2 ist dort nicht aktiviert; ein Offsite-Export wäre ein späterer Schritt). Spiele mit eigenem Speicher (Foil XI, Manufaktur-Server) sind nicht Teil dieser Sicherung. Die Auswahl der Bibliothek (manuell entfernte Spiele) liegt nur lokal auf dem Gerät.
+
+## Bibliothek und Spielen-Menü
+
+- **Bibliothek (Seitenleiste):** zeigt standardmäßig alle Spiele. Pro Spiel lässt sich „Aus Bibliothek entfernen“ / „Zur Bibliothek hinzufügen“ wählen (`lgh.bibl.<name>` = `{gespielt, aus, ein}`; ein entferntes Spiel kommt wieder, sobald man es erneut spielt; Favoriten sind immer drin).
+- **Spielen-Knopf mit Pfeil** (Detailseite): Der schmale Pfeil neben „Spielen“ öffnet ein Menü: In neuem Tab öffnen (bleibt im Hub, `#spiel/<id>/play`), Zu Favoriten, Bibliothek, Spiel teilen (Teilen-Dialog oder Link kopieren).
+
 ## Bilder ersetzen (Icons, Titelbilder, Wallpaper)
 
 Die Bilder in `public/screens/` (außer `shots/`) werden vom Browser bei jedem Aufruf beim Server nachgefragt und nur neu geladen, wenn sie sich geändert haben (`public/_headers`). Zusätzlich hängt `app.js` die Nummer `BILD_V` an die Bildadressen. Wer ein Bild ersetzt und sicher gehen will, dass wirklich alle es sofort sehen, zählt `BILD_V` in `public/app.js` (und `?v=` bei Favicon und Apple-Touch-Icon in `public/index.html`) hoch.
