@@ -583,6 +583,59 @@
     }).sort(function (a, b) { return b.gem - a.gem; }).slice(0, 6).map(function (x) { return x.s; });
   }
 
+  /* Link zum Spiel im Hub: mit play = startet gleich das Spiel (neuer Tab), sonst die Detailseite (zum Teilen) */
+  function spielLink(sp, play) {
+    return esc(location.href.split('#')[0] + '#spiel/' + encodeURIComponent(sp.id) + (play ? '/play' : ''));
+  }
+  function spielenMenueZu(g) {
+    if (!g) return;
+    var m = g.querySelector('.spielen-menue'), p = g.querySelector('.btn-spielen-pfeil');
+    if (m) m.hidden = true;
+    if (p) p.setAttribute('aria-expanded', 'false');
+  }
+  function spielenHinweis(g, text) {
+    var h = g && g.querySelector('.spielen-hinweis');
+    if (!h) return;
+    h.textContent = text; h.hidden = false;
+    clearTimeout(h._t); h._t = setTimeout(function () { h.hidden = true; }, 2600);
+  }
+  document.addEventListener('click', function (e) {
+    var offen = document.querySelector('.spielen-menue:not([hidden])');
+    var pfeil = e.target.closest && e.target.closest('.btn-spielen-pfeil');
+    if (pfeil) {
+      var g = pfeil.closest('.spielen-gruppe'), m = g.querySelector('.spielen-menue'), auf = m.hidden;
+      if (offen && offen !== m) spielenMenueZu(offen.closest('.spielen-gruppe'));
+      m.hidden = !auf; pfeil.setAttribute('aria-expanded', auf ? 'true' : 'false');
+      if (auf) { var ers = m.querySelector('.spielen-eintrag'); if (ers && e.detail === 0) ers.focus(); }
+      return;
+    }
+    var ein = e.target.closest && e.target.closest('.spielen-eintrag');
+    if (ein) {
+      var gr = ein.closest('.spielen-gruppe');
+      if (ein.getAttribute('data-a') === 'teilen') {
+        var mm = /^#spiel\/([^\/]+)/.exec(location.hash);
+        var spiel = mm && spiele && spiele.filter(function (s) { return s.id === decodeURIComponent(mm[1]); })[0];
+        if (spiel) {
+          var url = location.href.split('#')[0] + '#spiel/' + encodeURIComponent(spiel.id);
+          var kopieren = function () {
+            var ok = function () { spielenHinweis(gr, 'Link kopiert.'); };
+            var nein = function () { spielenHinweis(gr, 'Link: ' + url); };
+            try { navigator.clipboard.writeText(url).then(ok, nein); } catch (x) { nein(); }
+          };
+          if (navigator.share) navigator.share({ title: spiel.name + ' im Leif Game Hub', text: spiel.name + ' – ' + (spiel.text || ''), url: url }).catch(function (x) { if (!x || x.name !== 'AbortError') kopieren(); });
+          else kopieren();
+        }
+      }
+      spielenMenueZu(gr);
+      return;
+    }
+    if (offen && !(e.target.closest && e.target.closest('.spielen-menue'))) spielenMenueZu(offen.closest('.spielen-gruppe'));
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    var offen = document.querySelector('.spielen-menue:not([hidden])');
+    if (offen) { var g = offen.closest('.spielen-gruppe'); spielenMenueZu(g); var p = g.querySelector('.btn-spielen-pfeil'); if (p) p.focus(); }
+  });
   function renderDetail(sp) {
     var id = encodeURIComponent(sp.id);
     var titel = !!sp.wallpaper;
@@ -590,7 +643,12 @@
     var online = kategorien(sp).indexOf('Online') >= 0;
     var h = '<div class="detail-banner' + (titel ? ' titel' : '') + '">' + (titel ? '<div class="titelrahmen"><img class="titelhg" src="' + esc(sp.wallpaper) + '" alt="" aria-hidden="true" decoding="async"><img class="titelbild titelfg" src="' + esc(sp.wallpaper) + '" alt="' + esc(sp.name) + '" decoding="async"></div>' : art(sp, 1400, 420)) + '<a class="zurueck-link" href="#"><svg aria-hidden="true"><use href="#i-back"/></svg>Alle Spiele</a>' + ((sp.url || sp.wartung) ? favKnopf(sp, 'fav-ban') : '') + '</div>';
     h += '<div class="shop' + (titel ? ' titel' : '') + '">';
-    h += '<div class="shop-titelzeile">' + titelHtml(sp) + '<div class="spiel-aktion"><div class="spielinfo" hidden></div>' + (sp.url ? '<a class="btn btn-primary btn-spielen" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a>' : '<span class="btn btn-spielen gesperrt" aria-disabled="true"' + cdAttr(sp, '') + '>' + (sp.wartung ? sperrText(sp, '') : 'Bald') + '</span>') + '</div></div>';
+    h += '<div class="shop-titelzeile">' + titelHtml(sp) + '<div class="spiel-aktion"><div class="spielinfo" hidden></div>' + (sp.url ? '<div class="spielen-gruppe"><a class="btn btn-primary btn-spielen" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a>' +
+      '<button type="button" class="btn btn-primary btn-spielen-pfeil" aria-haspopup="menu" aria-expanded="false" aria-label="Weitere Optionen zum Spielen"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"/></svg></button>' +
+      '<div class="spielen-menue" role="menu" hidden>' +
+      '<a role="menuitem" class="spielen-eintrag" data-a="tab" href="' + spielLink(sp, true) + '" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-external"/></svg>In neuem Tab öffnen</a>' +
+      '<button type="button" role="menuitem" class="spielen-eintrag" data-a="teilen"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="12" r="2.4"/><circle cx="17.5" cy="6" r="2.4"/><circle cx="17.5" cy="18" r="2.4"/><path d="M8.6 10.8l6.8-3.6M8.6 13.2l6.8 3.6"/></svg>Spiel teilen</button>' +
+      '</div><div class="spielen-hinweis" role="status" aria-live="polite" hidden></div></div>' : '<span class="btn btn-spielen gesperrt" aria-disabled="true"' + cdAttr(sp, '') + '>' + (sp.wartung ? sperrText(sp, '') : 'Bald') + '</span>') + '</div></div>';
     var gal = galerieHtml(sp);
     var text = (sp.beschreibung && sp.beschreibung !== sp.text) ? '<section class="shop-text"><h2>Über dieses Spiel</h2><p>' + esc(sp.beschreibung) + '</p></section>' : '';
     h += '<div class="shop-oben' + (gal ? '' : ' ohne-galerie') + '">' + (gal ? '<div class="shop-haupt">' + gal + text + '</div>' : '');

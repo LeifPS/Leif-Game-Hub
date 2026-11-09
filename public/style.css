@@ -1195,3 +1195,39 @@ body {
 .lgh-knopf:hover, .lgh-knopf:focus-visible, .buehne.menue-auf .lgh-knopf { box-shadow: 0 0 0 1px rgba(255, 190, 100, .5), 0 0 26px var(--glow); }
 .menue { box-shadow: 8px 0 50px rgba(0, 0, 0, .55), 0 0 60px rgba(255, 140, 50, .08); border-right-color: rgba(255, 190, 100, .16); }
 .ch-msg.ich .ch-blase, .mc-msg.ich .mc-blase { background: var(--akzent-verlauf); box-shadow: 0 2px 14px var(--glow-weich); }
+
+/* Spielen-Knopf mit Pfeil (neuer Tab, teilen) */
+.spielen-gruppe { position: relative; display: flex; align-items: stretch; flex: none; }
+.spielen-gruppe .btn-spielen { border-radius: 9px 0 0 9px; }
+.spielen-gruppe .btn-spielen-pfeil {
+  width: 40px; min-width: 40px; padding: 0; height: 46px; border-radius: 0 9px 9px 0;
+  background: var(--akzent-verlauf); color: var(--auf-akzent); border: 0; border-left: 1px solid rgba(26, 18, 8, .28);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(255, 220, 150, .35) inset, 0 6px 22px var(--glow), 0 0 40px var(--glow-weich);
+}
+.spielen-gruppe .btn-spielen-pfeil:hover, .spielen-gruppe .btn-spielen-pfeil[aria-expanded="true"] { filter: brightness(1.08) saturate(1.05); }
+.spielen-gruppe .btn-spielen-pfeil svg { width: 18px; height: 18px; color: var(--auf-akzent); transition: transform .15s; }
+.spielen-gruppe .btn-spielen-pfeil[aria-expanded="true"] svg { transform: rotate(180deg); }
+.shop-titelzeile .spielen-gruppe .btn-spielen { min-width: 148px; }
+.spielen-menue {
+  position: absolute; z-index: 20; top: calc(100% + 8px); right: 0; min-width: 230px; padding: 6px;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .55), 0 0 30px var(--glow-weich);
+}
+.spielen-menue[hidden] { display: none; }
+.spielen-eintrag {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 12px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--text); font: inherit; font-size: 14.5px; text-align: left; cursor: pointer; text-decoration: none;
+}
+.spielen-eintrag svg { width: 19px; height: 19px; flex: none; color: var(--accent); }
+.spielen-eintrag:hover, .spielen-eintrag:focus-visible { background: rgba(255, 179, 64, .14); }
+.spielen-hinweis {
+  position: absolute; z-index: 21; top: calc(100% + 8px); right: 0; padding: 9px 14px; border-radius: 10px;
+  background: var(--panel-2); border: 1px solid var(--line); color: var(--text); font-size: 13.5px; white-space: nowrap; max-width: 80vw; overflow: hidden; text-overflow: ellipsis;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+}
+.spielen-hinweis[hidden] { display: none; }
+@media (max-width: 900px) {
+  .spielen-gruppe { width: 100%; }
+  .spielen-gruppe .btn-spielen, .shop-titelzeile .spielen-gruppe .btn-spielen { flex: 1; width: auto; }
+}
