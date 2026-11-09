@@ -868,7 +868,7 @@
     b = document.createElement('div'); b.id = 'sp-toasts'; b.className = 'sp-toasts'; b.setAttribute('aria-live', 'polite');
     bue.appendChild(b); return b;
   }
-  function scAufraeumen() { var b = document.getElementById('sp-toasts'); if (b) b.innerHTML = ''; sc.basis = null; sc.bekannt = {}; sc.laeuft = false; }
+  function scAufraeumen() { if (window.LghSpielMenue && window.LghSpielMenue.ungelesen) window.LghSpielMenue.ungelesen(0); var b = document.getElementById('sp-toasts'); if (b) b.innerHTML = ''; sc.basis = null; sc.bekannt = {}; sc.laeuft = false; }
   function scSchliessen(k) {
     if (!k || !k.parentNode) return;
     clearTimeout(k._t); k.parentNode.removeChild(k);
@@ -898,13 +898,18 @@
     k.querySelector('.sp-text').textContent = chatKurz(v.text);
     scTimer(k);
   }
+  function scMenuePunkt(liste) {   // Punkt am LGH-Symbol im Spiel (spielmenue.js)
+    var m = window.LghSpielMenue; if (!m || !m.ungelesen) return;
+    m.ungelesen(liste.reduce(function (s, v) { return s + (v.n || 0); }, 0));
+  }
   function scVerarbeiten(liste) {
+    scMenuePunkt(liste);
     if (sc.basis === null) {   // erste Antwort nach dem Spielstart: nur merken, nichts anzeigen
       sc.basis = true; liste.forEach(function (v) { sc.bekannt[v.name] = v.neu; }); return;
     }
     var box = document.getElementById('sp-toasts');
     liste.forEach(function (v) {
-      if (v.neu > (sc.bekannt[v.name] || 0)) { sc.bekannt[v.name] = v.neu; scKarte(v); }
+      if (v.neu > (sc.bekannt[v.name] || 0)) { sc.bekannt[v.name] = v.neu; if (!(window.LghSpielMenue && window.LghSpielMenue.chatMit && window.LghSpielMenue.chatMit() === v.name)) scKarte(v); }
     });
     // Karten von Freunden, deren Chat inzwischen anderswo gelesen wurde, verschwinden (außer man tippt gerade)
     if (box) [].forEach.call(box.querySelectorAll('.sp-karte'), function (k) {
