@@ -277,7 +277,7 @@
     if (wikiSpiele().length) s += '<a class="lib-item' + (wikisAktiv ? ' aktiv' : '') + '" href="#wikis"><span class="lib-home-icon"><svg width="20" height="20" aria-hidden="true"><use href="#i-book"/></svg></span><span class="name">Wikis</span></a>';
     s += '<div class="nav-label">Bibliothek</div>';
     var bibListe = alphabetisch().filter(function (sp) { return bibIst(sp.id); });
-    if (!bibListe.length) s += '<div class="lib-leer">Hier erscheinen Spiele, die du gespielt oder als Favorit markiert hast. Alle Spiele findest du auf der Startseite oder über die Suche.</div>';
+    if (!bibListe.length) s += '<div class="lib-leer">Hier ist gerade nichts. Alle Spiele findest du auf der Startseite oder über die Suche, und im Pfeil-Menü neben „Spielen“ kannst du sie wieder zur Bibliothek hinzufügen.</div>';
     bibListe.forEach(function (sp) {
       var offen = !!sp.url;
       var inner = '<span class="lib-icon">' + art(sp, 100, 100) + '</span><span class="name">' + esc(sp.name) + '</span>' + (favIst(sp.id) ? '<span class="lib-stern" aria-label="Favorit" title="Favorit">★</span>' : '') + (offen ? '' : '<small' + cdAttr(sp, '') + '>' + (sp.wartung ? sperrText(sp, '') : 'Bald') + '</small>');
@@ -302,7 +302,7 @@
     try { localStorage.setItem(k, JSON.stringify(neu)); } catch (e) { }
     weiterGeladen = 0;
   }
-  /* ---------- Bibliothek: nur Spiele, die man gespielt hat (oder als Favorit markiert / von Hand hinzugefügt hat). Entfernen merkt sich den Zeitpunkt;
+  /* ---------- Bibliothek: standardmäßig alle Spiele. Von Hand entfernte (Pfeil-Menü) fehlen, bis man sie wieder spielt oder hinzufügt; Favoriten bleiben immer drin. Entfernen merkt sich den Zeitpunkt;
      wer das Spiel danach wieder spielt, hat es automatisch wieder drin. Pro Konto auf dem Gerät gemerkt. ---------- */
   function bibKey() { var n = window.LghKonto && LghKonto.name(); return n ? 'lgh.bibl.' + String(n).toLowerCase() : null; }
   function bibLokal() { var k = bibKey(); try { var o = (k && JSON.parse(localStorage.getItem(k))) || {}; return { gespielt: o.gespielt || {}, aus: o.aus || {}, ein: o.ein || {} }; } catch (e) { return { gespielt: {}, aus: {}, ein: {} }; } }
@@ -311,7 +311,7 @@
   function bibIst(id) {
     if (favIst(id)) return true;
     var o = bibLokal(); if (o.ein[id]) return true;
-    var t = bibGespielt(id); return t > 0 && !(o.aus[id] && o.aus[id] >= t);
+    var t = bibGespielt(id); return !(o.aus[id] && o.aus[id] >= t);   // standardmäßig stehen alle Spiele drin; nur von Hand Entfernte fehlen, bis man sie wieder spielt
   }
   function bibMerken(id) { var o = bibLokal(); o.gespielt[id] = Date.now(); delete o.aus[id]; bibSchreiben(o); }
   function bibUmschalten(id) {
@@ -802,6 +802,15 @@
       buehne.appendChild(b);
     }
   }
+  function zeigeWiederHinweis(t) {
+    var d = t ? new Date(t * 1000) : null, w = d ? d.getDate() + '.' + (d.getMonth() + 1) + '. um ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ' Uhr' : '';
+    var b = document.getElementById('wieder-hinweis'); if (b) b.remove();
+    b = document.createElement('div'); b.id = 'wieder-hinweis'; b.className = 'stand-hinweis'; b.setAttribute('role', 'status');
+    b.innerHTML = '<span>Dein Spielstand' + (w ? ' vom ' + w : '') + ' wurde aus deinem Konto wiederhergestellt.</span><button type="button" class="btn btn-ghost" data-zu>OK</button>';
+    b.querySelector('[data-zu]').addEventListener('click', function () { b.remove(); });
+    buehne.appendChild(b);
+    setTimeout(function () { if (b.parentNode) b.remove(); }, 12000);
+  }
   function absender(e) {
     if (aktuell && rahmen.contentWindow && e.source === rahmen.contentWindow) return { id: aktuell.id, url: aktuell.url, abgang: false, el: rahmen };
     for (var i = 0; i < abgehende.length; i++) if (e.source === abgehende[i].fenster) return { id: abgehende[i].id, url: abgehende[i].url, abgang: true, el: abgehende[i].el };
@@ -893,7 +902,19 @@
       if (aktuell !== sp || zaehler !== startZaehler) return;
       ausKonto(function (k) { k.spiel(sp.id); });
       var warDrin = bibIst(sp.id); zuletztMerken(sp.id); bibMerken(sp.id); if (!warDrin) bibNeu();
-      ladeRahmen(sp, zaehler);
+      // Fehlt der Stand auf diesem Gerät (neues Gerät, Browserdaten gelöscht), der Stand im Konto aber da ist: still zurückholen, bevor das Spiel startet.
+      // Ein vorhandener Stand auf dem Gerät wird nie angerührt.
+      var lok = standLokal(sp.id), leer = !lok || !lok.d || !Object.keys(lok.d).length;
+      if (leer && window.LghKonto && LghKonto.angemeldet() && LghKonto.holeNeuesten) {
+        LghKonto.holeNeuesten(sp.id).then(function (r) {
+          if (aktuell !== sp || zaehler !== startZaehler) return;
+          if (r && r.d && Object.keys(r.d).length) {
+            var nochLeer = standLokal(sp.id); if (nochLeer && nochLeer.d && Object.keys(nochLeer.d).length) { ladeRahmen(sp, zaehler); return; }
+            try { localStorage.setItem(STAND + sp.id, JSON.stringify({ t: Date.now(), d: r.d })); zeigeWiederHinweis(r.t); } catch (e) { }
+          }
+          ladeRahmen(sp, zaehler);
+        });
+      } else ladeRahmen(sp, zaehler);
     });
   }
   function stoppeSpiel() {

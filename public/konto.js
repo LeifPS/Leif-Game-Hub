@@ -592,7 +592,7 @@
       '<div class="dlg-ueber">Profil</div><div class="dlg-gruppe">' +
       menueZeile('profil', 'Mein Profil') + menueZeile('bild', 'Profilbild ändern') + menueZeile('anz', 'Anzeigename ändern') + menueZeile('sicht', 'Sichtbarkeit', 'Wer Online-Status und Spiele sieht') +
       '</div><div class="dlg-ueber">Konto</div><div class="dlg-gruppe">' +
-      menueZeile('bn', 'Benutzernamen ändern') + menueZeile('pw', 'Passwort ändern') + menueZeile('stand', 'Spielstände', 'Sichern und zurückholen') +
+      menueZeile('bn', 'Benutzernamen ändern') + menueZeile('pw', 'Passwort ändern') + menueZeile('stand', 'Spielstände', esc(sicherText())) +
       '</div><div class="dlg-gruppe dlg-ende">' +
       menueZeile('aus', 'Abmelden', 'Nur auf diesem Gerät') + menueZeile('weg', 'Konto löschen', '', true) +
       '</div></div><form class="dlg-teil" id="dlg-form" hidden novalidate></form><div class="dlg-teil" id="dlg-stand" hidden></div><div class="dlg-teil" id="dlg-bild" hidden></div><div class="dlg-teil" id="dlg-sicht" hidden></div>',
@@ -731,11 +731,38 @@
   /* ---------- Spielstände: still mitschreiben ---------- */
   var spur = {};              // id -> { daten, letzter, dirty, laufend, zuGross }
   var SPUR_TAKT = 60000;
+  /* Status der Sicherung (pro Konto auf dem Gerät): wann zuletzt geprüft gesichert, seit wann es hakt */
+  var SICHER_WARN = 15 * 60000;   // ab so langer Störung wird gewarnt (kurz offline ist normal)
+  var SICHER_DEBOUNCE = 10000;    // so lange nach der letzten Änderung wird hochgeladen
+  function sicherKey() { return 'lgh.konto.sicher.' + konto.name.toLowerCase(); }
+  function sicherLesen() { try { return (JSON.parse(lsGet(sicherKey()) || '{}')) || {}; } catch (e) { return {}; } }
+  function offenZahl() { return Object.keys(spur).filter(function (i) { return spur[i].dirty && !spur[i].zuGross; }).length; }
+  function sicherOk() { if (!konto) return; var o = sicherLesen(); o.zuletzt = Date.now(); if (!offenZahl()) o.fehlerSeit = null; lsSet(sicherKey(), JSON.stringify(o)); }
+  function sicherFehler() { if (!konto) return; var o = sicherLesen(); if (!o.fehlerSeit) o.fehlerSeit = Date.now(); lsSet(sicherKey(), JSON.stringify(o)); }
+  function sicherung() {
+    if (!konto) return { zuletzt: 0, fehlerSeit: null, offen: 0, problem: false };
+    var o = sicherLesen(), n = offenZahl();
+    return { zuletzt: o.zuletzt || 0, fehlerSeit: o.fehlerSeit || null, offen: n, problem: !!(o.fehlerSeit && Date.now() - o.fehlerSeit > SICHER_WARN) };
+  }
+  function sicherText() {
+    var s = sicherung();
+    if (s.problem) return 'Achtung: Sicherung gestört';
+    if (!s.zuletzt) return 'Sichern und zurückholen';
+    var d = new Date(s.zuletzt), n = new Date(), uhr = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+    var tage = Math.round((new Date(n.getFullYear(), n.getMonth(), n.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+    return 'Zuletzt gesichert: ' + (tage <= 0 ? 'heute ' + uhr : tage === 1 ? 'gestern ' + uhr : d.getDate() + '.' + (d.getMonth() + 1) + '. ' + uhr);
+  }
+  function sha256Hex(text) {
+    try { return crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)).then(function (b) { return [].map.call(new Uint8Array(b), function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); }); }
+    catch (e) { return Promise.resolve(null); }
+  }
   function stand(id, d) {
     if (!konto || !d || typeof d !== 'object') return;
     var daten; try { daten = JSON.stringify(d); } catch (e) { return; }
     var s = spur[id] || (spur[id] = {});
     s.daten = daten; s.dirty = s.letzter !== daten;
+    // Nach kurzer Ruhe (nicht erst nach einer Minute) hochladen, damit höchstens ein paar Sekunden Fortschritt ungesichert sind
+    if (s.dirty && !s.timer) s.timer = setTimeout(function () { s.timer = null; hochladen(id, false); }, SICHER_DEBOUNCE);
   }
   function hochladen(id, schnell) {
     var s = spur[id];
@@ -743,15 +770,41 @@
     var daten = s.daten;
     s.laufend = true;
     return api('PUT', '/api/stand/' + encodeURIComponent(id), { erzwingen: true, daten: daten, geraet: geraet() }, { keepalive: !!schnell && daten.length < 50000, timeout: 20000 }).then(function (res) {
-      s.laufend = false;
-      if (res.ok) { s.letzter = daten; if (s.daten === daten) s.dirty = false; }
-      else if (res.status === 413) s.zuGross = true;   // zu groß für den Server: nicht weiter versuchen
-    }, function () { s.laufend = false; });
+      if (!res.ok) { s.laufend = false; if (res.status === 413) s.zuGross = true; else sicherFehler(); return; }
+      // Erst gesichert, wenn der Server dieselbe Prüfsumme meldet wie der Hub selbst rechnet
+      return sha256Hex(daten).then(function (h) {
+        s.laufend = false;
+        if (h && res.j && res.j.sha && res.j.sha !== h) { sicherFehler(); return; }   // beim Übertragen verändert: bleibt offen, nächster Versuch folgt
+        s.letzter = daten; if (s.daten === daten) s.dirty = false;
+        sicherOk();
+      });
+    }, function () { s.laufend = false; sicherFehler(); });
+  }
+  /* Neuester gesicherter Stand eines Spiels aus dem Konto (für die automatische Wiederherstellung); null, wenn keiner da ist oder der Server nicht antwortet */
+  function holeNeuesten(id) {
+    if (!konto) return Promise.resolve(null);
+    return api('GET', '/api/stand/' + encodeURIComponent(id), undefined, { timeout: 6000 }).then(function (res) {
+      if (!res.ok || !res.j || typeof res.j.daten !== 'string') return null;
+      try { var d = JSON.parse(res.j.daten); if (d && typeof d === 'object') return { d: d, t: res.j.aktualisiert, rev: res.j.rev }; } catch (e) { }
+      return null;
+    }, function () { return null; });
+  }
+  /* Warnung, wenn die Sicherung länger hakt (höchstens alle 6 Stunden, nur im Spiel sichtbar) */
+  var sicherGewarnt = 0;
+  function sicherWarnen() {
+    var s = sicherung();
+    if (!s.problem || Date.now() - sicherGewarnt < 6 * 3600000) return;
+    var host = document.getElementById('buehne'); if (!host || document.getElementById('sicher-warnung')) return;
+    sicherGewarnt = Date.now();
+    var b = document.createElement('div'); b.id = 'sicher-warnung'; b.className = 'stand-hinweis'; b.setAttribute('role', 'status');
+    b.innerHTML = '<span>Deine Spielstände konnten seit einiger Zeit nicht online gesichert werden. Dein Stand liegt weiter sicher auf diesem Gerät. Prüfe die Internetverbindung, der Hub versucht es weiter.</span><button type="button" class="btn btn-ghost" data-zu>OK</button>';
+    b.querySelector('[data-zu]').addEventListener('click', function () { b.remove(); });
+    host.appendChild(b);
   }
   function flush(schnell) {
     return Promise.all(Object.keys(spur).map(function (id) { return hochladen(id, schnell); }));
   }
-  setInterval(function () { if (konto) flush(false); }, SPUR_TAKT);
+  setInterval(function () { if (konto) { flush(false); sicherWarnen(); } }, SPUR_TAKT);
 
   // Einmal pro Tag und Gerät: vorhandene Stände aller Spiele als Ausgangspunkt hinterlegen
   function grundstand() {
@@ -983,7 +1036,7 @@
 
   window.LghKonto = {
     bereit: bereit, name: function () { return konto ? konto.name : null; }, anzeige: anzeigeName, angemeldet: function () { return !!konto; },
-    stand: stand, beimVerlassen: beimVerlassen, spiel: setzeSpiel, raum: setzeRaum,
+    stand: stand, holeNeuesten: holeNeuesten, sicherung: sicherung, beimVerlassen: beimVerlassen, spiel: setzeSpiel, raum: setzeRaum,
     einladung: einladung, chatKurz: chatKurz, raumFuer: raumFuer, spielNamen: function (f) { spielNamen = f; },
     freunde: freunde, chat: chat, gruppen: gruppen, setzeOffene: setzeOffene, avatarStil: avatarStil, avatar: avatarHtml, dialog: dialog,
     dlc: { laden: function () { return api('GET', '/api/dlc'); }, kaufen: function (id) { return api('POST', '/api/dlc/kaufen', { id: id }); }, gesehen: function () { return api('POST', '/api/dlc/gesehen', {}); } },

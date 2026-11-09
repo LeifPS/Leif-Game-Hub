@@ -77,6 +77,7 @@ test('Spielstand: speichern, laden, Versionen, Konflikt', async () => {
   const a = await neuesKonto(env);
   assert.equal((await call(env, 'GET', '/api/stand/zahlenwerk', undefined, a)).status, 404);
   const p1 = await call(env, 'PUT', '/api/stand/zahlenwerk', { basis: 0, daten: '{"t":1,"d":{"x":"1"}}', geraet: 'iPad' }, a);
+  { const soll = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('{"t":1,"d":{"x":"1"}}')))].map((x) => x.toString(16).padStart(2, '0')).join(''); assert.equal(p1.j.sha, soll, 'Server liefert die Prüfsumme des gespeicherten Stands'); }
   assert.deepEqual([p1.status, p1.j.rev], [200, 1]);
   // gleicher Inhalt: keine neue Version
   const gl = await call(env, 'PUT', '/api/stand/zahlenwerk', { basis: 1, daten: '{"t":1,"d":{"x":"1"}}' }, a);

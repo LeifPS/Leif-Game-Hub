@@ -356,12 +356,13 @@ async function speichern(request, db, s, spiel, jetzt) {
   const basis = Number.isInteger(b.basis) && b.basis >= 0 ? b.basis : null;
   if (basis === null && !b.erzwingen) return fehler(400, 'eingabe');
   const geraet = geraetName(b.geraet);
+  const sha = await sha256(b.daten);
 
   for (let versuch = 0; versuch < 2; versuch++) {
     const cur = await db.prepare('SELECT game, rev, data, size, updated, device FROM saves WHERE user_id = ? AND game = ? ORDER BY rev DESC LIMIT 1').bind(s.id, spiel).first();
     const curRev = cur ? cur.rev : 0;
     if (!b.erzwingen && basis !== curRev) return fehler(409, 'konflikt', { aktuell: cur ? meta(cur) : null });
-    if (cur && cur.data === b.daten) return antwort({ rev: curRev, gleich: true, aktualisiert: cur.updated });
+    if (cur && cur.data === b.daten) return antwort({ rev: curRev, gleich: true, aktualisiert: cur.updated, sha });
     const neu = curRev + 1;
     const r = await db.prepare(
       `INSERT INTO saves (user_id, game, rev, data, size, updated, device)
@@ -369,7 +370,7 @@ async function speichern(request, db, s, spiel, jetzt) {
     ).bind(s.id, spiel, neu, b.daten, groesse, jetzt, geraet, s.id, spiel, curRev).run();
     if (r.meta && r.meta.changes === 1) {
       await ausduennen(db, s.id, spiel, !!b.behalten);
-      return antwort({ rev: neu, aktualisiert: jetzt });
+      return antwort({ rev: neu, aktualisiert: jetzt, sha });
     }
     // Zwischen Lesen und Schreiben hat ein anderes Gerät gespeichert: noch einmal prüfen (bei erzwingen wird neu aufgesetzt)
   }
