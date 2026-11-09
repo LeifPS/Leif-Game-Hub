@@ -1188,7 +1188,9 @@ body {
 .btn-primary svg, .btn-spielen svg, .menue-item.primaer > svg { color: var(--auf-akzent); }
 .btn-spielen.gesperrt, .btn-spielen.gesperrt:hover { background: var(--panel-2); color: var(--muted); box-shadow: none; filter: none; }
 .tile .play { background: var(--akzent-verlauf); color: var(--auf-akzent); box-shadow: 0 0 22px var(--glow); }
-.tile:hover { box-shadow: 0 0 0 1px rgba(255, 190, 100, .35), 0 12px 38px rgba(255, 130, 40, .18); }
+/* Glow nur ums Titelbild (nicht als Rahmen um die ganze Kachel mit Text) */
+.tile:hover { box-shadow: none; }
+@media (hover: hover) { .tile:hover .tile-art, .tile-link:focus-visible .tile-art { box-shadow: 0 0 0 1px var(--line-2), 0 16px 34px rgba(0, 0, 0, .5), 0 10px 40px rgba(255, 140, 50, .14); } }
 .chip[aria-pressed="true"] { background: var(--akzent-verlauf); border-color: transparent; box-shadow: 0 0 18px var(--glow-weich); }
 .search:focus-within { border-color: rgba(255, 190, 100, .55); box-shadow: 0 0 0 3px rgba(255, 170, 70, .18), 0 0 26px var(--glow-weich); }
 .lgh-knopf { box-shadow: 0 0 18px var(--glow-weich); }
