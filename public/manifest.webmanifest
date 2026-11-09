@@ -4,8 +4,8 @@
  "description": "Alle Spiele von Leif an einem Ort.",
  "start_url": "./",
  "display": "standalone",
- "background_color": "#0d1016",
- "theme_color": "#0d1016",
+ "background_color": "#120e0a",
+ "theme_color": "#120e0a",
  "lang": "de",
  "icons": [
   {
