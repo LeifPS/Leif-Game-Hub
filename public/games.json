@@ -782,6 +782,7 @@
       "phase": "alpha",
       "farbe": "#7b4dff",
       "kategorien": ["Glück", "Sammeln"],
+      "banner": "screens/aurarng-wide.webp",
       "icon": "screens/aurarng-icon.webp"
     }
   ]
