@@ -141,6 +141,44 @@ export const SCHEMA = [
     PRIMARY KEY (user_id, dlc)
   )`,
   // Zähler gegen Raten von Passwörtern und Massenanmeldungen
+  // dev.leifps.de: von Entwicklern eingereichte Spiele (Hub-Konten). Sie erscheinen im Hub neben den Spielen aus games.json.
+  // shots/trailer/tags sind JSON-Listen; release = Unix-Sekunden (0 = sofort); Mitentwickler müssen auf ihrem Konto zustimmen.
+  `CREATE TABLE IF NOT EXISTS dev_games (
+    id TEXT PRIMARY KEY,
+    owner_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    text TEXT NOT NULL,
+    description TEXT,
+    tags TEXT NOT NULL,
+    banner TEXT NOT NULL,
+    url TEXT NOT NULL,
+    repo TEXT,
+    color TEXT NOT NULL,
+    release INTEGER NOT NULL DEFAULT 0,
+    version TEXT,
+    shots TEXT NOT NULL,
+    trailer TEXT NOT NULL,
+    created INTEGER NOT NULL,
+    updated INTEGER NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS dev_games_owner ON dev_games(owner_id)`,
+  `CREATE TABLE IF NOT EXISTS dev_co (
+    game TEXT NOT NULL,
+    user_id INTEGER NOT NULL,
+    accepted INTEGER NOT NULL DEFAULT 0,
+    invited INTEGER NOT NULL,
+    PRIMARY KEY (game, user_id)
+  )`,
+  `CREATE INDEX IF NOT EXISTS dev_co_user ON dev_co(user_id)`,
+  // Tagesstatistik je Spiel und Konto (Sekunden Spielzeit), nur für Auswertungen in Summe (Entwickler sehen nie einzelne Konten)
+  `CREATE TABLE IF NOT EXISTS spiel_tag (
+    game TEXT NOT NULL,
+    day INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    seconds INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (game, day, user_id)
+  )`,
+  `CREATE INDEX IF NOT EXISTS spiel_tag_user ON spiel_tag(user_id)`,
   `CREATE TABLE IF NOT EXISTS limits (
     k TEXT PRIMARY KEY,
     n INTEGER NOT NULL,

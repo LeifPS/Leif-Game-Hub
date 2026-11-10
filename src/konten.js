@@ -7,6 +7,7 @@
 import { SCHEMA } from './schema.js';
 import { gruppenModul } from './gruppen.js';
 import { dlcModul, KATALOG } from './dlc.js';
+import { devModul } from './dev.js';
 
 const enc = new TextEncoder();
 const hex = (u8) => [...u8].map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -283,6 +284,7 @@ async function kontoLoeschen(request, db, s, jetzt) {
   if (r.fehler) return r.fehler;
   await G.kontoWeg(db, s.id);
   await D.kontoWeg(db, s.id);
+  await V.kontoWeg(db, s.id);
   await db.batch([
     db.prepare('DELETE FROM saves WHERE user_id = ?').bind(s.id),
     db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(s.id),
@@ -571,7 +573,7 @@ async function bewertungSetzen(request, env, db, s, spiel, jetzt) {
   // Nur Spiele, die es im Hub gibt (sobald games.json lesbar ist), damit keine erfundenen Einträge entstehen
   const dlc = KATALOG.find((x) => x.id === spiel);
   const ids = (await gamesDaten(env, request)).ids;
-  if (!dlc && ids.size && !ids.has(spiel)) return fehler(404, 'unbekannt');
+  if (!dlc && ids.size && !ids.has(spiel) && !(await db.prepare('SELECT 1 AS x FROM dev_games WHERE id = ?').bind(spiel).first())) return fehler(404, 'unbekannt');
   if (dlc && b.sterne > 0 && !(await db.prepare('SELECT 1 AS x FROM dlc_owned WHERE user_id = ? AND dlc = ?').bind(s.id, spiel).first())) return fehler(403, 'nicht_gekauft');
   if (b.sterne === 0) await db.prepare('DELETE FROM ratings WHERE user_id = ? AND game = ?').bind(s.id, spiel).run();
   else {
@@ -637,6 +639,7 @@ async function praesenz(request, db, s, jetzt) {
   const stmts = [db.prepare('INSERT INTO presence (user_id, game, raum, seen) VALUES (?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET game = excluded.game, raum = excluded.raum, seen = excluded.seen')
     .bind(s.id, spiel, raum, seen)];
   if (spiel && !b.offline) stmts.push(db.prepare('INSERT INTO playtime (user_id, game, seconds, last) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, game) DO UPDATE SET seconds = seconds + excluded.seconds, last = excluded.last').bind(s.id, spiel, dazu, jetzt));
+  if (dazu > 0) stmts.push(V.tagesStatement(db, s.id, spiel, jetzt, dazu));
   await db.batch(stmts);
   return antwort({ ok: true });
 }
@@ -665,11 +668,15 @@ async function gamesDaten(env, request) {
   entwCache.set(quelle, neu);
   return neu;
 }
-async function entwickler(env, request) { return (await gamesDaten(env, request)).set; }
+async function entwickler(env, request, db, jetzt) {
+  const set = new Set((await gamesDaten(env, request)).set);
+  if (db) (await V.entwicklerNamen(db, jetzt)).forEach((n) => set.add(n));
+  return set;
+}
 
 // Anzeigenamen der Entwickler-Konten (für die Spielseiten im Hub)
 async function entwicklerNamen(db, env, request) {
-  const namen = [...(await entwickler(env, request))];
+  const namen = [...(await entwickler(env, request, db, Math.floor(Date.now() / 1000)))];
   if (!namen.length) return antwort({ entwickler: [] });
   const r = await db.prepare('SELECT name, display FROM users WHERE name_lc IN (' + namen.map(() => '?').join(',') + ')').bind(...namen).all();
   return antwort({ entwickler: r.results.map((u) => ({ name: u.name, anzeige: u.display || u.name })) });
@@ -736,11 +743,17 @@ async function profil(db, s, name, jetzt, entw) {
 /* ---------- Verteilung ---------- */
 const G = gruppenModul({ antwort, fehler, lies, gesperrt, zaehle, suche, paar, avParse, chatText, chatVorschau });
 const D = dlcModul({ antwort, fehler, lies, gesperrt, zaehle });
+const V = devModul({ antwort, fehler, lies, gesperrt, zaehle });
 
 export async function handle(request, env, jetztMs = Date.now()) {
   const url = new URL(request.url);
   const pfad = url.pathname;
-  if (!pfad.startsWith('/api/')) return env.ASSETS ? env.ASSETS.fetch(request) : new Response('Nicht gefunden', { status: 404 });
+  if (!pfad.startsWith('/api/')) {
+    if (!env.ASSETS) return new Response('Nicht gefunden', { status: 404 });
+    // dev.leifps.de: die Startseite kommt aus public/dev/ (alles Weitere liegt ohnehin unter /dev/...)
+    if (url.hostname.startsWith('dev.') && (pfad === '/' || pfad === '/index.html')) return env.ASSETS.fetch(new Request(new URL('/dev/index.html', request.url), request));
+    return env.ASSETS.fetch(request);
+  }
   const jetzt = Math.floor(jetztMs / 1000);
   const m = request.method;
 
@@ -783,6 +796,7 @@ export async function handle(request, env, jetztMs = Date.now()) {
     if (pfad === '/api/favoriten' && m === 'GET') return await favoritenListe(db, s);
     if (pfad === '/api/favoriten' && m === 'POST') return await favoritSetzen(request, db, s, jetzt);
     if (pfad === '/api/ungelesen' && m === 'GET') return await chatUngelesen(db, s, jetzt);
+    if (pfad.startsWith('/api/dev/')) return await V.route(request, env, db, s, jetzt, m, pfad, (await gamesDaten(env, request)).ids, env.FETCH);
     const dm = /^\/api\/dlc(?:\/([a-z]+))?$/.exec(pfad);
     if (dm) return await D.route(request, db, s, jetzt, m, dm[1] || '');
     const gm = /^\/api\/gruppen(?:\/(\d{1,9}))?(?:\/([a-z]+))?(?:\/([a-z]+))?$/.exec(pfad);
@@ -798,7 +812,7 @@ export async function handle(request, env, jetztMs = Date.now()) {
     if (pfad === '/api/entwickler' && m === 'GET') return await entwicklerNamen(db, env, request);
     if (pfad === '/api/profil' && m === 'GET') return await profil(db, s, null, jetzt, null);
     const pm = /^\/api\/profil\/([^/]+)$/.exec(pfad);
-    if (pm && m === 'GET') { let n; try { n = decodeURIComponent(pm[1]); } catch (e) { return fehler(400, 'eingabe'); } return await profil(db, s, n, jetzt, await entwickler(env, request)); }
+    if (pm && m === 'GET') { let n; try { n = decodeURIComponent(pm[1]); } catch (e) { return fehler(400, 'eingabe'); } return await profil(db, s, n, jetzt, await entwickler(env, request, db, jetzt)); }
 
     const sp = /^\/api\/stand\/([^/]+)(?:\/(versionen))?$/.exec(pfad);
     if (sp) {
