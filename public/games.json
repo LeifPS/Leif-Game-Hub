@@ -761,6 +761,17 @@
         "screens/shots/mosaik/2.webp",
         "screens/shots/mosaik/3.webp"
       ]
+    },
+    {
+      "id": "ropeuntangle",
+      "name": "Seilsalat",
+      "text": "Entwirre die Seile: Zieh die Seilenden auf freie Punkte, bis sich nichts mehr kreuzt. Schwarze Anker, kurze Seile und Sperrsteine machen die späteren Level knifflig.",
+      "url": "https://ropeuntangle.leifps.workers.dev",
+      "repo": "LeifPS/ropeuntangle",
+      "phase": "alpha",
+      "farbe": "#3f68c4",
+      "kategorien": ["Rätsel", "Logik"],
+      "icon": "screens/ropeuntangle-icon.webp"
     }
   ]
 }
