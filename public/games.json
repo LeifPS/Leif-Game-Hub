@@ -468,6 +468,7 @@
       "name": "Erntezeit: Aufbruch",
       "text": "Bewirtschafte deinen Hof in Echtzeit, schicke Wagen auf Aufbruch-Reisen, handle online und besuche die Höfe anderer Spieler.",
       "url": "https://erntezeitaufbruch.leifps.workers.dev",
+      "wiki": "https://erntezeitaufbruch.leifps.workers.dev/wiki/",
       "repo": "LeifPS/erntezeitaufbruch",
       "phase": "alpha",
       "entwickler": ["leif", "thore"],
