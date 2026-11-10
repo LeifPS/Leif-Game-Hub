@@ -771,7 +771,7 @@
       "phase": "alpha",
       "farbe": "#3f68c4",
       "kategorien": ["Rätsel", "Logik"],
-      "icon": "screens/ropeuntangle-icon.webp"
+      "icon": "screens/ropeuntangle-icon.webp", "wallpaper": "screens/ropeuntangle-wallpaper.webp", "schrift": {"familie": "fredoka", "versalien": false, "abstand": 0.01, "fuell": "#ffffff", "rand": "#22377a", "randbreite": 0.2}
     },
     {
       "id": "aurarng",
