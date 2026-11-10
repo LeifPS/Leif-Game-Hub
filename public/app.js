@@ -119,8 +119,9 @@
     var offen = false;
     spiele.forEach(function (sp) {
       if (!sp.cd) return;
-      if (sp.releaseMs <= jetztMs()) { sp.cd = false; sp.wartung = false; sp.url = sp.vorUrl; releaseFertig = true; } else offen = true;
+      if (sp.releaseMs <= jetztMs()) { if (sp.teaser) { sp.cd = false; teaserFertig = true; } else { sp.cd = false; sp.wartung = false; sp.url = sp.vorUrl; releaseFertig = true; } } else offen = true;
     });
+    if (teaserFertig) { teaserFertig = false; devLaden(); }   // eingereichtes Spiel, dessen Termin erreicht ist: vollständige Angaben vom Server holen
     if (releaseFertig) {   // frisch freigegeben: Ansichten neu aufbauen, damit überall "Spielen" steht
       releaseFertig = false; ansichtSpeicher = {}; ansichtKey = null; seiteFertig = false;
       if (body.getAttribute('data-view') !== 'play') route();
@@ -132,7 +133,7 @@
     }
     if (!offen && releaseTimer) { clearInterval(releaseTimer); releaseTimer = null; }
   }
-  var releaseFertig = false;
+  var releaseFertig = false, teaserFertig = false;
   /* Bewertungen: 1 bis 5 Sterne pro Konto (nur Sterne, keine Texte). Durchschnitt und Anzahl sehen alle, die eigene Wahl nur man selbst. */
   var bewDaten = {};
   var BEW_MIN = 900;   // mindestens 15 Minuten Spielzeit (der Server prüft das auch)
@@ -678,6 +679,7 @@
       '</div><div class="spielen-hinweis" role="status" aria-live="polite" hidden></div></div>' : '<span class="btn btn-spielen gesperrt" aria-disabled="true"' + cdAttr(sp, '') + '>' + (sp.wartung ? sperrText(sp, '') : 'Bald') + '</span>') + '</div></div>';
     var gal = galerieHtml(sp);
     var text = (sp.beschreibung && sp.beschreibung !== sp.text) ? '<section class="shop-text"><h2>Über dieses Spiel</h2><p>' + esc(sp.beschreibung) + '</p></section>' : '';
+    if (sp.trailer_yt && sp.trailer_yt.length) text += '<section class="shop-text"><h2>Trailer</h2><p>' + sp.trailer_yt.map(function (id, i) { return '<a class="trailer-link" href="https://www.youtube.com/watch?v=' + encodeURIComponent(id) + '" target="_blank" rel="noopener noreferrer">Trailer' + (sp.trailer_yt.length > 1 ? ' ' + (i + 1) : '') + ' auf YouTube ansehen</a>'; }).join('<br>') + '</p></section>';
     h += '<div class="shop-oben' + (gal ? '' : ' ohne-galerie') + '">' + (gal ? '<div class="shop-haupt">' + gal + text + '</div>' : '');
     h += '<aside class="shop-info"><div class="shop-kopf"><div class="shop-icon">' + art(sp, 300, 300) + '</div><p class="kurz">' + esc(sp.text) + '</p></div><dl class="fakten">';
     var erschienen = sp.release ? sp.release : v && v.erste ? v.erste : (sp.erschienen ? sp.erschienen + 'T12:00:00+02:00' : null);   // ohne Repo: Datum von Hand (games.json: "erschienen"); mit "release" gilt dessen Zeitpunkt
@@ -2087,6 +2089,31 @@
     if (ul) { var ulh = function () { ul.href = 'https://hub.leifps.de/' + location.hash; }; ulh(); window.addEventListener('hashchange', ulh); }
   }
 
+  /* ---------- Eingereichte Spiele (dev.leifps.de): kommen vom Server und stehen neben denen aus games.json ---------- */
+  function devAnwenden(liste) {
+    spiele = spiele.filter(function (sp) { return !sp.dev; });
+    liste.forEach(function (sp) {
+      sp.dev = true;
+      if (sp.teaser) {   // noch nicht veröffentlicht: nur Name und Datum, mit Countdown
+        var t = Date.parse(sp.release);
+        sp.releaseMs = t > jetztMs() ? t : jetztMs() + 5000; sp.cd = true; sp.wartung = true; sp.url = ''; sp.text = 'Erscheint am ' + datumZeitText(sp.release) + '.'; sp.kategorien = [];
+      } else if (sp.release && Date.parse(sp.release) > jetztMs() && sp.url && !sp.fruehzugang) {
+        sp.releaseMs = Date.parse(sp.release); sp.cd = true; sp.wartung = true; sp.vorUrl = sp.url; sp.url = '';
+      }
+      spiele.push(sp);
+    });
+    if (!releaseTimer && spiele.some(function (sp) { return sp.cd; })) releaseTimer = setInterval(releaseTick, 1000);
+    ansichtSpeicher = {}; ansichtKey = null; seiteFertig = false;
+    if (body.getAttribute('data-view') !== 'play') route();
+  }
+  function devLaden() {
+    if (!window.LghKonto || !LghKonto.devSpiele) return;
+    LghKonto.bereit().then(function () { return LghKonto.devSpiele(); }).then(function (res) {
+      if (!res || !res.ok) return;
+      if (res.j.jetzt) zeitVersatz = res.j.jetzt * 1000 - Date.now();
+      devAnwenden(res.j.spiele || []);
+    });
+  }
   var BILD_V = '4';
   function json(url) { return fetch(url, { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); }
   function gamesJson() {
@@ -2112,7 +2139,7 @@
       favoriten = favLokal();
       if (window.LghKonto) LghKonto.spielNamen(spielName);
       route();
-      if (window.LghKonto) LghKonto.bereit().then(function () { favLaden(); dlcLaden(); if (sortierung === 'bewertung') bewAlleLaden(); });
+      if (window.LghKonto) LghKonto.bereit().then(function () { favLaden(); dlcLaden(); devLaden(); if (sortierung === 'bewertung') bewAlleLaden(); });
     })
     .catch(function () { inhalt.innerHTML = '<div class="leer" style="padding:80px 28px">Die Spieleliste konnte nicht geladen werden.</div>'; });
 })();

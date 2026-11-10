@@ -990,7 +990,7 @@
     bewertungen: function () { return api('GET', '/api/bewertungen'); },
     bewertung: { laden: function (id) { return api('GET', '/api/bewertung/' + encodeURIComponent(id)); }, setzen: function (id, sterne) { return api('POST', '/api/bewertung/' + encodeURIComponent(id), { sterne: sterne }); } },
     favoriten: { laden: function () { return api('GET', '/api/favoriten'); }, setzen: function (id, an) { return api('POST', '/api/favoriten', { spiel: id, an: !!an }); } },
-    kontoDialog: kontoDialog, entwickler: function () { return api('GET', '/api/entwickler'); }, profil: function (name) { return api('GET', '/api/profil' + (name ? '/' + encodeURIComponent(name) : '')); }, abmelden: abmelden, abzeichen: benachrichtige, beiAenderung: function (f) { lauscher.push(f); },
+    kontoDialog: kontoDialog, entwickler: function () { return api('GET', '/api/entwickler'); }, devSpiele: function () { return api('GET', '/api/dev/spiele'); }, profil: function (name) { return api('GET', '/api/profil' + (name ? '/' + encodeURIComponent(name) : '')); }, abmelden: abmelden, abzeichen: benachrichtige, beiAenderung: function (f) { lauscher.push(f); },
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

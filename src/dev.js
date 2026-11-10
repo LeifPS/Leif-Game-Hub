@@ -86,6 +86,7 @@ export function devModul(h) {
         ...o, text: g.text, beschreibung: g.description || g.text, kategorien: lesen(g.tags, []), url: g.url, wallpaper: g.banner,
         screenshots: lesen(g.shots, []), trailer_yt: lesen(g.trailer, []), phase: 'alpha', version: g.version || undefined,
         erschienen: new Date((g.release || g.created) * 1000).toISOString().slice(0, 10), aktualisiert: new Date(g.updated * 1000).toISOString().slice(0, 10),
+        ...(live ? {} : { fruehzugang: true }),
       });
     }
     return antwort({ spiele: out, jetzt });
