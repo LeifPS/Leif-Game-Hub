@@ -751,7 +751,7 @@ export async function handle(request, env, jetztMs = Date.now()) {
   if (!pfad.startsWith('/api/')) {
     if (!env.ASSETS) return new Response('Nicht gefunden', { status: 404 });
     // dev.leifps.de: die Startseite kommt aus public/dev/ (alles Weitere liegt ohnehin unter /dev/...)
-    if (url.hostname.startsWith('dev.') && (pfad === '/' || pfad === '/index.html')) return env.ASSETS.fetch(new Request(new URL('/dev/index.html', request.url), request));
+    if (url.hostname.startsWith('dev.') && (pfad === '/' || pfad === '/index.html')) return env.ASSETS.fetch(new Request(new URL('/dev/', request.url), request));
     return env.ASSETS.fetch(request);
   }
   const jetzt = Math.floor(jetztMs / 1000);

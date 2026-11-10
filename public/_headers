@@ -20,3 +20,11 @@
   Cache-Control: no-cache
 /spielmenue.js
   Cache-Control: no-cache
+/dev/
+  Cache-Control: no-cache
+/dev/index.html
+  Cache-Control: no-cache
+/dev/dev.js
+  Cache-Control: no-cache
+/dev/dev.css
+  Cache-Control: no-cache
