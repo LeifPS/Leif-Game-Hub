@@ -772,7 +772,7 @@
       "phase": "alpha",
       "farbe": "#3f68c4",
       "kategorien": ["Rätsel", "Logik"],
-      "icon": "screens/ropeuntangle-icon.webp", "wallpaper": "screens/ropeuntangle-wallpaper.webp", "schrift": {"familie": "fredoka", "versalien": false, "abstand": 0.01, "fuell": "#ffffff", "rand": "#22377a", "randbreite": 0.2}
+      "icon": "screens/ropeuntangle-icon.webp", "wallpaper": "screens/ropeuntangle-wallpaper.webp", "schrift": {"familie": "fredoka", "versalien": false, "abstand": 0.01, "fuell": "#ffffff", "rand": "#22377a", "randbreite": 0.2}, "screenshots": ["screens/shots/ropeuntangle/1.webp", "screens/shots/ropeuntangle/2.webp", "screens/shots/ropeuntangle/3.webp", "screens/shots/ropeuntangle/4.webp", "screens/shots/ropeuntangle/5.webp", "screens/shots/ropeuntangle/6.webp"]
     },
     {
       "id": "aurarng",
