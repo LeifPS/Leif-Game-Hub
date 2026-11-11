@@ -798,6 +798,7 @@
       "kategorien": ["Glück", "Sammeln"],
       "icon": "screens/kristallrng-icon.webp",
       "wallpaper": "screens/kristallrng-wallpaper.webp",
+      "screenshots": ["screens/shots/kristallrng/1.webp", "screens/shots/kristallrng/2.webp", "screens/shots/kristallrng/3.webp"],
       "schrift": {"familie": "fredoka", "versalien": false, "abstand": 0.01, "fuell": "#ffffff", "rand": "#14447a", "randbreite": 0.2}
     }
   ]
