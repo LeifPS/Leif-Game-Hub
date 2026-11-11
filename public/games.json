@@ -806,6 +806,19 @@
       "wallpaper": "screens/kristallrng-wallpaper.webp",
       "screenshots": ["screens/shots/kristallrng/1.webp", "screens/shots/kristallrng/2.webp", "screens/shots/kristallrng/3.webp"],
       "schrift": {"familie": "fredoka", "versalien": false, "abstand": 0.01, "fuell": "#ffffff", "rand": "#14447a", "randbreite": 0.2}
+    },
+    {
+      "id": "billiard",
+      "name": "Billiard",
+      "text": "8-Ball und 9-Ball in 3D von oben: mit Online-Warteschlange, Räumen für Freunde, Computergegnern, Erfolgen und freischaltbarem Tuch, Queues und Kugeln.",
+      "url": "https://billiard.leifps.workers.dev",
+      "repo": "LeifPS/billiard",
+      "phase": "alpha",
+      "farbe": "#1f7a4a",
+      "kategorien": ["Sport", "Online"],
+      "icon": "screens/billiard-icon.webp",
+      "wallpaper": "screens/billiard-wallpaper.webp",
+      "schrift": {"familie": "fredoka", "versalien": true, "abstand": 0.02, "fuell": "#ffffff", "rand": "#0f3d26", "randbreite": 0.2}
     }
   ]
 }
