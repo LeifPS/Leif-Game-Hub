@@ -786,6 +786,19 @@
       "icon": "screens/aurarng-icon.webp",
       "wallpaper": "screens/aurarng-wallpaper.webp",
       "schrift": {"familie": "fredoka", "versalien": true, "abstand": 0.02, "fuell": "#ffffff", "rand": "#3b1c74", "randbreite": 0.2}
+    },
+    {
+      "id": "kristallrng",
+      "name": "Kristall RNG",
+      "text": "Schürfe Kristalle in wechselnden Höhlen, sammle alle 48 Steine in sieben Mutationen und finde die seltensten Funde der Tiefe.",
+      "url": "https://kristallrng.leifps.workers.dev",
+      "repo": "LeifPS/kristallrng",
+      "phase": "alpha",
+      "farbe": "#3aa8e0",
+      "kategorien": ["Glück", "Sammeln"],
+      "icon": "screens/kristallrng-icon.webp",
+      "wallpaper": "screens/kristallrng-wallpaper.webp",
+      "schrift": {"familie": "fredoka", "versalien": false, "abstand": 0.01, "fuell": "#ffffff", "rand": "#14447a", "randbreite": 0.2}
     }
   ]
 }
