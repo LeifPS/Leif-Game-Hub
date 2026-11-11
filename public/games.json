@@ -818,6 +818,12 @@
       "kategorien": ["Sport", "Online"],
       "icon": "screens/billiard-icon.webp",
       "wallpaper": "screens/billiard-wallpaper.webp",
+      "screenshots": [
+        "screens/shots/billiard/1.webp",
+        "screens/shots/billiard/2.webp",
+        "screens/shots/billiard/3.webp",
+        "screens/shots/billiard/4.webp"
+      ],
       "schrift": {"familie": "fredoka", "versalien": true, "abstand": 0.02, "fuell": "#ffffff", "rand": "#0f3d26", "randbreite": 0.2}
     }
   ]
