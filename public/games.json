@@ -784,6 +784,12 @@
       "farbe": "#7b4dff",
       "kategorien": ["Glück", "Sammeln"],
       "icon": "screens/aurarng-icon.webp",
+      "screenshots": [
+        "screens/shots/aurarng/1.webp",
+        "screens/shots/aurarng/2.webp",
+        "screens/shots/aurarng/3.webp",
+        "screens/shots/aurarng/4.webp"
+      ],
       "wallpaper": "screens/aurarng-wallpaper.webp",
       "schrift": {"familie": "fredoka", "versalien": true, "abstand": 0.02, "fuell": "#ffffff", "rand": "#3b1c74", "randbreite": 0.2}
     },
