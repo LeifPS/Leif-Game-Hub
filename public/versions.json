@@ -13,6 +13,13 @@
   "offiziell": false,
   "version": "0.5.0.12"
  },
+ "billiard": {
+  "anzahl": 6,
+  "datum": "2026-11-11T07:24:58+01:00",
+  "erste": "2026-11-11T07:04:51+01:00",
+  "offiziell": false,
+  "version": "0.3.0.3"
+ },
  "brutjagd": {
   "anzahl": 53,
   "datum": "2026-11-09T15:14:11+01:00",
@@ -76,6 +83,13 @@
   "offiziell": true,
   "version": "1.13.5.17"
  },
+ "kristallrng": {
+  "anzahl": 4,
+  "datum": "2026-11-11T07:04:08+01:00",
+  "erste": "2026-11-10T21:56:51+01:00",
+  "offiziell": false,
+  "version": "0.1.1.2"
+ },
  "manufaktur": {
   "anzahl": 45,
   "datum": "2026-11-08T10:18:25+01:00",
@@ -118,11 +132,11 @@
   "version": "0.1.12.8"
  },
  "ropeuntangle": {
-  "anzahl": 6,
-  "datum": "2026-11-10T21:57:10+01:00",
+  "anzahl": 7,
+  "datum": "2026-11-11T07:16:15+01:00",
   "erste": "2026-11-10T20:50:41+01:00",
   "offiziell": false,
-  "version": "0.3.1.0"
+  "version": "0.3.1.1"
  },
  "schleimmerge": {
   "anzahl": 28,
