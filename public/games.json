@@ -825,6 +825,16 @@
         "screens/shots/billiard/4.webp"
       ],
       "schrift": {"familie": "fredoka", "versalien": true, "abstand": 0.02, "fuell": "#ffffff", "rand": "#0f3d26", "randbreite": 0.2}
+    },
+    {
+      "id": "casino",
+      "name": "Casino",
+      "text": "Spiele Blackjack mit virtuellen Chips. Texas Hold’em mit echten Spielern und weitere Tische folgen.",
+      "url": "https://casino.leifps.workers.dev",
+      "repo": "LeifPS/casino",
+      "phase": "alpha",
+      "farbe": "#2e6845",
+      "kategorien": ["Karten", "Online", "Casino"]
     }
   ]
 }
