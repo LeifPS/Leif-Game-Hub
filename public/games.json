@@ -829,7 +829,7 @@
     {
       "id": "casino",
       "name": "Casino",
-      "text": "Spiele Blackjack mit virtuellen Chips. Texas Hold’em mit echten Spielern und weitere Tische folgen.",
+      "text": "Spiele Blackjack oder Texas Hold’em um virtuelle Chips. An Onlinetischen spielen echte Menschen; Computergegner füllen freie Plätze.",
       "url": "https://casino.leifps.workers.dev",
       "repo": "LeifPS/casino",
       "phase": "alpha",
