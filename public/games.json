@@ -825,16 +825,6 @@
         "screens/shots/billiard/4.webp"
       ],
       "schrift": {"familie": "fredoka", "versalien": true, "abstand": 0.02, "fuell": "#ffffff", "rand": "#0f3d26", "randbreite": 0.2}
-    },
-    {
-      "id": "casino",
-      "name": "Casino",
-        "text": "Spiele Blackjack, Texas Hold’em und European Roulette um virtuelle Chips. An Onlinetischen spielen echte Menschen; Computergegner füllen freie Plätze.",
-      "url": "https://casino.leifps.workers.dev",
-      "repo": "LeifPS/casino",
-      "phase": "alpha",
-      "farbe": "#2e6845",
-      "kategorien": ["Karten", "Online", "Casino"]
     }
   ]
 }
