@@ -91,11 +91,11 @@
   "version": "0.1.1.2"
  },
  "manufaktur": {
-  "anzahl": 45,
-  "datum": "2026-11-08T10:18:25+01:00",
+  "anzahl": 46,
+  "datum": "2026-11-13T20:47:09+01:00",
   "erste": "2026-11-08T00:00:18+01:00",
   "offiziell": false,
-  "version": "0.1.0.44"
+  "version": "0.1.0.45"
  },
  "nebelmeer": {
   "anzahl": 2,
