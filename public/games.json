@@ -658,6 +658,7 @@
       "name": "Manufaktur",
       "text": "Führe deine eigene kleine Töpfer-Manufaktur in einem Dorf mit Freunden und Familie: Entwirf Becher, Vasen und Schalen, probiere Glasuren aus und erfülle Aufträge. Alles läuft weiter, auch wenn du nicht da bist.",
       "url": "https://manufaktur.leifps.workers.dev",
+      "neuerTab": true,
       "repo": "LeifPS/Manufaktur",
       "phase": "alpha",
       "entwickler": ["Teleteddy", "irgendwieida13"],

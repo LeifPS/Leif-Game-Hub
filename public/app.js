@@ -672,7 +672,7 @@
     h += '<div class="shop-titelzeile">' + titelHtml(sp) + '<div class="spiel-aktion"><div class="spielinfo" hidden></div>' + (sp.url ? '<div class="spielen-gruppe"><a class="btn btn-primary btn-spielen" href="#spiel/' + id + '/play">' + playIcon() + 'Spielen</a>' +
       '<button type="button" class="btn btn-primary btn-spielen-pfeil" aria-haspopup="menu" aria-expanded="false" aria-label="Weitere Optionen zum Spielen"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"/></svg></button>' +
       '<div class="spielen-menue" role="menu" hidden>' +
-      '<a role="menuitem" class="spielen-eintrag" data-a="tab" href="' + spielLink(sp, true) + '" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-external"/></svg>In neuem Tab öffnen</a>' +
+      '<a role="menuitem" class="spielen-eintrag" data-a="tab" href="' + (sp.neuerTab ? esc(sp.url) : spielLink(sp, true)) + '" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-external"/></svg>In neuem Tab öffnen</a>' +
       (function () { var an = favIst(sp.id); return '<button type="button" role="menuitem" class="spielen-eintrag fav-eintrag' + (an ? ' an' : '') + '" data-fav="' + esc(sp.id) + '" aria-pressed="' + an + '"><svg aria-hidden="true"><use href="#i-star"/></svg><span class="fav-text">' + (an ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen') + '</span></button>'; })() +
       ('<button type="button" role="menuitem" class="spielen-eintrag" data-a="bib" data-id="' + esc(sp.id) + '"' + (favIst(sp.id) ? ' hidden' : '') + '><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4.5h4v15H5zM11 4.5h4v15h-4zM17.2 5.2l3.6.9-3.2 14-3.6-.9z"/></svg><span class="bib-text">' + (bibIst(sp.id) ? 'Aus Bibliothek entfernen' : 'Zur Bibliothek hinzufügen') + '</span></button>') +
       '<button type="button" role="menuitem" class="spielen-eintrag" data-a="teilen"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="12" r="2.4"/><circle cx="17.5" cy="6" r="2.4"/><circle cx="17.5" cy="18" r="2.4"/><path d="M8.6 10.8l6.8-3.6M8.6 13.2l6.8 3.6"/></svg>Spiel teilen</button>' +
@@ -1937,6 +1937,29 @@
     document.body.appendChild(hinter);
     var b = hinter.querySelector('[data-los]'); if (b) b.focus();
   }
+  /* Spiele mit "neuerTab": true (z. B. weil sie die Anmeldung in einem Cookie halten, das ein fremder Rahmen nicht speichern darf)
+     laufen nicht im Hub-Rahmen, sondern in einem eigenen Tab. Der Hub zeigt dafür einen Hinweis mit dem Öffnen-Knopf (ein Link, den auch das iPhone nicht blockiert). */
+  function tabSpiel(sp) {
+    if (document.querySelector('.dlg-tab')) return;
+    var bereit; try { bereit = window.LghKonto ? window.LghKonto.bereit() : Promise.resolve(); } catch (x) { bereit = Promise.resolve(); }
+    bereit.then(function () {
+      if (document.querySelector('.dlg-tab')) return;
+      var hinter = document.createElement('div');
+      hinter.className = 'dlg-hinter dlg-tab';
+      hinter.innerHTML = '<div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="tab-t"><div class="dlg-titel" id="tab-t" style="margin-bottom:10px">' + esc(sp.name) + ' öffnet in einem eigenen Tab</div>' +
+        '<p style="margin:0 0 6px;line-height:1.5">Dieses Spiel hat eine eigene Anmeldung und läuft darum nicht innerhalb des Hubs, sondern in einem eigenen Browser-Tab. Dein Konto im Hub bleibt davon unberührt.</p>' +
+        '<div class="dlg-fuss" style="gap:10px"><button type="button" class="btn btn-ghost" data-zu>Zurück</button><a class="btn btn-primary" data-los href="' + esc(sp.url) + '" target="_blank" rel="noopener">' + esc(sp.name) + ' öffnen</a></div></div>';
+      function zu() { hinter.remove(); document.removeEventListener('keydown', taste); }
+      function taste(e) { if (e.key === 'Escape') zu(); }
+      hinter.addEventListener('click', function (e) {
+        if (e.target === hinter || (e.target.closest && e.target.closest('[data-zu]'))) return zu();
+        if (e.target.closest && e.target.closest('[data-los]')) { var warDrin = bibIst(sp.id); zuletztMerken(sp.id); bibMerken(sp.id); if (!warDrin) bibNeu(); setTimeout(zu, 50); }
+      });
+      document.addEventListener('keydown', taste);
+      document.body.appendChild(hinter);
+      var b = hinter.querySelector('[data-los]'); if (b) b.focus();
+    });
+  }
   function routeEx() {
     var m = /^#spiel\/([^\/]+)(\/play)?$/.exec(location.hash);
     var sp = null;
@@ -2013,6 +2036,7 @@
       alphaWarnung(sp);
       return;
     }
+    if (sp && m[2] && sp.neuerTab) { location.replace('#spiel/' + encodeURIComponent(sp.id)); tabSpiel(sp); return; }
     if (sp && m[2]) {
       body.setAttribute('data-view', 'play');
       starteSpiel(sp);

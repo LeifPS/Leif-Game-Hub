@@ -31,6 +31,7 @@ Pflicht sind `id` (kurz, klein, ohne Leerzeichen), `name`, `text`, `url` und `fa
 | `phase: "alpha"` | Spiel gilt als Alpha (Kachel „Alpha 0.x“, roter Status auf der Spielseite); ohne Angabe Beta, ab `1.0.0.0` Offiziell |
 | `kategorien` | Filter-Chips und Suche |
 | `wiki` | Adresse des Wikis zum Spiel (z. B. `https://tonlinge.leifps.workers.dev/wiki/`): erscheint als Eintrag „Wikis“ in der Seitenleiste (unter Freunde, nur wenn mindestens ein Spiel eines hat), als Karte auf der Seite `#wikis` und als Zeile „Wiki“ auf der Spielseite. Das Wiki öffnet sich unverändert in einem neuen Tab; es gibt bewusst kein gemeinsames Wiki und kein Bearbeiten im Hub |
+| `neuerTab` | `true`: Das Spiel läuft nicht im Hub-Rahmen, sondern in einem eigenen Browser-Tab. Nötig für Spiele, die die Anmeldung in einem Cookie halten (ein fremder Rahmen darf es nicht speichern, im Rahmen steht dann „Bitte melde dich an“). „Spielen“ zeigt einen Hinweis mit dem Öffnen-Knopf (ein echter Link, den auch das iPhone nicht blockiert) und merkt das Spiel für „Zuletzt gespielt“ und die Bibliothek; Chat, Lautstärke und Spielstand-Übergabe des Hubs gibt es dort nicht |
 | `featured: true` | Spiel steht groß oben auf der Startseite |
 | `beschreibung` | Längerer Text auf der Spielseite (sonst `text`) |
 | `bild` | Titelbild für Kacheln (Hochformat 3:4, z. B. `screens/meinspiel.webp`); ohne Angabe zeichnet der Hub automatisch ein Platzhalterbild aus `farbe` |
