@@ -854,7 +854,7 @@
       "name": "Die Bibliothek der träumenden Bücher",
       "text": "Eine Bibliothek, die innen größer ist als außen: Bring entlaufene Dinge zurück in ihre Bücher, löse sanfte Rätsel und finde heraus, wer hier die Briefe schreibt.",
       "beschreibung": "Ein ruhiges Such- und Rätselspiel ohne Zeitdruck. Ein Brunnen fließt nach oben, eine Uhr läuft rückwärts, und aus jedem Saal sind Dinge aus ihren Geschichten gewandert. Tippe sie an, folge ihnen durch den Raum, und sie fliegen zurück in ihr Buch. Fünf Säle, fünf Rätsel (Knoten entwirren, Treppen drehen, eine Karte zusammensetzen …) und eine Geschichte, die alles verbindet. Für Kinder gut zu schaffen; wer genauer hinsieht, sammelt goldene Lesezeichen und schaltet einen geheimen Epilog frei.",
-      "url": null,
+      "url": "https://bibliothek.leifps.workers.dev",
       "repo": "LeifPS/bibliothek",
       "farbe": "#6b4f9e",
       "kategorien": ["Rätsel", "Erkunden", "Abenteuer"],
