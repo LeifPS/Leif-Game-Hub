@@ -1946,7 +1946,7 @@
       if (document.querySelector('.dlg-tab')) return;
       var hinter = document.createElement('div');
       hinter.className = 'dlg-hinter dlg-tab';
-      hinter.innerHTML = '<div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="tab-t"><div class="dlg-titel" id="tab-t" style="margin-bottom:10px">' + esc(sp.name) + ' öffnet in einem eigenen Tab</div>' +
+      hinter.innerHTML = '<div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="tab-t"><div class="dlg-titel" id="tab-t" style="margin-bottom:10px">Läuft in einem eigenen Tab</div>' +
         '<p style="margin:0 0 6px;line-height:1.5">Dieses Spiel hat eine eigene Anmeldung und läuft darum nicht innerhalb des Hubs, sondern in einem eigenen Browser-Tab. Dein Konto im Hub bleibt davon unberührt.</p>' +
         '<div class="dlg-fuss" style="gap:10px"><button type="button" class="btn btn-ghost" data-zu>Zurück</button><a class="btn btn-primary" data-los href="' + esc(sp.url) + '" target="_blank" rel="noopener">' + esc(sp.name) + ' öffnen</a></div></div>';
       function zu() { hinter.remove(); document.removeEventListener('keydown', taste); }
