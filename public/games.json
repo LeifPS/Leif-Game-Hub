@@ -835,7 +835,9 @@
       "phase": "alpha",
       "farbe": "#0f6b43",
       "kategorien": ["Glück", "Karten", "Online"],
-      "icon": "screens/casino-icon.webp"
+      "icon": "screens/casino-icon.webp",
+      "wallpaper": "screens/casino-wallpaper.webp",
+      "schrift": {"familie": "fredoka", "versalien": true, "abstand": 0.02, "fuell": "#ffe27a", "rand": "#0a3a28", "randbreite": 0.2}
     }
   ]
 }
