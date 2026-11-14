@@ -837,6 +837,15 @@
       "kategorien": ["Glück", "Karten", "Online"],
       "icon": "screens/casino-icon.webp",
       "wallpaper": "screens/casino-wallpaper.webp",
+      "screenshots": [
+        "screens/shots/casino/1.webp",
+        "screens/shots/casino/2.webp",
+        "screens/shots/casino/3.webp",
+        "screens/shots/casino/4.webp",
+        "screens/shots/casino/5.webp",
+        "screens/shots/casino/6.webp",
+        "screens/shots/casino/7.webp"
+      ],
       "schrift": {"familie": "fredoka", "versalien": true, "abstand": 0.02, "fuell": "#ffe27a", "rand": "#0a3a28", "randbreite": 0.2}
     }
   ]
