@@ -848,6 +848,29 @@
         "screens/shots/casino/7.webp"
       ],
       "schrift": {"familie": "fredoka", "versalien": true, "abstand": 0.02, "fuell": "#ffe27a", "rand": "#0a3a28", "randbreite": 0.2}
+        },
+    {
+      "id": "bibliothek",
+      "name": "Die Bibliothek der träumenden Bücher",
+      "text": "Eine Bibliothek, die innen größer ist als außen: Bring entlaufene Dinge zurück in ihre Bücher, löse sanfte Rätsel und finde heraus, wer hier die Briefe schreibt.",
+      "beschreibung": "Ein ruhiges Such- und Rätselspiel ohne Zeitdruck. Ein Brunnen fließt nach oben, eine Uhr läuft rückwärts, und aus jedem Saal sind Dinge aus ihren Geschichten gewandert. Tippe sie an, folge ihnen durch den Raum, und sie fliegen zurück in ihr Buch. Fünf Säle, fünf Rätsel (Knoten entwirren, Treppen drehen, eine Karte zusammensetzen …) und eine Geschichte, die alles verbindet. Für Kinder gut zu schaffen; wer genauer hinsieht, sammelt goldene Lesezeichen und schaltet einen geheimen Epilog frei.",
+      "url": null,
+      "repo": "LeifPS/bibliothek",
+      "farbe": "#6b4f9e",
+      "kategorien": ["Rätsel", "Erkunden", "Abenteuer"],
+      "icon": "screens/bibliothek-icon.webp",
+      "wallpaper": "screens/bibliothek-wallpaper.webp",
+      "screenshots": [
+        "screens/shots/bibliothek/1.webp",
+        "screens/shots/bibliothek/2.webp",
+        "screens/shots/bibliothek/3.webp",
+        "screens/shots/bibliothek/4.webp",
+        "screens/shots/bibliothek/5.webp",
+        "screens/shots/bibliothek/6.webp",
+        "screens/shots/bibliothek/7.webp",
+        "screens/shots/bibliothek/8.webp"
+      ],
+      "schrift": {"familie": "cinzel", "versalien": false, "abstand": 0.0, "fuell": "#ffe9a8", "rand": "#3b2c66", "randbreite": 0.12}
     }
   ]
 }
