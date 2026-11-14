@@ -14,11 +14,11 @@
   "version": "0.5.0.12"
  },
  "billiard": {
-  "anzahl": 9,
-  "datum": "2026-11-14T10:20:17+01:00",
+  "anzahl": 10,
+  "datum": "2026-11-14T13:15:53+01:00",
   "erste": "2026-11-11T07:04:51+01:00",
   "offiziell": false,
-  "version": "0.5.0.0"
+  "version": "0.5.1.0"
  },
  "brutjagd": {
   "anzahl": 53,
