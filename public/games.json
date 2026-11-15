@@ -871,6 +871,39 @@
         "screens/shots/bibliothek/8.webp"
       ],
       "schrift": {"familie": "cinzel", "versalien": false, "abstand": 0.0, "fuell": "#ffe9a8", "rand": "#3b2c66", "randbreite": 0.12}
+    },
+    {
+      "id": "volkkarten",
+      "name": "Volk: Das Kartenspiel",
+      "text": "Baue dein Volk auf und steige durch sieben Zeitalter: Land, Gebäude, Einheiten und Wunder auf echten Karten, gegen Computer oder online, mit Volkskarten und Götter & Glaube.",
+      "url": "https://volk-online.leifps.workers.dev",
+      "repo": "LeifPS/volk-online",
+      "phase": "alpha",
+      "farbe": "#e8791a",
+      "kategorien": [
+        "Karten",
+        "Strategie",
+        "Online"
+      ],
+      "icon": "screens/volkkarten-icon.webp",
+      "wallpaper": "screens/volkkarten-wallpaper.webp",
+      "screenshots": [
+        "screens/shots/volkkarten/1.webp",
+        "screens/shots/volkkarten/2.webp",
+        "screens/shots/volkkarten/3.webp",
+        "screens/shots/volkkarten/4.webp",
+        "screens/shots/volkkarten/5.webp",
+        "screens/shots/volkkarten/6.webp",
+        "screens/shots/volkkarten/7.webp"
+      ],
+      "schrift": {
+        "familie": "silkscreen",
+        "versalien": true,
+        "abstand": 0.04,
+        "fuell": "#ffd35a",
+        "rand": "#3a1c08",
+        "randbreite": 0.2
+      }
     }
   ]
 }
