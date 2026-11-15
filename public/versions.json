@@ -187,6 +187,20 @@
   "offiziell": false,
   "version": "0.9.0.13"
  },
+ "volk": {
+  "anzahl": 9,
+  "datum": "2026-11-15T22:03:16+01:00",
+  "erste": "2026-11-15T20:30:08+01:00",
+  "offiziell": false,
+  "version": "0.7.0.0"
+ },
+ "volkkarten": {
+  "anzahl": 10,
+  "datum": "2026-11-15T21:49:22+01:00",
+  "erste": "2026-11-15T19:24:58+01:00",
+  "offiziell": false,
+  "version": "0.8.0.0"
+ },
  "wasserschlacht": {
   "anzahl": 16,
   "datum": "2026-11-09T15:48:45+01:00",
