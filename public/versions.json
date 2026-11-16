@@ -195,11 +195,11 @@
   "version": "0.7.0.0"
  },
  "volkkarten": {
-  "anzahl": 12,
-  "datum": "2026-11-16T08:58:10+01:00",
+  "anzahl": 23,
+  "datum": "2026-11-16T18:49:34+01:00",
   "erste": "2026-11-15T19:24:58+01:00",
   "offiziell": false,
-  "version": "0.9.0.0"
+  "version": "0.12.2.0"
  },
  "wasserschlacht": {
   "anzahl": 16,
