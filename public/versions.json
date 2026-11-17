@@ -187,6 +187,13 @@
   "offiziell": false,
   "version": "0.9.0.13"
  },
+ "volkechtzeit": {
+  "anzahl": 18,
+  "datum": "2026-11-17T15:22:51+01:00",
+  "erste": "2026-11-14T23:48:57+01:00",
+  "offiziell": false,
+  "version": "0.5.4.0"
+ },
  "volkkarten": {
   "anzahl": 23,
   "datum": "2026-11-16T18:49:34+01:00",
