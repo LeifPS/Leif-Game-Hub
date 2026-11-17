@@ -906,41 +906,8 @@
       }
     },
     {
-      "id": "volk",
-      "name": "Volk",
-      "text": "Ein Civilization-Klon in Pixelart: Baue in Runden dein Volk auf, erforsche den Baum und führe Krieg – allein gegen KI oder mit Freunden.",
-      "url": "https://volk2.leifps.workers.dev",
-      "repo": "LeifPS/volk2",
-      "phase": "alpha",
-      "farbe": "#d9a441",
-      "kategorien": [
-        "Strategie",
-        "Aufbau",
-        "Online"
-      ],
-      "icon": "screens/volk-icon.webp",
-      "screenshots": [
-        "screens/shots/volk/1.webp",
-        "screens/shots/volk/2.webp",
-        "screens/shots/volk/3.webp",
-        "screens/shots/volk/4.webp",
-        "screens/shots/volk/5.webp",
-        "screens/shots/volk/6.webp",
-        "screens/shots/volk/7.webp"
-      ],
-      "beschreibung": "Volk ist ein rundenbasiertes Aufbaustrategiespiel im Pixelart-Stil, angelehnt an Civilization. Du spielst eine Partie wie ein Brettspiel: allein gegen KI-Völker oder mit Freunden und Familie, jeder reihum am Zug. Gründe Städte, erforsche über 240 Erfindungen von der Antike bis zur Atomzeit, erkunde eine riesige Hexkarte mit Biomen, Tieren und Rohstoffen, handle mit Stadtstaaten, schließe Bündnisse oder erkläre Krieg. Bauen und Forschen dauern mehrere Runden, Einheiten bewegen sich mit Bewegungspunkten, Kämpfe gibt es nur auf Befehl mit Vorschau. Gewonnen wird durch Eroberung, Wissenschaft (als Erster die Fusionsforschung) oder Punkte beim Rundenlimit. Der Host stellt Tempo, Siegarten, KI-Stärke (Leicht bis Boni-Stufen) und das Zugzeit-Konto ein. Wer lange fehlt, wird von der KI ersetzt. Mit Tutorial, Lexikon und Hilfe. Am PC und auf dem Tablet.",
-      "schrift": {
-        "familie": "silkscreen",
-        "versalien": false,
-        "abstand": 0.02,
-        "fuell": "#fff",
-        "rand": "#5a3a1a",
-        "randbreite": 0.2
-      }
-    },
-    {
       "id": "volkechtzeit",
-      "name": "Volk: Echtzeit",
+      "name": "Volk",
       "text": "Baue in Echtzeit dein eigenes Volk in einer großen, lebendigen Pixelwelt – mit Freunden, Familie, KI-Völkern und Barbaren.",
       "url": "https://volk.leifps.workers.dev",
       "repo": "LeifPS/volk",
@@ -964,7 +931,7 @@
         "screens/shots/volkechtzeit/9.webp",
         "screens/shots/volkechtzeit/10.webp"
       ],
-      "beschreibung": "Volk: Echtzeit ist ein Aufbaustrategiespiel wie Civilization – nur ohne Runden. Alles läuft in Echtzeit, und die Welt läuft weiter, auch wenn niemand online ist. Am Anfang geht alles flott: Späher laufen im Sekundentakt über die Karte, Gebäude und Erfindungen sind in Minuten fertig, Städte wachsen schnell. Von Zeitalter zu Zeitalter wird es zäher, die Atomzeit dauert Tage. Wähle Namen und Farbe deines Volkes, gründe Städte, erkunde eine riesige Hexkarte mit vielen Biomen, Tieren und Rohstoffen, erforsche über 240 Erfindungen von der Antike bis zur Atomzeit und sieh zu, wie deine Städte vom Lehmdorf zur Großstadt wachsen. Handle mit anderen Spielern, KI-Völkern und Stadtstaaten, schließe Bündnisse oder führe Krieg – Kämpfe gibt es nur auf Befehl, mit Vorschau. Neulinge sind 24 Stunden geschützt, und wer offline ist, dem kann nichts passieren. Mit Tutorial, Lexikon und Hilfe für alle, die so etwas noch nie gespielt haben. Am PC und auf dem Tablet.",
+      "beschreibung": "Volk ist ein Aufbaustrategiespiel wie Civilization – nur ohne Runden. Alles läuft in Echtzeit, und die Welt läuft weiter, auch wenn niemand online ist. Am Anfang geht alles flott: Späher laufen im Sekundentakt über die Karte, Gebäude und Erfindungen sind in Minuten fertig, Städte wachsen schnell. Von Zeitalter zu Zeitalter wird es zäher, die Atomzeit dauert Tage. Wähle Namen und Farbe deines Volkes, gründe Städte, erkunde eine riesige Hexkarte mit vielen Biomen, Tieren und Rohstoffen, erforsche über 240 Erfindungen von der Antike bis zur Atomzeit und sieh zu, wie deine Städte vom Lehmdorf zur Großstadt wachsen. Handle mit anderen Spielern, KI-Völkern und Stadtstaaten, schließe Bündnisse oder führe Krieg – Kämpfe gibt es nur auf Befehl, mit Vorschau. Neulinge sind 24 Stunden geschützt, und wer offline ist, dem kann nichts passieren. Mit Tutorial, Lexikon und Hilfe für alle, die so etwas noch nie gespielt haben. Am PC und auf dem Tablet.",
       "schrift": {
         "familie": "silkscreen",
         "versalien": false,

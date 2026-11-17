@@ -187,13 +187,6 @@
   "offiziell": false,
   "version": "0.9.0.13"
  },
- "volk": {
-  "anzahl": 9,
-  "datum": "2026-11-15T22:03:16+01:00",
-  "erste": "2026-11-15T20:30:08+01:00",
-  "offiziell": false,
-  "version": "0.7.0.0"
- },
  "volkkarten": {
   "anzahl": 23,
   "datum": "2026-11-16T18:49:34+01:00",
