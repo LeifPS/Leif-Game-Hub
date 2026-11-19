@@ -44,8 +44,6 @@ export function glyphFromStrokes(ch, strokes, pen = PEN) {
   return d;
 }
 
-// Striche eines Zeichens mit gespeicherten Strichen (Einheiten, Bildkoordinaten) -> Bildpixel für den Export
-
 // cells: [{ch, v, pack, grp}], onDone(g) mit g = { zeichen: [Zeichen-Objekte] }
 export function openDraw({ cells, onDone, onClose }) {
   const modal = h('div', { class: 'modal on', role: 'dialog', 'aria-label': 'Zeichen zeichnen' }); document.body.append(modal);
@@ -58,13 +56,27 @@ export function openDraw({ cells, onDone, onClose }) {
   const grp = h('span', { class: 'chip' }), prog = h('span', { class: 'chip ac' }), cnt = h('span', { class: 'chip' });
   const cv = h('canvas', { style: { touchAction: 'none', background: '#fff', border: '1px solid var(--bd)', borderRadius: '12px', display: 'block', cursor: 'crosshair' } });
   const ctx = cv.getContext('2d');
-  const hint = h('p', { class: 'xs mut', style: { margin: 0, textAlign: 'center' } }, 'Schreibe auf die dicke Linie. Kleine Buchstaben reichen bis zur gestrichelten Linie darüber.');
+  const hint = h('p', { class: 'xs mut', style: { margin: 0, textAlign: 'center' } }, 'Schreibe auf die dicke Linie. Kleine Buchstaben reichen bis zur gestrichelten Linie darüber. Nach dem letzten Strich geht es von selbst weiter (der Balken zeigt die Zeit, ein neuer Strich stoppt ihn).');
+  // Auto-Weiter: nach dem letzten Strich kurz warten und zum nächsten Zeichen springen (Zeichen mit mehreren Strichen bekommen mehr Zeit)
+  const AUTO = { off: ['Auto-Weiter aus', 0], fast: ['Auto-Weiter schnell', 650], normal: ['Auto-Weiter normal', 1000], slow: ['Auto-Weiter langsam', 1600] };
+  let auto = 'normal'; try { const a = localStorage.getItem('hs:autoadv'); if (AUTO[a]) auto = a; } catch (_) { /* Speicher gesperrt */ }
+  const MULTI = /[ijtfxkäöüÄÖÜ!?:;=+%#"'…÷±]/; let timer = 0;
+  const bar = h('div', { style: { width: '100%', maxWidth: '100%', height: '4px', borderRadius: '2px', background: 'var(--surf2)', overflow: 'hidden', flex: 'none' } }, h('i', { style: { display: 'block', height: '100%', width: '0', background: 'var(--ac)' } }));
+  const fill = bar.firstChild;
+  function cancelAuto() { clearTimeout(timer); timer = 0; fill.style.transition = 'none'; fill.style.width = '0'; }
+  function armAuto() {
+    cancelAuto(); const base = AUTO[auto][1], c = cells[idx]; if (!base || !c) return;
+    const l = list(); if (posOf() >= l.length - 1) return;   // beim letzten Zeichen nicht automatisch weiter
+    const ms = base * (MULTI.test(c.ch) || c.ch.normalize('NFD').length > 1 ? 1.7 : 1);
+    void fill.offsetWidth; fill.style.transition = `width ${ms}ms linear`; fill.style.width = '100%';
+    timer = setTimeout(() => { timer = 0; move(1); }, ms);
+  }
 
   function size() {
     const availH = window.innerHeight - 56 - 76 - 120, availW = window.innerWidth - 24;
     ppu = Math.max(2.4, Math.min(availH / CH, availW / CW, 6));
     const dpr = Math.min(2.5, window.devicePixelRatio || 1);
-    cv.style.width = CW * ppu + 'px'; cv.style.height = CH * ppu + 'px';
+    cv.style.width = CW * ppu + 'px'; cv.style.height = CH * ppu + 'px'; bar.style.width = CW * ppu + 'px';
     cv.width = Math.round(CW * ppu * dpr); cv.height = Math.round(CH * ppu * dpr);
     ctx.setTransform(cv.width / CW, 0, 0, cv.height / CH, 0, 0);
     paint();
@@ -82,7 +94,7 @@ export function openDraw({ cells, onDone, onClose }) {
   cv.addEventListener('pointerdown', (e) => {
     if (e.pointerType === 'pen') sawPen = true; if (e.pointerType === 'touch' && sawPen) return;   // Handfläche ignorieren, wenn ein Stift benutzt wird
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    e.preventDefault(); cv.setPointerCapture(e.pointerId); cur = { p: [pt(e)], id: e.pointerId }; paint();
+    e.preventDefault(); cancelAuto(); cv.setPointerCapture(e.pointerId); cur = { p: [pt(e)], id: e.pointerId }; paint();
   });
   cv.addEventListener('pointermove', (e) => {
     if (!cur || e.pointerId !== cur.id) return; e.preventDefault();
@@ -95,7 +107,7 @@ export function openDraw({ cells, onDone, onClose }) {
   const up = (e) => {
     if (!cur || e.pointerId !== cur.id) return; const s = cur; cur = null;
     let p = s.p; if (p.length > 4) p = simplify(smooth(p), .06);
-    if (p.length) strokes.push({ p }); refresh(); paint();
+    if (p.length) strokes.push({ p }); refresh(); paint(); if (p.length) armAuto();
   };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
   cv.addEventListener('contextmenu', e => e.preventDefault());
@@ -103,7 +115,7 @@ export function openDraw({ cells, onDone, onClose }) {
   const list = () => visible();
   const posOf = () => { const l = list(), c = cells[idx]; const i = l.indexOf(c); return i < 0 ? l.findIndex(x => cells.indexOf(x) >= idx) : i; };
   function load() {
-    const c = cells[idx]; strokes = (done.get(key(c)) || []).map(s => ({ p: s.p.map(q => q.slice()) })); cur = null;
+    cancelAuto(); const c = cells[idx]; strokes = (done.get(key(c)) || []).map(s => ({ p: s.p.map(q => q.slice()) })); cur = null;
     label.textContent = c.ch; grp.textContent = c.grp + (c.v ? ' · Variante ' + (c.v + 1) : ''); ghost = ghost === null ? c.pack !== 'standard' : ghost;
     refresh(); paint();
   }
@@ -112,7 +124,8 @@ export function openDraw({ cells, onDone, onClose }) {
     const last = p >= l.length - 1; mf.replaceChildren(
       btn('Zurück', { disabled: p <= 0, onclick: () => move(-1) }), h('span', { class: 'sp1' }),
       btn(strokes.length ? (last ? 'Fertig' : 'Weiter') : (last ? 'Fertig' : 'Überspringen'), { cls: 'pri', onclick: () => last ? finish() : move(1) }));
-    tools.replaceChildren(btn('Rückgängig', { cls: 'sm', disabled: !strokes.length, onclick: () => { strokes.pop(); refresh(); paint(); } }), btn('Löschen', { cls: 'sm', disabled: !strokes.length, onclick: () => { strokes = []; refresh(); paint(); } }),
+    tools.replaceChildren(btn('Rückgängig', { cls: 'sm', disabled: !strokes.length, onclick: () => { cancelAuto(); strokes.pop(); refresh(); paint(); } }), btn('Löschen', { cls: 'sm', disabled: !strokes.length, onclick: () => { cancelAuto(); strokes = []; refresh(); paint(); } }),
+      btn(AUTO[auto][0], { cls: 'sm' + (auto === 'off' ? '' : ' on'), onclick: () => { const k = Object.keys(AUTO); auto = k[(k.indexOf(auto) + 1) % k.length]; try { localStorage.setItem('hs:autoadv', auto); } catch (_) { /* egal */ } cancelAuto(); refresh(); } }),
       btn(ghost ? 'Vorlage aus' : 'Vorlage an', { cls: 'sm', onclick: () => { ghost = !ghost; refresh(); paint(); } }),
       btn(once ? 'Alle Varianten' : 'Nur 1×', { cls: 'sm', onclick: () => { once = !once; if (once && cells[idx].v > 0) { const n = cells.findIndex((c, i) => i > idx && c.v === 0); if (n >= 0) { save(); idx = n; load(); return; } } refresh(); } }));
   }
@@ -127,15 +140,15 @@ export function openDraw({ cells, onDone, onClose }) {
     save(); const out = [];
     for (const c of cells) { const st = done.get(key(c)); if (!st) continue; const d = glyphFromStrokes(c.ch, st); if (d) out.push({ ch: c.ch, d }); }
     if (!out.length) { toast('Du hast noch nichts gezeichnet.', 2800, 'err'); return; }
-    window.removeEventListener('resize', size); modal.remove(); onDone(out);
+    cancelAuto(); window.removeEventListener('resize', size); modal.remove(); onDone(out);
   }
   async function close() {
     if (done.size || strokes.length) { if (!(await confirmBox('Alles Gezeichnete verwerfen?', 'Verwerfen'))) return; }
-    window.removeEventListener('resize', size); modal.remove(); if (onClose) onClose();
+    cancelAuto(); window.removeEventListener('resize', size); modal.remove(); if (onClose) onClose();
   }
   head.append(btn('Abbrechen', { cls: 'ghost icon', icon: 'x', onclick: close }), h('div', { class: 't', style: { display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' } }, prog, cnt),
     btn('Speichern', { cls: 'sm', onclick: finish }));
-  mb.append(h('div', { class: 'row', style: { gap: '10px', alignItems: 'center', justifyContent: 'center' } }, label, grp), cv, tools, hint);
+  mb.append(h('div', { class: 'row', style: { gap: '10px', alignItems: 'center', justifyContent: 'center' } }, label, grp), cv, bar, tools, hint);
   window.addEventListener('resize', size);
   load(); size();
   return { close };
