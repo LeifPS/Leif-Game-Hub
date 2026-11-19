@@ -19,7 +19,7 @@ const app = {
   refreshFontLabel() { this.fontCache.clear(); this.views.write.refresh(); },
   async loadFonts() {
     let builtin = this._builtin;
-    if (!builtin) { const d = await (await fetch('data/leif.json')).json(); builtin = this._builtin = { id: 'leif', name: 'Leifs Schrift (Beispiel)', builtin: true, meta: d.meta, g: d.g, packs: ['standard', 'franz'], updated: 0 }; }
+    if (!builtin) { const d = await (await fetch('data/leif.json')).json(); builtin = this._builtin = { id: 'leif', name: 'Leifs Schrift (Beispiel)', builtin: true, meta: d.meta, g: d.g, packs: ['standard', 'sonder', 'mathe', 'franz'], updated: 0 }; }
     const mine = (await dbAll('fonts')).sort((a, b) => (b.updated || 0) - (a.updated || 0));
     this.fonts = [...mine, builtin];
   },
