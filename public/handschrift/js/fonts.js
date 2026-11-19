@@ -3,6 +3,7 @@ import { h, saveFile, toast, fmtDate } from './util.js';
 import { btn, sheet, confirmBox, promptBox } from './ui.js';
 import { samplePreview } from './render.js';
 import { openWizard } from './wizard.js';
+import { openTopUp } from './extra.js';
 import { PACKS, PACK_BY_ID } from './packs.js';
 import { dbPut, dbDel, fontToFile, fontFromFile, countGlyphs } from './store.js';
 import { fileBase } from './exporter.js';
@@ -23,7 +24,7 @@ export function fontsView(app) {
         h('div', { class: 'fcard' }, prev, h('div', { class: 'sp1', style: { minWidth: 0 } }, h('b', null, f.name), isOn ? h('span', { class: 'chip ok', style: { marginLeft: '8px' } }, 'In Benutzung') : null, chipsEl, f.updated ? h('div', { class: 'xs mut', style: { marginTop: '4px' } }, `${n} Bilder · ${fmtDate(f.updated)}`) : null)),
         h('div', { class: 'row wrap2', style: { marginTop: '12px', gap: '8px' } },
           btn(isOn ? 'Aktiv' : 'Verwenden', { cls: 'sm' + (isOn ? '' : ' pri'), disabled: isOn, onclick: () => { app.setFont(f.id); toast(`„${f.name}“ wird jetzt benutzt`); draw(); } }),
-          btn('Erweitern', { icon: 'plus', cls: 'sm', onclick: () => openWizard(app, { font: f.builtin ? null : f, preselect: f.builtin ? ['standard', 'sonder'] : [] }), title: f.builtin ? 'Eigene Schrift mit denselben Paketen erstellen' : 'Pakete hinzufügen' }),
+          f.builtin ? btn('Erweitern', { icon: 'plus', cls: 'sm', onclick: () => openWizard(app, { font: null, preselect: ['standard', 'sonder'] }), title: 'Eigene Schrift mit denselben Paketen erstellen' }) : btn('Ergänzen', { icon: 'plus', cls: 'sm', onclick: () => openTopUp(app, f), title: 'Fehlende Zeichen, weitere Varianten oder neue Pakete hinzufügen' }),
           btn('Zeichen', { icon: 'eye', cls: 'sm', onclick: () => showGlyphs(f) }),
           f.builtin ? null : btn('Umbenennen', { icon: 'edit', cls: 'sm', onclick: async () => { const nm = await promptBox('Name der Schrift', f.name); if (nm) { f.name = nm; await dbPut('fonts', stripped(f)); draw(); app.refreshFontLabel(); } } }),
           f.builtin ? null : btn('Exportieren', { icon: 'download', cls: 'sm', onclick: () => saveFile(fontToFile(f), `${fileBase(f.name)}.hsfont`) }),

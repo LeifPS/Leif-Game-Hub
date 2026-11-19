@@ -7,7 +7,7 @@ import { smooth, simplify } from './vec.js';
 import { describeChar } from './chardesc.js';
 
 const LB = 0.8, RB = 2.2, PEN = 2.1;
-const CW = 72, CH = 100, BASE = 68;                     // Zeichenfläche in Einheiten (x-Höhe = 27 Einheiten)
+const CW = 72, CH = 100, BASE = 68, CAP = 1.8;                     // Zeichenfläche in Einheiten (x-Höhe = 27 Einheiten)
 const SUBS = new Set([...'₀₁₂₃₄₅₆₇₈₉']);
 const INK = '#1d3a9a';
 
@@ -46,7 +46,7 @@ export function glyphFromStrokes(ch, strokes, pen = PEN) {
 }
 
 // cells: [{ch, v, pack, grp}], onDone(g) mit g = { zeichen: [Zeichen-Objekte] }
-export function openDraw({ cells, onDone, onClose }) {
+export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra: nachträglich ergänzte Varianten/Zeichen (kein „Nur 1×“)
   const modal = h('div', { class: 'modal on', role: 'dialog', 'aria-label': 'Zeichen zeichnen' }); document.body.append(modal);
   const head = h('div', { class: 'bar' }), mb = h('div', { class: 'mb', style: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 12px', gap: '8px', overflow: 'hidden' } }), mf = h('div', { class: 'mf' });
   modal.append(head, mb, mf);
@@ -57,7 +57,7 @@ export function openDraw({ cells, onDone, onClose }) {
   const grp = h('span', { class: 'chip', style: { alignSelf: 'center' } }), prog = h('span', { class: 'chip ac' }), cnt = h('span', { class: 'chip' });
   const cv = h('canvas', { style: { touchAction: 'none', background: '#fff', border: '1px solid var(--bd)', borderRadius: '12px', display: 'block', cursor: 'crosshair' } });
   const ctx = cv.getContext('2d'), base = document.createElement('canvas'), bg = base.getContext('2d');   // base = Hintergrund + fertige Striche (wird nur bei Änderungen neu gemalt)
-  const hint = h('p', { class: 'xs mut', style: { margin: 0, textAlign: 'center' } }, 'Schreibe auf die dicke Linie. Kleine Buchstaben reichen bis zur gestrichelten Linie darüber. Nach dem letzten Strich geht es von selbst weiter (der Balken zeigt die Zeit, ein neuer Strich stoppt ihn).');
+  const hint = h('p', { class: 'xs mut', style: { margin: 0, textAlign: 'center' } }, 'Schreibe auf die dicke Linie. Kleine Buchstaben reichen bis zur ersten gestrichelten Linie, Großbuchstaben, Ziffern und lange Buchstaben (b, d, h, k, l) bis zur oberen. Nach dem letzten Strich geht es von selbst weiter (der Balken zeigt die Zeit, ein neuer Strich stoppt ihn).');
   // Auto-Weiter: nach dem letzten Strich kurz warten und zum nächsten Zeichen springen (Zeichen mit mehreren Strichen bekommen mehr Zeit)
   const AUTO = { off: ['Auto-Weiter aus', 0], fast: ['Auto-Weiter schnell', 650], normal: ['Auto-Weiter normal', 1000], slow: ['Auto-Weiter langsam', 1600] };
   let auto = 'normal'; try { const a = localStorage.getItem('hs:autoadv'); if (AUTO[a]) auto = a; } catch (_) { /* Speicher gesperrt */ }
@@ -84,16 +84,20 @@ export function openDraw({ cells, onDone, onClose }) {
   }
   const pen = (s, g = ctx) => { g.strokeStyle = g.fillStyle = INK; g.lineCap = g.lineJoin = 'round'; g.lineWidth = PEN; const q = s.p; if (q.length < 2) { g.beginPath(); g.arc(q[0][0], q[0][1], PEN / 2, 0, 7); g.fill(); return; } g.beginPath(); q.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke(); };
   // Vorlage: Schriftgröße so, dass die x-Höhe genau bis zur gestrichelten Linie reicht (Buchstaben, Ziffern, Satzzeichen); Schriftzeichen und Symbole etwas größer
-  const FONT = 'system-ui,"Hiragino Sans","PingFang SC","Noto Sans CJK SC",sans-serif'; let latinPx = 0;
+  const FONT = 'system-ui,"Hiragino Sans","PingFang SC","Noto Sans CJK SC",sans-serif'; let latinPx = 0; const TALL = /[0-9bdfhklßðþ]/;
   const fontPx = (ch) => {
     if (/[☀-➿　-ヿ一-鿿]/.test(ch)) return XH * 1.7;
-    if (!latinPx) { bg.font = `100px ${FONT}`; const a = bg.measureText('x').actualBoundingBoxAscent; latinPx = a > 10 ? Math.max(XH * 1.6, Math.min(XH * 2.4, XH / a * 100)) : XH * 1.95; }
-    return latinPx;
+    if (!latinPx) {
+      bg.font = `100px ${FONT}`; const a = bg.measureText('x').actualBoundingBoxAscent, c = bg.measureText('H').actualBoundingBoxAscent;
+      latinPx = a > 10 && c > 10 ? [Math.max(XH * 1.6, Math.min(XH * 2.4, XH / a * 100)), Math.max(XH * 2.2, Math.min(XH * 3.4, XH * CAP / c * 100))] : [XH * 1.95, XH * 2.7];
+    }
+    return TALL.test(ch) || ch !== ch.toLowerCase() ? latinPx[1] : latinPx[0];   // Großbuchstaben, Ziffern und lange Buchstaben bis zur oberen Linie
   };
   function paint() {   // alles neu: Hintergrund-Ebene (Linien, Vorlage, fertige Striche) und darüber den laufenden Strich
     bg.clearRect(0, 0, CW, CH);
     const line = (y, col, w, dash) => { bg.beginPath(); bg.setLineDash(dash || []); bg.strokeStyle = col; bg.lineWidth = w; bg.moveTo(0, y); bg.lineTo(CW, y); bg.stroke(); bg.setLineDash([]); };
-    line(BASE - XH * 1.6, '#e4e6f7', .3, [1.5, 1.5]); line(BASE - XH, '#b9bff0', .35, [1.5, 1.5]); line(BASE + XH * .6, '#e4e6f7', .3, [1.5, 1.5]); line(BASE, '#8d98ea', .6);
+    line(BASE - XH * CAP, '#b9bff0', .35, [1.5, 1.5]); line(BASE - XH, '#b9bff0', .35, [1.5, 1.5]);
+    bg.fillStyle = '#9aa3e6'; bg.font = '2.5px system-ui,sans-serif'; bg.textAlign = 'left'; bg.textBaseline = 'alphabetic'; bg.fillText('Groß, Ziffern, b d h k l', 1.2, BASE - XH * CAP - .9); bg.fillText('klein', 1.2, BASE - XH - .9); line(BASE + XH * .6, '#e4e6f7', .3, [1.5, 1.5]); line(BASE, '#8d98ea', .6);
     const c = cells[idx];
     if (ghost && c) { bg.fillStyle = 'rgba(95,105,150,.26)'; bg.font = `${fontPx(c.ch)}px ${FONT}`; bg.textAlign = 'center'; bg.textBaseline = 'alphabetic'; bg.fillText(c.ch, CW / 2, BASE); }
     for (const s of strokes) pen(s, bg);
@@ -142,10 +146,10 @@ export function openDraw({ cells, onDone, onClose }) {
     const last = p >= l.length - 1; mf.replaceChildren(
       btn('Zurück', { disabled: p <= 0, onclick: () => move(-1) }), h('span', { class: 'sp1' }),
       btn(strokes.length ? (last ? 'Fertig' : 'Weiter') : (last ? 'Fertig' : 'Überspringen'), { cls: 'pri', onclick: () => last ? finish() : move(1) }));
-    tools.replaceChildren(btn('Rückgängig', { cls: 'sm', disabled: !strokes.length, onclick: () => { cancelAuto(); strokes.pop(); refresh(); paint(); } }), btn('Löschen', { cls: 'sm', disabled: !strokes.length, onclick: () => { cancelAuto(); strokes = []; refresh(); paint(); } }),
+    tools.replaceChildren(...[btn('Rückgängig', { cls: 'sm', disabled: !strokes.length, onclick: () => { cancelAuto(); strokes.pop(); refresh(); paint(); } }), btn('Löschen', { cls: 'sm', disabled: !strokes.length, onclick: () => { cancelAuto(); strokes = []; refresh(); paint(); } }),
       btn(AUTO[auto][0], { cls: 'sm' + (auto === 'off' ? '' : ' on'), onclick: () => { const k = Object.keys(AUTO); auto = k[(k.indexOf(auto) + 1) % k.length]; try { localStorage.setItem('hs:autoadv', auto); } catch (_) { /* egal */ } cancelAuto(); refresh(); } }),
       btn(ghost ? 'Vorlage zum Nachzeichnen: an' : 'Vorlage zum Nachzeichnen: aus', { cls: 'sm', onclick: () => { ghost = !ghost; try { localStorage.setItem('hs:ghost', ghost ? '1' : '0'); } catch (_) { /* Speicher gesperrt */ } refresh(); paint(); } }),
-      btn(once ? 'Alle Varianten' : 'Nur 1×', { cls: 'sm', onclick: () => { once = !once; if (once && cells[idx].v > 0) { const n = cells.findIndex((c, i) => i > idx && c.v === 0); if (n >= 0) { save(); idx = n; load(); return; } } refresh(); } }));
+      extra ? null : btn(once ? 'Alle Varianten' : 'Nur 1×', { cls: 'sm', onclick: () => { once = !once; if (once && cells[idx].v > 0) { const n = cells.findIndex((c, i) => i > idx && c.v === 0); if (n >= 0) { save(); idx = n; load(); return; } } refresh(); } })].filter(Boolean));
   }
   const tools = h('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap', justifyContent: 'center' } });
   function save() { const c = cells[idx]; if (strokes.length) done.set(key(c), strokes.map(s => ({ p: s.p }))); else done.delete(key(c)); }

@@ -44,7 +44,7 @@ export const PENS = {
 };
 export const DEF = {
   fmt: 'a4', paper: 'lined', paperColor: 'creme', scan: true, pen: 'kugel_blau', ink: '#1d3a9a', weight: .35, inkAlpha: 1,
-  size: 21, lh: 2.9, sp: .9, wsp: 1, jit: .6, slant: 0, seed: 7,
+  size: 21, lh: 2.9, sp: .9, wsp: 1, jit: .6, slant: 0, capsc: 1, seed: 7,
   mt: 140, mb: 120, ml: 120, mr: 100, kz: true, markup: true, sz: false, margin: true,
   header: '', pageNum: false, pageNumFmt: '{n}',
 };
@@ -214,7 +214,7 @@ export function layout(text, S, font) {
         let idx = Math.floor(rng() * r.pool.length);
         if (r.pool.length > 1 && lastVar[ch] === idx) idx = (idx + 1 + Math.floor(rng() * (r.pool.length - 1))) % r.pool.length;
         lastVar[ch] = idx;
-        const v = r.pool[idx], sc = r.s * scl * (st.b ? 1.03 : 1) * (1 + (rng() - .5) * .06 * S.jit);
+        const v = r.pool[idx], sc = r.s * scl * (S.capsc !== 1 && ch !== ch.toLowerCase() && ch === ch.toUpperCase() && /\p{L}/u.test(ch) ? S.capsc : 1) * (st.b ? 1.03 : 1) * (1 + (rng() - .5) * .06 * S.jit);
         const adv = (v.seg * k * sc * r.sx * S.sp) + S.size * .03 * scl + (rng() - .5) * S.jit * S.size * .08;
         run.push({ ch, v, sc, sx: r.sx, up: r.up || 0, adv, st, dy: (rng() - .5) * S.jit * S.size * .06, rot: (rng() - .5) * S.jit * .04, a: .86 + .14 * rng() }); w += adv;
       }

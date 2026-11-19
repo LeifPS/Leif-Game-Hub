@@ -179,3 +179,5 @@ details.faq p{margin:8px 0 0;color:var(--mut)}
 kbd{font-family:ui-monospace,Menlo,monospace;background:var(--surf2);border-radius:5px;padding:1px 6px;font-size:12.5px}
 .sk{animation:sk 1.2s infinite alternate;background:var(--surf2);border-radius:6px}@keyframes sk{to{opacity:.5}}
 @media print{body *{display:none}}
+
+.tg{border:1.5px solid var(--bd);background:var(--surf);border-radius:99px;padding:6px 12px;font-weight:600;font-size:13px;color:var(--tx)}.tg.on{border-color:var(--ac);background:var(--acs);color:var(--ac)}

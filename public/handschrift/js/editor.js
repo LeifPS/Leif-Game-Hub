@@ -5,6 +5,7 @@ import { layout, drawPage, ensureImages, FORMATS, PAPERS, PAPER_COLORS, PENS, DE
 import { exportPdf, exportGoodNotes, exportGoodNotesInk, exportPngs, zipOf, fileBase } from './exporter.js';
 import { PACKS } from './packs.js';
 import { openWizard } from './wizard.js';
+import { openTopUp } from './extra.js';
 import { dbPut, kvSet } from './store.js';
 
 const MARGINS = { schmal: [70, 60, 90, 80], normal: [120, 100, 140, 120], breit: [170, 150, 180, 150] };
@@ -90,6 +91,7 @@ export function editorView(app) {
     const need = new Set(), loose = [];
     for (const ch of chars) { const p = PACKS.filter(p => p.groups.some(g => g.c.includes(ch))).sort((a, b) => a.bit - b.bit)[0]; p ? need.add(p.id) : loose.push(ch); }
     const rec = app.fonts.find(f => f.id === (doc.fontId || app.fontId));
+    if (rec && !rec.builtin) { openTopUp(app, rec, { chars: chars.join('') }); return; }
     openWizard(app, { font: rec && !rec.builtin ? rec : null, preselect: [...need], customChars: loose.join('') });
   }
   async function pagePng(i) {
@@ -131,7 +133,7 @@ export function editorView(app) {
         range('Strichstärke', () => s.weight, setK('weight'), 0, 1.4, .05, v => v.toFixed(2)), range('Deckkraft', () => s.inkAlpha, setK('inkAlpha'), .4, 1, .02, v => Math.round(v * 100) + ' %'));
       b.append(sec('Schrift'), range('Größe', () => s.size, setK('size'), 13, 42, .5, v => v + ' pt'), range('Zeilenabstand', () => s.lh, setK('lh'), 2, 4.6, .05, v => v.toFixed(2) + '×'),
         range('Buchstabenabstand', () => s.sp, setK('sp'), .6, 1.4, .02, v => Math.round(v * 100) + ' %'), range('Wortabstand', () => s.wsp, setK('wsp'), .5, 2, .05, v => Math.round(v * 100) + ' %'),
-        range('Unregelmäßigkeit', () => s.jit, setK('jit'), 0, 1.6, .05, v => Math.round(v * 100) + ' %'), range('Neigung', () => s.slant, setK('slant'), -10, 18, .5, v => v + '°'));
+        range('Unregelmäßigkeit', () => s.jit, setK('jit'), 0, 1.6, .05, v => Math.round(v * 100) + ' %'), range('Neigung', () => s.slant, setK('slant'), -10, 18, .5, v => v + '°'), range('Größe der Großbuchstaben', () => s.capsc, setK('capsc'), .7, 1.7, .05, v => Math.round(v * 100) + ' %'));
       b.append(sec('Text'), toggle('Mathe-Kürzel', 'x^2 → x², a_1 → a₁, -> → →, \\alpha → α', () => s.kz, setK('kz')), toggle('Formatierung', '**fett**, __unterstrichen__, ==markiert==, # Überschrift', () => s.markup, setK('markup')), toggle('ß als ss schreiben', null, () => s.sz, setK('sz')));
       const hi = h('input', { type: 'text', value: s.header || '', placeholder: 'z. B. Leif · Biologie · {datum}', maxlength: 80, oninput: () => { s.header = hi.value; ch(); } });
       b.append(sec('Kopf- und Fußzeile'), h('label', { class: 'f' }, 'Kopfzeile (auf jeder Seite)'), hi, h('p', { class: 'xs mut' }, 'Platzhalter: {datum} und {n} (Seitenzahl)'), toggle('Seitenzahlen', 'Unten mittig auf jeder Seite', () => s.pageNum, setK('pageNum')));
