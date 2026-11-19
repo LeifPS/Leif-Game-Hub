@@ -151,7 +151,7 @@ export async function readPage(canvas, cellsOnPage, qr) {
     const gray = sample(g, W, H, A, x, y, CW, CH, SC), mask = new Uint8Array(CW * CH);
     for (let k = 0; k < mask.length; k++) mask[k] = gray[k] < th ? 1 : 0;
     const c = cellsOnPage[i], { lab, comps } = components(mask, CW, CH), keep = new Uint8Array(CW * CH);
-    const small = '.·,:;\'"`´‚'.includes(c.ch);
+    const small = '.·,:;\'"`´‚…•°'.includes(c.ch);
     const dead = new Set();
     for (const k of comps) {
       const w = k.x1 - k.x0 + 1, h = k.y1 - k.y0 + 1;
