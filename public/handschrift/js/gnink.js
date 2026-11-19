@@ -123,7 +123,7 @@ function rep(b, from, to) {
   for (let i = 0; i + f.length <= o.length; i++) { let ok = true; for (let j = 0; j < f.length; j++) if (o[i + j] !== f[j]) { ok = false; break; } if (ok) { o.set(t, i); i += f.length - 1; } }
   return o;
 }
-export async function makeGoodNotesInk({ pages, title, thumb, paper, debug = {} }) {
+export async function makeGoodNotesInk({ pages, title, thumb, paper }) {
   // Hintergrund: leere Standardseite oder echte GoodNotes-Vorlage (paper = 'gnlin' | 'gnkar')
   const PP = paper && PAP[paper], AID = PP ? PP.id : ATT_ID;
   let attRec = TPL.att, linkTpl = TPL.link, pageTpl = TPL.page, searchTpl = TPL.search, attsTpl = TPL.attachments, pdfBytes = TPL.pdf;
@@ -175,8 +175,7 @@ export async function makeGoodNotesInk({ pages, title, thumb, paper, debug = {} 
     noteIds.push(nidS); notes.push(stream(out));
   });
   const LK = parse(linkTpl); setIn(LK, [105, 10], 'd', ts()); setIn(LK, [105, 11], 'b', ev()); setIn(LK, [105, 14], 'v', ck()); recs.push(encode(LK));
-  if (debug.rawUi) recs.push(TPL.ui);
-  else { const U = parse(TPL.ui); setIn(U, [10, 2], 'b', lids[0]); setIn(U, [10, 11], 'b', ev()); setIn(U, [10, 14], 'v', ck()); setIn(U, [10, 10], 'd', ts()); recs.push(encode(U)); }
+  const U = parse(TPL.ui); setIn(U, [10, 2], 'b', lids[0]); setIn(U, [10, 11], 'b', ev()); setIn(U, [10, 14], 'v', ck()); setIn(U, [10, 10], 'd', ts()); recs.push(encode(U));
   const files = [
     { name: 'document.info.pb', data: new Uint8Array(0) },
     { name: 'index.search.pb', data: searchTpl },

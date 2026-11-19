@@ -1,6 +1,6 @@
 // Ansicht „Schriften“: Liste, Verwenden, Umbenennen, Erweitern, Export/Import, Zeichen ansehen
 import { h, saveFile, toast, fmtDate } from './util.js';
-import { ic, btn, sheet, confirmBox, promptBox } from './ui.js';
+import { btn, sheet, confirmBox, promptBox } from './ui.js';
 import { samplePreview } from './render.js';
 import { openWizard } from './wizard.js';
 import { PACKS, PACK_BY_ID } from './packs.js';
@@ -14,7 +14,7 @@ export function fontsView(app) {
     const imp = h('input', { type: 'file', accept: '.hsfont,application/json', class: 'sr', onchange: async () => { try { const rec = await fontFromFile(imp.files[0]); await dbPut('fonts', rec); await app.fontSaved(rec); toast(`„${rec.name}“ importiert`); } catch (e) { toast(e.message, 5000, 'err'); } imp.value = ''; } });
     wrap.append(h('div', { class: 'row', style: { marginBottom: '14px' } }, h('div', { class: 'sp1' }, h('h1', null, 'Schriften'), h('p', { class: 'mut sm', style: { margin: 0 } }, 'Deine Handschriften, alles bleibt auf diesem Gerät')),
       btn('Importieren', { icon: 'upload', cls: 'sm', onclick: () => imp.click() }), imp));
-    wrap.append(h('div', { class: 'hero' }, h('h1', null, 'Schreib in deiner eigenen Handschrift'), h('p', null, 'Wähle die Zeichen, die du brauchst, schreib sie einmal auf einen Bogen und lade ihn hoch. Danach wird jeder Text so, als hättest du ihn selbst geschrieben.'), btn('Neue Schrift erstellen', { icon: 'plus', onclick: () => openWizard(app) })));
+    wrap.append(h('div', { class: 'hero' }, h('h1', null, 'Schreib in deiner eigenen Handschrift'), h('p', null, 'Wähle die Zeichen, die du brauchst, schreib sie einmal auf einen Bogen und lade ihn hoch oder zeichne sie direkt hier in der App. Danach wird jeder Text so, als hättest du ihn selbst geschrieben.'), btn('Neue Schrift erstellen', { icon: 'plus', onclick: () => openWizard(app) })));
     for (const f of app.fonts) {
       const prev = h('div', { class: 'fprev' }), isOn = app.fontId === f.id, n = countGlyphs(f.g), chars = Object.keys(f.g).length;
       app.getFont(f.id).then(fo => samplePreview(fo)).then(c => prev.append(c)).catch(() => {});
@@ -31,7 +31,7 @@ export function fontsView(app) {
     }
     wrap.append(h('div', { class: 'note' }, h('b', null, 'Tipp: '), 'Exportiere deine Schrift als Datei (.hsfont). So kannst du sie auf einem anderen Gerät importieren oder sichern.'));
   }
-  const stripped = (f) => { const { builtin, ...r } = f; void builtin; return r; };
+  const stripped = (f) => { const r = { ...f }; delete r.builtin; return r; };
   function showGlyphs(f) {
     sheet(f.name, (b) => {
       const have = new Set(Object.keys(f.g));

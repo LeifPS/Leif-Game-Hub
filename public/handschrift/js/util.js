@@ -15,12 +15,9 @@ export function h(tag, attrs, ...kids) {
   for (const k of kids.flat(9)) if (k != null && k !== false) el.append(k.nodeType ? k : document.createTextNode(k));
   return el;
 }
-export const esc = (t) => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-export const sleep = (ms = 0) => new Promise(r => setTimeout(r, ms));
 export const tick = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
 export const debounce = (fn, ms = 150) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
-export const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 export const blobOf = (c, type = 'image/png', q) => new Promise(r => c.toBlob(r, type, q));
 export const fmtDate = (t) => new Date(t).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 export const fmtTime = (t) => new Date(t).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -32,7 +29,6 @@ export function toast(text, ms = 2800, kind = '') {
   toastEl.textContent = text; toastEl.className = 'on ' + kind;
   clearTimeout(toastT); if (ms) toastT = setTimeout(() => toastEl.classList.remove('on'), ms);
 }
-export const toastOff = () => toastEl && toastEl.classList.remove('on');
 
 const loaded = {};
 export function loadScript(src) {

@@ -17,6 +17,13 @@ const P = {
   grid: 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z', undo: 'M3 7v6h6M3 13a9 9 0 1 0 3-7.7L3 8', refresh: 'M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5', menu: 'M4 6h16M4 12h16M4 18h16', book: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5zM4 19.5V22h16',
 };
 export const ic = (n) => { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('class', 'ic'); s.setAttribute('aria-hidden', 'true'); const p = document.createElementNS('http://www.w3.org/2000/svg', 'path'); p.setAttribute('d', P[n] || P.info); s.append(p); return s; };
+// Markenzeichen: handgeschriebenes „h“ auf Kachel (wie das Favicon)
+let markN = 0;
+export function mark(size = 32) {
+  const id = 'mk' + (++markN), w = document.createElement('span'); w.className = 'mark'; w.style.cssText = `display:inline-block;width:${size}px;height:${size}px;flex:none`;
+  w.innerHTML = `<svg viewBox="0 0 512 512" width="${size}" height="${size}" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3a4de0"/><stop offset="1" stop-color="#7b4ff0"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#${id})"/><g transform="translate(256 258) scale(1.08) translate(-257 -258)"><path d="M88 420H424" stroke="#fff" stroke-opacity=".3" stroke-width="9" stroke-linecap="round"/><path d="M146 414C170 336 198 238 228 164C246 118 276 82 314 92C352 102 330 170 292 228C252 290 206 352 166 414C204 340 246 280 296 274C342 270 346 320 332 358C324 382 340 398 362 392C382 386 398 372 410 352" fill="none" stroke="#fffaf0" stroke-width="35" stroke-linecap="round" stroke-linejoin="round"/><circle cx="426" cy="326" r="21" fill="#ffc247"/></g></svg>`;
+  return w;
+}
 export const btn = (label, o = {}) => { const { icon, cls = '', onclick, title, disabled } = o; return h('button', { class: 'btn ' + cls, type: 'button', onclick, title: title || (typeof label === 'string' && cls.includes('icon') ? label : null), 'aria-label': cls.includes('icon') ? (title || label) : null, disabled }, icon ? ic(icon) : null, cls.includes('icon') ? null : label); };
 
 // Sheet (unten auf dem Handy, rechts am Rechner)
@@ -33,7 +40,6 @@ export function sheet(title, build, { wide = false, onclose } = {}) {
   requestAnimationFrame(() => { el.classList.add('on'); scrim.classList.add('on'); }); open.add(api);
   return api;
 }
-export const closeSheets = () => [...open].forEach(s => s.close());
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && open.size) [...open].pop().close(); });
 
 export function range(label, get, set, min, max, step, fmt = v => v) {
@@ -56,8 +62,7 @@ export function chips(opts, get, set, cls = 'opt') {
 }
 export function confirmBox(text, ok = 'Löschen') {
   return new Promise(res => {
-    const sh = sheet('Bist du sicher?', (b, api) => { b.append(h('p', null, text), h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '14px' } }, btn('Abbrechen', { onclick: () => { api.close(); res(false); } }), btn(ok, { cls: 'pri', onclick: () => { api.close(); res(true); } }))); }, { onclose: () => res(false) });
-    void sh;
+    sheet('Bist du sicher?', (b, api) => { b.append(h('p', null, text), h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '14px' } }, btn('Abbrechen', { onclick: () => { api.close(); res(false); } }), btn(ok, { cls: 'pri', onclick: () => { api.close(); res(true); } }))); }, { onclose: () => res(false) });
   });
 }
 export function promptBox(title, val = '', ok = 'Speichern') {

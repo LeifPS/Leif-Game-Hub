@@ -1,7 +1,7 @@
 // Ansicht „Dokumente“
-import { h, saveFile, toast, fmtTime, uid } from './util.js';
-import { ic, btn, sheet, confirmBox } from './ui.js';
-import { dbPut, dbDel } from './store.js';
+import { h, saveFile, toast, fmtTime } from './util.js';
+import { btn, sheet, confirmBox } from './ui.js';
+import { dbDel } from './store.js';
 import { fileBase } from './exporter.js';
 
 export function docsView(app) {
@@ -32,7 +32,6 @@ export function docsView(app) {
         btn('Löschen', { icon: 'trash', cls: 'danger', onclick: async () => { api.close(); if (await confirmBox(`„${d.title || 'Dokument'}“ wirklich löschen?`)) { await dbDel('docs', d.id); await app.docsChanged(d.id); draw(); } } })));
     });
   }
-  void dbPut; void uid;
   draw();
   return { el: root, refresh: draw };
 }

@@ -1,7 +1,7 @@
 // Zeichen direkt in der App zeichnen. Jeder Strich wird als Strich gespeichert (für GoodNotes)
 // und zusätzlich als Bild gerendert (für Vorschau, PDF und PNG).
 import { h, toast } from './util.js';
-import { ic, btn, confirmBox } from './ui.js';
+import { btn, confirmBox } from './ui.js';
 import { SC, PAD, XH } from './imgops.js';
 import { smooth, simplify } from './vec.js';
 
@@ -45,7 +45,6 @@ export function glyphFromStrokes(ch, strokes, pen = PEN) {
 }
 
 // Striche eines Zeichens mit gespeicherten Strichen (Einheiten, Bildkoordinaten) -> Bildpixel für den Export
-export const strokesOfGlyph = (v) => v.st.map(s => ({ pts: s.p.map(([x, y]) => [x * SC, y * SC]), w: s.w * SC }));
 
 // cells: [{ch, v, pack, grp}], onDone(g) mit g = { zeichen: [Zeichen-Objekte] }
 export function openDraw({ cells, onDone, onClose }) {
@@ -141,4 +140,3 @@ export function openDraw({ cells, onDone, onClose }) {
   load(); size();
   return { close };
 }
-void ic;

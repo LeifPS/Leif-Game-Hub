@@ -1,7 +1,7 @@
 // Assistent: Schrift erstellen oder erweitern (Pakete wählen -> Vorlage -> Bögen hochladen -> prüfen -> speichern)
-import { h, $, uid, tick, blobOf, saveFile, toast, fmtSize } from './util.js';
-import { ic, btn, closeSheets } from './ui.js';
-import { PACKS, PACK_BY_ID, buildCells, pageCount, maskOf, idsOf, hashOf, packInfo, PER_PAGE } from './packs.js';
+import { h, uid, tick, blobOf, saveFile, toast, fmtSize } from './util.js';
+import { ic, btn } from './ui.js';
+import { PACK_BY_ID, buildCells, pageCount, maskOf, idsOf, hashOf, packInfo } from './packs.js';
 import { renderSheet, cellsOnPage } from './sheet.js';
 import { findMarker, readPage, buildGlyphs } from './reader.js';
 import { pagesOf } from './pdfin.js';
@@ -53,14 +53,13 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
     const w = h('div', { class: 'wrap' }); mb.append(w);
     w.append(h('h1', null, font ? `„${font.name}“ erweitern` : 'Deine eigene Schrift erstellen'),
       h('p', { class: 'mut' }, 'Wähle, welche Zeichen du schreiben möchtest. Daraus entsteht ein Bogen zum Ausfüllen. Du kannst später jederzeit weitere Pakete hinzufügen.'));
-    const sum = h('div'), foot = h('div');
+    const sum = h('div');
     const redraw = () => {
       const c = cells(), uniq = new Set(c.map(x => x.ch)).size, pages = pageCount(c);
       sum.replaceChildren(h('div', { class: 'row wrap2' }, h('span', { class: 'chip ac' }, `${uniq} Zeichen`), h('span', { class: 'chip' }, `${c.length} Kästchen`), h('span', { class: 'chip' }, `${c.length ? pages : 0} ${pages === 1 ? 'Seite' : 'Seiten'}`)));
-      mf.replaceChildren(btn('Schon ausgefüllte Bögen hochladen', { cls: 'sm', onclick: () => go(3) }), btn('Direkt zeichnen', { cls: 'sm', disabled: !c.length, onclick: startDraw }), h('span', { class: 'sp1' }), sumChips(), btn('Weiter', { cls: 'pri', disabled: !c.length, onclick: () => { if (S.custom.chars) kvSet('custom:' + hashOf({ chars: clean(S.custom.chars), n: S.custom.n }), { chars: clean(S.custom.chars), n: S.custom.n }); go(2); } }));
+      mf.replaceChildren(h('div', { class: 'mfstack' }, sum, h('div', { class: 'row' }, btn('Bögen hochladen', { cls: 'sm', title: 'Schon ausgefüllte Bögen hochladen', onclick: () => go(3) }), btn('Direkt zeichnen', { cls: 'sm', disabled: !c.length, onclick: startDraw }), h('span', { class: 'sp1' }), btn('Weiter', { cls: 'pri', disabled: !c.length, onclick: () => { if (S.custom.chars) kvSet('custom:' + hashOf({ chars: clean(S.custom.chars), n: S.custom.n }), { chars: clean(S.custom.chars), n: S.custom.n }); go(2); } }))));
       list.querySelectorAll('.pack').forEach(b => b.classList.toggle('on', S.sel.has(b.dataset.id)));
     };
-    const sumChips = () => sum;
     const list = h('div');
     for (const [gname, ids] of GROUPS) {
       list.append(h('h3', { style: { margin: '16px 0 8px' } }, gname));
@@ -247,7 +246,6 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
       close(); await app.fontSaved(rec);
     } catch (e) { toast('Speichern fehlgeschlagen: ' + e.message, 5000, 'err'); } finally { S.busy = false; }
   }
-  void closeSheets; void PER_PAGE; void $;
   draw();
   return { close };
 }

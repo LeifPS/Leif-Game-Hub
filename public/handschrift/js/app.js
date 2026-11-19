@@ -1,8 +1,8 @@
 // Start der App: Zustand, Gerüst, Ansichten
-import { h, uid, toast } from './util.js';
-import { ic, btn } from './ui.js';
+import { h, uid } from './util.js';
+import { ic, mark } from './ui.js';
 import { Font, DEF } from './render.js';
-import { dbAll, dbGet, dbPut, kvGet, kvSet, countGlyphs } from './store.js';
+import { dbAll, dbPut, kvGet, kvSet } from './store.js';
 import { editorView } from './editor.js';
 import { fontsView } from './fonts.js';
 import { docsView } from './docs.js';
@@ -58,7 +58,7 @@ Das hier ist **deine Handschrift** – na ja, noch die Beispielschrift. Unter ==
 
 - Text links tippen oder einfügen, rechts siehst du das Ergebnis
 - Hochzahlen gehen so: x^2 + y^3
-- Exportieren als PDF für GoodNotes: oben auf [rot]Exportieren[/]
+- Für GoodNotes: oben auf [rot]Exportieren[/] und „GoodNotes: echte Striche“ wählen
 
 Viel Spaß beim Schreiben!`;
 
@@ -69,16 +69,16 @@ async function boot() {
   app.fontId = await kvGet('fontId', app.fonts[0].id); if (!app.fonts.find(f => f.id === app.fontId)) app.fontId = app.fonts[0].id;
   app.views.write = editorView(app); app.views.fonts = fontsView(app); app.views.docs = docsView(app); app.views.more = moreView(app);
   const nav = (cls) => NAV.map(([k, t, i]) => h('button', { type: 'button', class: cls, dataset: { nav: k }, onclick: () => app.show(k) }, ic(i), h('span', null, t)));
-  const side = h('nav', { class: 'side', 'aria-label': 'Hauptmenü' }, h('div', { class: 'brand' }, h('div', { class: 'logo' }, ic('pen')), 'Handschrift'), ...nav('navb'), h('div', { class: 'sp' }), h('p', { class: 'xs mut', style: { margin: '8px' } }, 'Alles bleibt auf deinem Gerät.'));
+  const side = h('nav', { class: 'side', 'aria-label': 'Hauptmenü' }, h('div', { class: 'brand' }, mark(32), 'Handschrift'), ...nav('navb'), h('div', { class: 'sp' }), h('p', { class: 'xs mut', style: { margin: '8px' } }, 'Alles bleibt auf deinem Gerät.'));
   const main = h('main', { class: 'main' });
   for (const k of ['write', 'fonts', 'docs', 'more']) { const v = h('div', { class: 'view' }); v.append(app.views[k].el); viewEls[k] = v; main.append(v); }
   root.append(h('div', { class: 'shell' }, side, main, h('nav', { class: 'tabs', 'aria-label': 'Hauptmenü' }, ...nav('tab'))));
   // Dokument öffnen oder Willkommens-Dokument anlegen
-  let d = app.docs.find(x => x.id === (null)) || null; const lastId = await kvGet('docId', null);
-  d = app.docs.find(x => x.id === lastId) || app.docs[0];
+  const lastId = await kvGet('docId', null);
+  let d = app.docs.find(x => x.id === lastId) || app.docs[0];
   if (!d) d = await app.newDoc({ title: 'Willkommen', text: WELCOME, fontId: app.fontId });
   app.doc = d; await app.views.write.load(d); app.show('write');
-  document.getElementById('boot')?.remove();
+  { const bt = document.getElementById('boot'); if (bt) { bt.style.transition = 'opacity .25s'; bt.style.opacity = '0'; setTimeout(() => bt.remove(), 280); } }
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); app.installPrompt = e; if (app.view === 'more') app.views.more.refresh(); });
   window.addEventListener('online', () => app.view === 'more' && app.views.more.refresh()); window.addEventListener('offline', () => app.view === 'more' && app.views.more.refresh());
   registerSw();
@@ -93,4 +93,3 @@ function registerSw() {
   }).catch(() => { app.swState = 'unsupported'; });
 }
 boot().catch(e => { console.error(e); const b = document.getElementById('boot'); if (b) b.textContent = 'Die App konnte nicht starten: ' + e.message; });
-void toast; void dbGet; void countGlyphs; void btn;

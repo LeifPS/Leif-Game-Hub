@@ -1,7 +1,7 @@
 // Ansicht „Mehr“: Darstellung, Installation, Offline, Speicher, Hilfe
 import { h, toast, fmtSize } from './util.js';
-import { ic, btn, seg, confirmBox } from './ui.js';
-import { kvSet, usage, persist } from './store.js';
+import { btn, seg, confirmBox } from './ui.js';
+import { usage, persist } from './store.js';
 
 export const VERSION = '1.0';
 export function moreView(app) {
@@ -34,11 +34,11 @@ export function moreView(app) {
       faq('Meine Bögen werden schlecht erkannt', 'Am besten exportierst du den Bogen direkt als PDF aus GoodNotes oder einer anderen Notiz-App. Bei Fotos: gerade von oben, gutes Licht, keine Schatten, den ganzen Bogen im Bild. Dunkler Stift, nicht den Kästchenrand berühren.'),
       faq('Kann ich später Zeichen hinzufügen?', 'Ja. Unter „Schriften“ bei deiner Schrift auf „Erweitern“ tippen und weitere Pakete oder eigene Zeichen wählen. Fehlen beim Schreiben Zeichen, schlägt die App das direkt vor.'),
       faq('Was passiert mit fehlenden Akzenten?', 'Akzentbuchstaben, die du nicht geschrieben hast, setzt die App aus dem Buchstaben und einem gezeichneten Akzent zusammen. Echte Zeichen aus einem Paket sehen immer besser aus.'),
-      faq('Wie komme ich in GoodNotes?', 'Beim Export „PDF“ wählen und „In GoodNotes öffnen“ bzw. die Datei speichern. In GoodNotes dann auf + → Importieren tippen.'),
+      faq('Wie komme ich in GoodNotes?', 'Beim Export „GoodNotes: echte Striche“ wählen und die .goodnotes-Datei speichern. In GoodNotes dann auf + → Importieren tippen. Du bekommst echte Handschrift-Striche, die du radieren und weiterbearbeiten kannst. Als Papier kannst du unter Einstellungen „GoodNotes liniert“ oder „GoodNotes kariert“ wählen, dann sitzt die Schrift genau auf den Linien. Alternativ geht auch PDF.'),
+      faq('Kann ich Zeichen direkt in der App zeichnen?', 'Ja. Beim Erstellen oder Erweitern einer Schrift unten auf „Direkt zeichnen“ tippen. Jedes Zeichen zeichnest du mit Finger oder Apple Pencil in ein Feld mit Hilfslinien. Die Striche bleiben als echte Striche erhalten und landen im GoodNotes-Export 1:1.'),
       faq('Wo liegen meine Daten?', 'Nur auf diesem Gerät, in diesem Browser. Es gibt kein Konto und es wird nichts hochgeladen. Mit dem Export einer Schrift (.hsfont) kannst du sie auf ein anderes Gerät mitnehmen.')));
     wrap.append(h('p', { class: 'xs mut', style: { textAlign: 'center', margin: '18px 0 0' } }, `Handschrift ${VERSION} · läuft komplett auf deinem Gerät`));
   }
   draw();
   return { el: root, refresh: draw };
 }
-void kvSet;

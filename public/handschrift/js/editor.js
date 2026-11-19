@@ -1,7 +1,7 @@
 // Ansicht „Schreiben“: Textfeld, Werkzeugleiste, Live-Vorschau, Einstellungen, Export, Sonderzeichen
 import { h, debounce, toast, saveFile, fmtSize } from './util.js';
 import { ic, btn, sheet, range, toggle, seg, chips } from './ui.js';
-import { layout, drawPage, ensureImages, FORMATS, PAPERS, PAPER_COLORS, PENS, DEF, SHORTCUTS, GNPAPER, fmtOf } from './render.js';
+import { layout, drawPage, ensureImages, FORMATS, PAPERS, PAPER_COLORS, PENS, DEF, GNPAPER, fmtOf } from './render.js';
 import { exportPdf, exportGoodNotes, exportGoodNotesInk, exportPngs, zipOf, fileBase } from './exporter.js';
 import { PACKS } from './packs.js';
 import { openWizard } from './wizard.js';
@@ -81,7 +81,6 @@ export function editorView(app) {
   function updateInfo() {
     const n = L.pages.reduce((a, p) => a + p.filter(e => e.g).length, 0), f = fontObj;
     info.replaceChildren(h('span', null, `${n} Zeichen · ${L.pages.length} ${L.pages.length === 1 ? 'Seite' : 'Seiten'}`), h('span', { class: 'sp1' }), h('span', null, FORMATS[fmtOf(S())].name));
-    void f;
     if (L.missing.length) {
       missEl.hidden = false;
       missEl.replaceChildren(ic('alert'), h('span', null, 'Fehlt in dieser Schrift: ', h('b', null, L.missing.slice(0, 14).join(' ') + (L.missing.length > 14 ? ' …' : ''))), btn('Hinzufügen', { cls: 'sm', onclick: () => addMissing(L.missing) }));
@@ -151,15 +150,20 @@ export function editorView(app) {
       const gnote = () => run(async () => { const blob = await exportGoodNotes(L, S(), doc.title, dpi, prog); const r = await saveFile(blob, fileBase(doc.title) + '.goodnotes'); msg.textContent = r === 'abgebrochen' ? '' : `GoodNotes-Datei gespeichert (${fmtSize(blob.size)}, ${L.pages.length} ${L.pages.length === 1 ? 'Seite' : 'Seiten'}).` + (S().fmt === 'gn' ? '' : ' Tipp: Format „GoodNotes Standard“ passt genau auf leere Standardseiten.'); });
       const gink = () => run(async () => { const blob = await exportGoodNotesInk(L, S(), doc.title, prog); const r = await saveFile(blob, fileBase(doc.title) + '.goodnotes'); msg.textContent = r === 'abgebrochen' ? '' : `GoodNotes-Datei mit echten Strichen gespeichert (${fmtSize(blob.size)}, ${L.pages.length} ${L.pages.length === 1 ? 'Seite' : 'Seiten'}).`; });
       const png = (transparent) => run(async () => { const files = await exportPngs(L, S(), doc.title, dpi, transparent, prog); if (files.length === 1) { await saveFile(files[0].blob, files[0].name); } else await saveFile(zipOf(files), fileBase(doc.title) + (transparent ? '-transparent' : '') + '-PNG.zip'); msg.textContent = 'Bilder gespeichert.'; });
+      const gnPaper = GNPAPER[S().paper];
       b.append(h('label', { class: 'f' }, 'Qualität'), chips([[150, 'Standard'], [200, 'Hoch (empfohlen)'], [300, 'Sehr hoch']], () => dpi, v => { dpi = v; }),
-        h('div', { style: { display: 'grid', gap: '10px', marginTop: '16px' } },
-          btn('GoodNotes: echte Striche (.goodnotes)', { icon: 'download', cls: 'pri', onclick: gink() }),
+        h('div', { class: 'xgroup' }, 'Für GoodNotes'),
+        h('div', { style: { display: 'grid', gap: '10px' } },
+          btn('Echte Striche (.goodnotes)', { icon: 'download', cls: 'pri', onclick: gink() }),
+          h('p', { class: 'xhint' }, gnPaper ? 'Radier- und bearbeitbar, auf der eingebauten GoodNotes-Vorlage. Die Schrift sitzt genau auf den Linien.' : 'Radier- und bearbeitbar, auf leerer Standardseite. Für Linien oder Kästchen in den Einstellungen das Papier „GoodNotes liniert“ oder „GoodNotes kariert“ wählen.'),
+          canShare ? btn('PDF in GoodNotes öffnen', { icon: 'share', onclick: pdf(true) }) : null,
+          btn('Seiten als Bild (.goodnotes)', { icon: 'download', onclick: gnote() })),
+        h('div', { class: 'xgroup' }, 'Andere Formate'),
+        h('div', { style: { display: 'grid', gap: '10px' } },
           btn('PDF speichern', { icon: 'download', onclick: pdf(false) }),
-          canShare ? btn('In GoodNotes öffnen (Teilen)', { icon: 'share', onclick: pdf(true) }) : null,
-          btn('GoodNotes: Seiten als Bild (.goodnotes)', { icon: 'download', onclick: gnote() }),
           btn('PNG je Seite' + (L.pages.length > 1 ? ' (ZIP)' : ''), { icon: 'image', onclick: png(false) }),
           btn('Nur Schrift, transparent (PNG)', { icon: 'layers', onclick: png(true) })),
-        bar, msg, h('div', { class: 'note' }, h('b', null, 'GoodNotes: '), 'Am besten „GoodNotes-Datei“ mit dem Format „GoodNotes Standard“: In GoodNotes auf + → Importieren, die Seiten landen im Standardformat. Alternativ PDF speichern und genauso importieren. Jede Seite wird eine Seite im Heft. Das transparente PNG fügst du als Bild auf eigenes Papier ein.'));
+        bar, msg, h('div', { class: 'note' }, h('b', null, 'In GoodNotes: '), 'Auf + → Importieren tippen und die Datei wählen. Jede Seite wird eine Seite im Heft. Das transparente PNG fügst du als Bild auf eigenes Papier ein.'));
     });
   }
 
@@ -171,7 +175,7 @@ export function editorView(app) {
       b.append(h('h3', { style: { margin: '4px 0' } }, 'Kürzel'), h('p', { class: 'xs mut' }, 'Tippe das Kürzel im Text, die App wandelt es beim Schreiben um.'));
       const sc = [['->', '→'], ['=>', '⇒'], ['<=', '≤'], ['>=', '≥'], ['!=', '≠'], ['+-', '±'], ['x^2', 'x²'], ['a_1', 'a₁'], ['\\pi', 'π'], ['\\alpha', 'α'], ['\\sqrt', '√'], ['\\infty', '∞'], ['\\deg', '°'], ['\\cdot', '·']];
       b.append(h('div', { class: 'chips' }, ...sc.map(([k, v]) => h('button', { type: 'button', class: 'opt', onclick: put(k) }, `${k} → ${v}`))));
-      const known = new Set(); void SHORTCUTS;
+      const known = new Set();
       for (const p of PACKS) {
         const chars = [...new Set(p.groups.flatMap(g => [...g.c]))].filter(c => !known.has(c)); if (!chars.length) continue;
         const ok = chars.filter(c => font.resolve(c)); if (ok.length < 2 && p.id !== 'symbole') continue;

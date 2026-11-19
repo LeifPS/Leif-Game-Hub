@@ -66,7 +66,6 @@ const TEX = { alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', epsilon: 'ε', 
   neq: '≠', ne: '≠', leq: '≤', le: '≤', geq: '≥', ge: '≥', approx: '≈', to: '→', rightarrow: '→', leftarrow: '←', Rightarrow: '⇒', Leftrightarrow: '⇔', in: '∈', notin: '∉',
   sum: '∑', prod: '∏', int: '∫', partial: '∂', nabla: '∇', forall: '∀', exists: '∃', deg: '°', cup: '∪', cap: '∩', subset: '⊂', emptyset: '∅', neg: '¬', land: '∧', lor: '∨',
   N: 'ℕ', Z: 'ℤ', Q: 'ℚ', R: 'ℝ', C: 'ℂ', angle: '∠', perp: '⊥', parallel: '∥', therefore: '∴', euro: '€', copyright: '©', checkmark: '✓', star: '★', heart: '♥' };
-export const SHORTCUTS = TEX;
 
 export function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const makeNoise = (rng) => { const p = [rng() * 6.28, rng() * 6.28, rng() * 6.28]; return x => .5 * Math.sin(x / 190 + p[0]) + .3 * Math.sin(x / 75 + p[1]) + .2 * Math.sin(x / 33 + p[2]); };
@@ -164,7 +163,7 @@ async function composeGlyph(v, kinds, seed) {
     else if (kd === 'ogon') { const x0 = main.x1 - 2 * u, y0 = bot; g.beginPath(); g.moveTo(x0, y0); g.bezierCurveTo(x0 - 1 * u, y0 + 3 * u, x0 + 1 * u, y0 + 4.5 * u, x0 + 3.4 * u, y0 + 6 * u); g.stroke(); }
     else if (kd === 'flip') { /* unten */ }
     else if (kd === 'slash') line([[main.x1 + 1.5 * u, top - 1 * u], [main.x0 - 1.5 * u, bot + 1 * u]]);
-    else if (kd === 'bar') { const x = (main.x0 + main.x1) / 2; line([[main.x0 - 1.5 * u, mid + (rng() - .5) * u], [main.x1 + 2.5 * u, mid - 1.5 * u]]); void x; }
+    else if (kd === 'bar') { line([[main.x0 - 1.5 * u, mid + (rng() - .5) * u], [main.x1 + 2.5 * u, mid - 1.5 * u]]) }
   }
   // geglättet wie echte Zeichen: leichte Kantenglättung bleibt vom Canvas
   const nv = { ...v, img: c, iw: v.iw + 6, ih: v.ih + (extraTop + extraBot) / SC, ox: v.ox - 3, oy: v.oy - extraTop / SC, composed: true };
@@ -191,7 +190,7 @@ function parseInline(para, S) {
   return out;
 }
 
-export function layout(text, S, font, mi = {}) {
+export function layout(text, S, font) {
   text = prep(text, S);
   const FM = FORMATS[fmtOf(S)], PW = FM.w, PH = FM.h, XH = font.XH;
   const MT = S.mt, MB = S.mb, rul = gnRuler(S, MT), VJ = rul ? .25 : 1;
@@ -282,9 +281,9 @@ export function layout(text, S, font, mi = {}) {
     newLine();
   }
   // Kopf- und Fußzeile
-  const live = pages.filter((p, i) => p.length || i === 0), total = live.length, extra = [];
+  const live = pages.filter((p, i) => p.length || i === 0), total = live.length;
   const stat = (str, align, yy, seed, scl = .8) => {
-    const r2 = mulberry32(seed); const old = rng; void old;
+    const r2 = mulberry32(seed);
     const parts = str.normalize('NFC').split(' '), runs = parts.map(wd => makeWord([...wd].map(c => ({ c })), scl)), gap = S.size * 1.0 * scl;
     const w = runs.reduce((a, r) => a + r.w, 0) + gap * Math.max(0, runs.length - 1);
     let sx = align === 'c' ? (PW - w) / 2 : align === 'r' ? right - w : left; const out = [];
@@ -295,7 +294,6 @@ export function layout(text, S, font, mi = {}) {
     if (S.header && S.header.trim()) pg.push(...stat(prep(S.header.replace(/\{n\}/g, i + 1).replace(/\{datum\}/g, new Date().toLocaleDateString('de-DE')), S), 'l', Math.max(60, MT - lineH * .25), 100 + i));
     if (S.pageNum) pg.push(...stat((S.pageNumFmt || '{n}').replace(/\{n\}/g, i + 1).replace(/\{gesamt\}/g, total), 'c', PH - Math.max(40, MB * .45), 200 + i));
   });
-  void extra; void mi;
   return { pages: live, lineH, k, missing: [...missing], PW, PH };
 }
 
