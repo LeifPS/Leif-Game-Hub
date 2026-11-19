@@ -14,7 +14,24 @@ export const FORMATS = {
 };
 export const PAPERS = {
   lined: 'Liniert', grid: 'Kariert', dots: 'Punkte', blank: 'Leer', college: 'Schulheft (eng)', legal: 'Gelbes Blatt',
+  gnlin: 'GoodNotes liniert', gnkar: 'GoodNotes kariert',
 };
+// Eingebaute GoodNotes-Vorlagen (Standardseite 455,04 x 588,45 pt = 948 x 1226 px bei 150 dpi).
+// h0/hp: erste Linie und Abstand (pt, Mitte der 0,5 pt dicken Linie); v0/vp: senkrechte Linien; every: Schreibzeile = jede n-te Linie
+const PXPT = 150 / 72;
+export const GNPAPER = {
+  gnlin: { h0: 49.75, hp: 25, every: 1, size: 18, ml: 110, mr: 70, mt: 60, mb: 50 },
+  gnkar: { h0: 15.75, hp: 16, v0: 15.75, vp: 16, every: 2, size: 22, ml: 110, mr: 70, mt: 60, mb: 50 },
+};
+export const fmtOf = (S) => GNPAPER[S.paper] ? 'gn' : S.fmt;
+// Grundlinien (px) der Schreibzeilen auf einer GoodNotes-Vorlage
+function gnRuler(S, MT) {
+  const gp = GNPAPER[S.paper]; if (!gp) return null;
+  const y0 = gp.h0 * PXPT, step = gp.hp * gp.every * PXPT;
+  const snapY = (y) => y0 + Math.ceil((y - y0) / step - 1e-6) * step - 1;
+  const snapX = (x) => gp.vp ? gp.v0 * PXPT + Math.ceil((x - gp.v0 * PXPT) / (gp.vp * PXPT) - 1e-6) * gp.vp * PXPT + 3 : x;
+  return { step, snapY, snapX, MT };
+}
 export const PAPER_COLORS = { weiss: '#ffffff', creme: '#fbf9f2', gelb: '#fdf3c4', blau: '#eef4fb', dunkel: '#23262b' };
 export const PENS = {
   kugel_blau:  { name: 'Kugelschreiber blau', ink: '#1d3a9a', weight: .35, alpha: 1 },
@@ -176,17 +193,18 @@ function parseInline(para, S) {
 
 export function layout(text, S, font, mi = {}) {
   text = prep(text, S);
-  const PW = FORMATS[S.fmt].w, PH = FORMATS[S.fmt].h, XH = font.XH;
-  const rng = mulberry32(S.seed), k = S.size / XH, lineH = S.size * S.lh, left = S.ml, right = PW - S.mr;
-  const MT = S.mt, MB = S.mb;
+  const FM = FORMATS[fmtOf(S)], PW = FM.w, PH = FM.h, XH = font.XH;
+  const MT = S.mt, MB = S.mb, rul = gnRuler(S, MT), VJ = rul ? .25 : 1;
+  const rng = mulberry32(S.seed), k = S.size / XH, lineH = rul ? rul.step : S.size * S.lh, left = rul ? rul.snapX(S.ml) : S.ml, right = PW - S.mr;
+  const firstY = () => rul ? rul.snapY(MT + lineH) : MT + lineH;
   const pages = [[]], missing = new Set();
-  let y = MT + lineH, x = left, slope = 0, lastVar = {}, ind = 0;
+  let y = firstY(), x = left, slope = 0, lastVar = {}, ind = 0;
   let nY = makeNoise(rng), nR = makeNoise(rng), nS = makeNoise(rng);
   let lastHl = null, lastUl = null;
   const newLine = () => {
     y += lineH; x = left + ind + (rng() - .5) * S.jit * S.size * .5;
     slope = (rng() - .5) * 0.012 * S.jit; nY = makeNoise(rng); nR = makeNoise(rng); nS = makeNoise(rng);
-    if (y > PH - MB) { pages.push([]); y = MT + lineH; }
+    if (y > PH - MB) { pages.push([]); y = firstY(); }
     lastHl = lastUl = null;
   };
   const makeWord = (chars, scl = 1) => {
@@ -219,7 +237,7 @@ export function layout(text, S, font, mi = {}) {
     for (const g of run) {
       if (cx + g.adv > right && cx > left + ind + S.size) { flush(); newLine(); cx = x; prev = null; startX = cx; }
       const m = 1 + nS(cx) * .035 * S.jit;
-      const e = { g, m, x: cx, y: y + slope * (cx - left) + wordDy + nY(cx) * S.size * .09 * S.jit + g.dy + g.up * k, rot: nR(cx) * .045 * S.jit + g.rot };
+      const e = { g, m, x: cx, y: y + (slope * (cx - left) + wordDy + nY(cx) * S.size * .09 * S.jit + g.dy) * VJ + g.up * k, rot: nR(cx) * .045 * S.jit + g.rot };
       const pg = pages[pages.length - 1];
       if (prev && S.conn > 0 && LOW.test(prev.g.ch) && LOW.test(g.ch) && prev.g.v.ex && g.v.en && rng() < S.conn && prev.g.st.col === g.st.col) {
         const s1 = k * prev.g.sc * prev.m, s2 = k * g.sc * m;
@@ -301,7 +319,11 @@ export function drawPaper(ctx, S, lineH, PW, PH) {
   const line = dark ? 'rgba(200,210,230,.22)' : 'rgba(120,150,190,.45)';
   ctx.strokeStyle = line; ctx.lineWidth = 1.6;
   const y0 = S.mt + lineH + 3;
-  if (S.paper === 'lined' || S.paper === 'legal' || S.paper === 'college') {
+  if (GNPAPER[S.paper]) {
+    const gp = GNPAPER[S.paper]; ctx.fillStyle = 'rgb(208,210,211)'; const t = .5 * PXPT;
+    for (let y = gp.h0 * PXPT; y < PH + 2; y += gp.hp * PXPT) ctx.fillRect(0, y - t / 2, PW, t);
+    if (gp.vp) for (let x = gp.v0 * PXPT; x < PW + 2; x += gp.vp * PXPT) ctx.fillRect(x - t / 2, 0, t, PH);
+  } else if (S.paper === 'lined' || S.paper === 'legal' || S.paper === 'college') {
     const st = S.paper === 'college' ? lineH * .72 : lineH; ctx.beginPath();
     const ys = S.paper === 'college' ? y0 - Math.floor(y0 / st) * st : y0;
     for (let y = ys; y < PH; y += st) { if (y > S.mt * .5) { ctx.moveTo(0, y); ctx.lineTo(PW, y); } }

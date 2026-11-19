@@ -1,5 +1,5 @@
 // Export: PDF (A4 für GoodNotes), PNG je Seite, PNG-ZIP, transparente PNG
-import { drawPage, ensureImages, FORMATS, SC } from './render.js';
+import { drawPage, ensureImages, FORMATS, SC, fmtOf, GNPAPER } from './render.js';
 import { makePdf, makeZip } from './pdfw.js';
 import { blobOf, tick } from './util.js';
 import { vectorize } from './vec.js';
@@ -14,7 +14,7 @@ async function pageCanvas(L, i, S, dpi, transparent) {
   return c;
 }
 export async function exportPdf(L, S, title, dpi = 200, onProgress = () => {}) {
-  const pages = [], f = FORMATS[S.fmt];
+  const pages = [], f = FORMATS[fmtOf(S)];
   for (let i = 0; i < L.pages.length; i++) {
     const c = await pageCanvas(L, i, S, dpi, false);
     const b = await blobOf(c, 'image/jpeg', .92);
@@ -24,7 +24,7 @@ export async function exportPdf(L, S, title, dpi = 200, onProgress = () => {}) {
   return makePdf(pages, title);
 }
 export async function exportGoodNotes(L, S, title, dpi = 200, onProgress = () => {}) {
-  const pages = [], f = FORMATS[S.fmt]; let thumb = null;
+  const pages = [], f = FORMATS[fmtOf(S)]; let thumb = null;
   for (let i = 0; i < L.pages.length; i++) {
     const c = await pageCanvas(L, i, S, dpi, false);
     const b = await blobOf(c, 'image/jpeg', .92);
@@ -70,11 +70,11 @@ export async function exportGoodNotesInk(L, S, title, onProgress = () => {}) {
     }
     pages.push(hl.concat(ink)); onProgress((pi + 1) / L.pages.length * .8); await tick();
   }
-  const t = document.createElement('canvas'), pc = await pageCanvas(L, 0, { ...S, paper: 'blank', paperColor: 'weiss', scan: false }, 100, false);
+  const gnp = GNPAPER[S.paper] ? S.paper : null, t = document.createElement('canvas'), pc = await pageCanvas(L, 0, { ...S, paper: gnp || 'blank', paperColor: 'weiss', scan: false }, 100, false);
   t.width = 360; t.height = Math.round(pc.height * 360 / pc.width); const tg = t.getContext('2d'); tg.fillStyle = '#fff'; tg.fillRect(0, 0, t.width, t.height); tg.drawImage(pc, 0, 0, t.width, t.height);
   const thumb = new Uint8Array(await (await blobOf(t, 'image/jpeg', .85)).arrayBuffer());
   const { makeGoodNotesInk } = await import('./gnink.js');
-  const blob = await makeGoodNotesInk({ pages, title, thumb }); onProgress(1); return blob;
+  const blob = await makeGoodNotesInk({ pages, title, thumb, paper: gnp }); onProgress(1); return blob;
 }
 export async function exportPngs(L, S, title, dpi = 200, transparent = false, onProgress = () => {}) {
   const files = [], base = slug(title);

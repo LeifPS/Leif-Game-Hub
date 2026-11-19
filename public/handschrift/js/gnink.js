@@ -1,6 +1,7 @@
 // GoodNotes-Datei (.goodnotes) mit leeren Standardseiten und echten Tinten-Strichen.
 // Aufbau aus echten GoodNotes-Exporten abgeleitet (ZIP + Protobuf-Ereignisprotokoll, Striche als LZ4-Blöcke).
 import { TPL, ATT_ID, DOC_ID } from './gntpl2.js';
+import { PAP, SRC_DOC } from './gnpap.js';
 
 const te = new TextEncoder(), td = new TextDecoder();
 const cat = (...a) => { const o = new Uint8Array(a.reduce((s, x) => s + x.length, 0)); let p = 0; for (const x of a) { o.set(x, p); p += x.length; } return o; };
@@ -116,17 +117,31 @@ const DEV = 3026805516050564454n;
 
 // pages: [ [ { pts:[[x,y]...], w, color:[r,g,b,a], marker?:bool } ... ] ... ], Koordinaten in GoodNotes-Einheiten
 // thumb: JPEG-Bytes der ersten Seite
-export async function makeGoodNotesInk({ pages, title, thumb, debug = {} }) {
+// Bytes eines festen Textes (gleiche Länge) überall ersetzen, z. B. Anhang-Ids
+function rep(b, from, to) {
+  const f = te.encode(from), t = te.encode(to), o = b.slice();
+  for (let i = 0; i + f.length <= o.length; i++) { let ok = true; for (let j = 0; j < f.length; j++) if (o[i + j] !== f[j]) { ok = false; break; } if (ok) { o.set(t, i); i += f.length - 1; } }
+  return o;
+}
+export async function makeGoodNotesInk({ pages, title, thumb, paper, debug = {} }) {
+  // Hintergrund: leere Standardseite oder echte GoodNotes-Vorlage (paper = 'gnlin' | 'gnkar')
+  const PP = paper && PAP[paper], AID = PP ? PP.id : ATT_ID;
+  let attRec = TPL.att, linkTpl = TPL.link, pageTpl = TPL.page, searchTpl = TPL.search, attsTpl = TPL.attachments, pdfBytes = TPL.pdf;
+  if (PP) {
+    attRec = rep(TPL.att, ATT_ID, AID); { const A = parse(attRec); setIn(A, [6, 5], 'v', PP.pdf.length); attRec = encode(A); }
+    linkTpl = rep(TPL.link, ATT_ID, AID); pageTpl = rep(PP.page, SRC_DOC, DOC_ID);
+    searchTpl = rep(TPL.search, ATT_ID, AID); attsTpl = rep(TPL.attachments, ATT_ID, AID); pdfBytes = PP.pdf;
+  }
   const now = Date.now(); let tick = 0, clock = 1789663489500, seq = 188700 + Math.floor(Math.random() * 5000);
   const ts = () => f64(now + (++tick) * 3), ck = () => ++clock, ev = () => uid();
   // Dokument + Anhang (leere Vorlagenseite)
   const D = parse(TPL.doc); setIn(D, [30, 2, 1], 'b', te.encode((title || 'Handschrift').slice(0, 80)));
-  const recs = [encode(D), TPL.att];
+  const recs = [encode(D), attRec];
   const noteIds = [], notes = [], lids = [];
   pages.forEach((strokes, pi) => {
     const pid = uid(), [lid, nid] = idPair(), nidS = td.decode(nid); lids.push(lid);
     // Seite
-    const P = parse(TPL.page); set(P, 1, 'b', pid); setIn(P, [2, 2], 'b', pid); setIn(P, [2, 10], 'd', ts()); setIn(P, [2, 11], 'b', ev()); setIn(P, [2, 16], 'v', ck());
+    const P = parse(pageTpl); set(P, 1, 'b', pid); setIn(P, [2, 2], 'b', pid); setIn(P, [2, 10], 'd', ts()); setIn(P, [2, 11], 'b', ev()); setIn(P, [2, 16], 'v', ck());
     for (const f of [12, 13, 17, 19]) { try { setIn(P, [2, f, 2, 2], 'v', rnd()); } catch (_) { /* Feld fehlt in der Vorlage */ } }
     recs.push(encode(P));
     // Ebene
@@ -159,19 +174,19 @@ export async function makeGoodNotesInk({ pages, title, thumb, debug = {} }) {
     });
     noteIds.push(nidS); notes.push(stream(out));
   });
-  const LK = parse(TPL.link); setIn(LK, [105, 10], 'd', ts()); setIn(LK, [105, 11], 'b', ev()); setIn(LK, [105, 14], 'v', ck()); recs.push(encode(LK));
+  const LK = parse(linkTpl); setIn(LK, [105, 10], 'd', ts()); setIn(LK, [105, 11], 'b', ev()); setIn(LK, [105, 14], 'v', ck()); recs.push(encode(LK));
   if (debug.rawUi) recs.push(TPL.ui);
   else { const U = parse(TPL.ui); setIn(U, [10, 2], 'b', lids[0]); setIn(U, [10, 11], 'b', ev()); setIn(U, [10, 14], 'v', ck()); setIn(U, [10, 10], 'd', ts()); recs.push(encode(U)); }
   const files = [
     { name: 'document.info.pb', data: new Uint8Array(0) },
-    { name: 'index.search.pb', data: TPL.search },
+    { name: 'index.search.pb', data: searchTpl },
     { name: 'index.notes.pb', data: stream(noteIds.map(id => encode([[1, 'b', te.encode(id)], [2, 'b', te.encode('notes/' + id)]]))) },
-    { name: 'search/' + ATT_ID, data: stream(pages.map((_, k) => encode([[2, 'v', k + 1], [3, 'b', new Uint8Array(0)]]))) },
+    { name: 'search/' + AID, data: stream(pages.map((_, k) => encode([[2, 'v', k + 1], [3, 'b', new Uint8Array(0)]]))) },
     ...noteIds.map((id, i) => ({ name: 'notes/' + id, data: notes[i] })),
     { name: 'index.events.pb', data: stream(recs) },
     { name: 'thumbnail.jpg', data: thumb, noDeflate: true },
-    { name: 'index.attachments.pb', data: TPL.attachments },
-    { name: 'attachments/' + ATT_ID, data: TPL.pdf, noDeflate: true },
+    { name: 'index.attachments.pb', data: attsTpl },
+    { name: 'attachments/' + AID, data: pdfBytes, noDeflate: true },
     { name: 'schema.pb', data: TPL.schema },
   ];
   return zip(files);

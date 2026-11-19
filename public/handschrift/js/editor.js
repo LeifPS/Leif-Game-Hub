@@ -1,7 +1,7 @@
 // Ansicht „Schreiben“: Textfeld, Werkzeugleiste, Live-Vorschau, Einstellungen, Export, Sonderzeichen
 import { h, debounce, toast, saveFile, fmtSize } from './util.js';
 import { ic, btn, sheet, range, toggle, seg, chips } from './ui.js';
-import { layout, drawPage, ensureImages, FORMATS, PAPERS, PAPER_COLORS, PENS, DEF, SHORTCUTS } from './render.js';
+import { layout, drawPage, ensureImages, FORMATS, PAPERS, PAPER_COLORS, PENS, DEF, SHORTCUTS, GNPAPER, fmtOf } from './render.js';
 import { exportPdf, exportGoodNotes, exportGoodNotesInk, exportPngs, zipOf, fileBase } from './exporter.js';
 import { PACKS } from './packs.js';
 import { openWizard } from './wizard.js';
@@ -80,7 +80,7 @@ export function editorView(app) {
   pagesEl.addEventListener('scroll', debounce(drawVisible, 80));
   function updateInfo() {
     const n = L.pages.reduce((a, p) => a + p.filter(e => e.g).length, 0), f = fontObj;
-    info.replaceChildren(h('span', null, `${n} Zeichen · ${L.pages.length} ${L.pages.length === 1 ? 'Seite' : 'Seiten'}`), h('span', { class: 'sp1' }), h('span', null, FORMATS[S().fmt].name));
+    info.replaceChildren(h('span', null, `${n} Zeichen · ${L.pages.length} ${L.pages.length === 1 ? 'Seite' : 'Seiten'}`), h('span', { class: 'sp1' }), h('span', null, FORMATS[fmtOf(S())].name));
     void f;
     if (L.missing.length) {
       missEl.hidden = false;
@@ -109,12 +109,21 @@ export function editorView(app) {
 
   // ---------- Einstellungen ----------
   function openSettings() {
-    sheet('Einstellungen', (b) => {
+    sheet('Einstellungen', (b, api) => {
       const s = S(), ch = () => { saveSoon(); renderSoon(); }, setK = (k) => (v) => { s[k] = v; ch(); };
+      // GoodNotes-Vorlagen haben feste Linien: Format, Größe und Ränder werden passend gesetzt; danach Ansicht neu aufbauen
+      const pickPaper = (v) => {
+        const was = GNPAPER[s.paper], gp = GNPAPER[v]; s.paper = v;
+        if (gp) Object.assign(s, { fmt: 'gn', paperColor: 'weiss', scan: false, size: gp.size, ml: gp.ml, mr: gp.mr, mt: gp.mt, mb: gp.mb });
+        else if (was) Object.assign(s, { ml: 90, mr: 70, mt: 90, mb: 70, size: 20 });
+        ch(); if (gp || was) { api.close(); setTimeout(openSettings, 280); }
+      };
+      const pickFmt = (v) => { const was = GNPAPER[s.paper]; s.fmt = v; if (was && v !== 'gn') s.paper = 'lined'; ch(); if (was && v !== 'gn') { api.close(); setTimeout(openSettings, 280); } };
       const sec = (t) => h('h3', { style: { margin: '20px 0 4px' } }, t);
       b.append(h('div', { class: 'row', style: { gap: '8px', marginBottom: '4px' } }, btn('Neu würfeln', { icon: 'dice', cls: 'sm', onclick: () => { s.seed = (Math.random() * 1e6) | 0; ch(); } }), btn('Als Standard merken', { cls: 'sm', onclick: () => { kvSet('lastS', { ...s }); toast('Das gilt jetzt für neue Dokumente'); } }), btn('Zurücksetzen', { cls: 'sm', onclick: () => { Object.assign(s, { ...DEF }); ch(); b.parentNode.parentNode && b.replaceChildren(); openSettings(); } })));
-      b.append(sec('Papier'), h('label', { class: 'f' }, 'Format'), chips(Object.entries(FORMATS).map(([k, v]) => [k, v.name]), () => s.fmt, setK('fmt')),
-        h('label', { class: 'f' }, 'Papierart'), chips(Object.entries(PAPERS), () => s.paper, setK('paper')),
+      b.append(sec('Papier'), h('label', { class: 'f' }, 'Format'), chips(Object.entries(FORMATS).map(([k, v]) => [k, v.name]), () => fmtOf(s), pickFmt),
+        h('label', { class: 'f' }, 'Papierart'), chips(Object.entries(PAPERS), () => s.paper, pickPaper),
+        GNPAPER[s.paper] ? h('p', { class: 'xs mut' }, 'Die Schrift sitzt genau auf den Linien der eingebauten GoodNotes-Vorlage' + (GNPAPER[s.paper].vp ? ' (auf jeder zweiten Zeile des Rasters)' : '') + '. Im GoodNotes-Export mit echten Strichen wird diese Vorlage als Hintergrund verwendet. Zeilenabstand und Format sind dabei fest.') : null,
         h('label', { class: 'f' }, 'Papierfarbe'), (() => { const w = h('div', { class: 'chips' }); const d = () => w.replaceChildren(...Object.entries(PAPER_COLORS).map(([k, c]) => h('button', { type: 'button', class: 'sw' + (s.paperColor === k ? ' on' : ''), style: { background: c }, 'aria-label': k, onclick: () => { s.paperColor = k; if (k === 'dunkel' && /^#(1|0)/.test(s.ink)) { s.ink = '#e8e8f0'; } ch(); d(); } }))); d(); return w; })(),
         h('label', { class: 'f' }, 'Ränder'), chips([['schmal', 'Schmal'], ['normal', 'Normal'], ['breit', 'Breit']], () => Object.entries(MARGINS).find(([, v]) => v[0] === s.ml && v[1] === s.mr)?.[0] || '', (v) => { const m = MARGINS[v]; [s.ml, s.mr, s.mt, s.mb] = m; ch(); }),
         toggle('Scan-Effekt', 'Leichte Körnung und Schatten wie bei einem Scan', () => s.scan, setK('scan')), toggle('Roter Rand', 'Randlinie bei liniertem Papier', () => s.margin !== false, setK('margin')));
