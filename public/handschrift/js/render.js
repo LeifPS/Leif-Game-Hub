@@ -10,6 +10,7 @@ export const FORMATS = {
   letter: { name: 'US Letter', w: 1275, h: 1650 },
   ipad: { name: 'iPad (4:3)', w: 1240, h: 1653 },
   quad: { name: 'Quadrat', w: 1400, h: 1400 },
+  gn:   { name: 'GoodNotes Standard', w: 948, h: 1226 },
 };
 export const PAPERS = {
   lined: 'Liniert', grid: 'Kariert', dots: 'Punkte', blank: 'Leer', college: 'Schulheft (eng)', legal: 'Gelbes Blatt',

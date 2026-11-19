@@ -22,6 +22,20 @@ export async function exportPdf(L, S, title, dpi = 200, onProgress = () => {}) {
   }
   return makePdf(pages, title);
 }
+export async function exportGoodNotes(L, S, title, dpi = 200, onProgress = () => {}) {
+  const pages = [], f = FORMATS[S.fmt]; let thumb = null;
+  for (let i = 0; i < L.pages.length; i++) {
+    const c = await pageCanvas(L, i, S, dpi, false);
+    const b = await blobOf(c, 'image/jpeg', .92);
+    if (i === 0) { const t = document.createElement('canvas'), k = 360 / c.width; t.width = 360; t.height = Math.round(c.height * k); t.getContext('2d').drawImage(c, 0, 0, t.width, t.height); thumb = new Uint8Array(await (await blobOf(t, 'image/jpeg', .85)).arrayBuffer()); }
+    pages.push({ jpeg: new Uint8Array(await b.arrayBuffer()), px: [c.width, c.height], pt: [f.w * 72 / 150, f.h * 72 / 150] });
+    c.width = c.height = 1; onProgress((i + 1) / L.pages.length * .9); await tick();
+  }
+  const pdf = new Uint8Array(await (await makePdf(pages, title)).arrayBuffer());
+  const { makeGoodNotes } = await import('./gn.js');
+  const blob = await makeGoodNotes({ pdf, n: pages.length, w: f.w * 72 / 150, h: f.h * 72 / 150, thumb, title });
+  onProgress(1); return blob;
+}
 export async function exportPngs(L, S, title, dpi = 200, transparent = false, onProgress = () => {}) {
   const files = [], base = slug(title);
   for (let i = 0; i < L.pages.length; i++) {

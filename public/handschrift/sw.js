@@ -1,5 +1,5 @@
 // Service Worker: macht die App offline nutzbar (alles wird beim ersten Besuch auf das Gerät geladen)
-const VER = 'hs-11ff102482';
+const VER = 'hs-f0785399a4';
 const CORE = [
  "/",
  "/app.css",
@@ -15,6 +15,8 @@ const CORE = [
  "/js/editor.js",
  "/js/exporter.js",
  "/js/fonts.js",
+ "/js/gn.js",
+ "/js/gntpl.js",
  "/js/imgops.js",
  "/js/more.js",
  "/js/packs.js",
