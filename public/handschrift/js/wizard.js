@@ -200,6 +200,7 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
       const key = ch + '|' + i, bad = flagged.has(key) || flagged.has(ch + '|' + gl.v);
       const im = new Image(); im.src = gl.src; im.style.cssText = 'max-width:92%;max-height:92%;object-fit:contain';
       const t = h('button', { type: 'button', class: 'g' + (bad ? ' bad' : ''), title: bad ? 'Berührt den Kästchenrand – tippen zum Ausschließen' : 'Tippen zum Ausschließen', onclick: () => { const k = ch + '|' + i; S.off.has(k) ? S.off.delete(k) : S.off.add(k); t.classList.toggle('off'); upd(); } }, h('i', null, ch), im);
+      if (bad && res.g[ch].filter((g2, j) => !(flagged.has(ch + '|' + j) || flagged.has(ch + '|' + g2.v))).length >= 2) { S.off.add(key); t.classList.add('off'); } // angeschnittene Zeichen: vorab ausschließen, wenn genug gute da sind
       tiles.append(t);
     });
     upd();
@@ -211,7 +212,7 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
       empties.length ? h('div', { class: 'note warn' }, 'Leer geblieben: ', h('b', { style: { fontFamily: 'ui-monospace,monospace' } }, [...new Set(empties)].slice(0, 60).join(' ')), [...new Set(empties)].length > 60 ? ' …' : '', '. Diese Zeichen fehlen dann in deiner Schrift (die App behilft sich dort mit Ersatz).') : '',
       missPages.length ? h('div', { class: 'note' }, `Noch nicht hochgeladen: Seite ${[...new Set(missPages)].join(', ')}. Du kannst sie später ergänzen.`) : '',
       S.result.stats.cells < 20 ? h('div', { class: 'note warn' }, 'Das sind sehr wenige Zeichen. Falls das nicht stimmt, war die Seite vielleicht unscharf oder schief fotografiert.') : '',
-      h('p', { class: 'sm mut' }, 'Gelb umrandet: Zeichen berührt den Kästchenrand. Tippe ein Zeichen an, um es auszuschließen.'), tiles,
+      h('p', { class: 'sm mut' }, 'Gelb umrandet: Zeichen berührt den Kästchenrand (vermutlich abgeschnitten) und ist, wenn genug andere da sind, schon abgewählt. Tippe ein Zeichen an, um es aus- oder wieder einzuschließen.'), tiles,
       h('label', { class: 'f' }, 'Name der Schrift'), nameIn,
       target ? h('div', { style: { marginTop: '10px' } }, h('div', { class: 'seg' }, h('button', { type: 'button', class: S.mode === 'add' ? 'on' : '', onclick: (e) => { S.mode = 'add'; [...e.target.parentNode.children].forEach((b, i) => b.classList.toggle('on', !i)); } }, `Zu „${target.name}“ hinzufügen`), h('button', { type: 'button', class: S.mode === 'new' ? 'on' : '', onclick: (e) => { S.mode = 'new'; [...e.target.parentNode.children].forEach((b, i) => b.classList.toggle('on', !!i)); } }, 'Als neue Schrift'))) : null);
     mf.replaceChildren(btn('Zurück', { onclick: () => go(3) }), h('span', { class: 'sp1' }), btn('Schrift speichern', { icon: 'check', cls: 'pri', onclick: save }));
