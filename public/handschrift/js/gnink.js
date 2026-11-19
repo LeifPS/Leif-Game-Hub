@@ -37,6 +37,8 @@ const u32 = (v) => { const o = new Uint8Array(4); new DataView(o.buffer).setUint
 const u16 = (v) => Uint8Array.from([v & 255, (v >> 8) & 255]);
 const uidS = () => crypto.randomUUID().toUpperCase();
 const uid = () => te.encode(uidS());
+// Ebene und Notiz sind getrennte Objekte: Notiz-Id = Ebenen-Id mit letzter Hex-Stelle + 1
+const idPair = () => { const u = uidS(), c = u[u.length - 1], d = '0123456789ABCDEF'.indexOf(c) % 15, l = u.slice(0, -1) + '0123456789ABCDEF'[d], n = u.slice(0, -1) + '0123456789ABCDEF'[d + 1]; return [te.encode(l), te.encode(n)]; };
 const rnd = () => Math.floor(Math.random() * 4294967295) + 1;
 // Verschachtelte Felder: edit(rec, [f1, f2, ...], fn) ändert das Feld ganz innen
 function edit(fs, path, fn) {
@@ -114,21 +116,21 @@ const DEV = 3026805516050564454n;
 
 // pages: [ [ { pts:[[x,y]...], w, color:[r,g,b,a], marker?:bool } ... ] ... ], Koordinaten in GoodNotes-Einheiten
 // thumb: JPEG-Bytes der ersten Seite
-export async function makeGoodNotesInk({ pages, title, thumb }) {
+export async function makeGoodNotesInk({ pages, title, thumb, debug = {} }) {
   const now = Date.now(); let tick = 0, clock = 1789663489500, seq = 188700 + Math.floor(Math.random() * 5000);
   const ts = () => f64(now + (++tick) * 3), ck = () => ++clock, ev = () => uid();
   // Dokument + Anhang (leere Vorlagenseite)
   const D = parse(TPL.doc); setIn(D, [30, 2, 1], 'b', te.encode((title || 'Handschrift').slice(0, 80)));
   const recs = [encode(D), TPL.att];
-  const noteIds = [], notes = [];
+  const noteIds = [], notes = [], lids = [];
   pages.forEach((strokes, pi) => {
-    const pid = uid(), nid = uid(), nidS = td.decode(nid);
+    const pid = uid(), [lid, nid] = idPair(), nidS = td.decode(nid); lids.push(lid);
     // Seite
     const P = parse(TPL.page); set(P, 1, 'b', pid); setIn(P, [2, 2], 'b', pid); setIn(P, [2, 10], 'd', ts()); setIn(P, [2, 11], 'b', ev()); setIn(P, [2, 16], 'v', ck());
     for (const f of [12, 13, 17, 19]) { try { setIn(P, [2, f, 2, 2], 'v', rnd()); } catch (_) { /* Feld fehlt in der Vorlage */ } }
     recs.push(encode(P));
-    // Ebene (= Notiz-Id)
-    const L = parse(TPL.layer); set(L, 1, 'b', nid); setIn(L, [54, 2], 'b', nid); setIn(L, [54, 3, 1], 'b', pid);
+    // Ebene
+    const L = parse(TPL.layer); set(L, 1, 'b', lid); setIn(L, [54, 2], 'b', lid); setIn(L, [54, 3, 1], 'b', pid);
     setIn(L, [54, 4, 1], 'b', te.encode('AwH' + B62[(pi / 62) | 0] + B62[pi % 62]));
     setIn(L, [54, 11], 'b', ev()); setIn(L, [54, 14], 'v', ck());
     for (const path of [[54, 3, 2, 2], [54, 4, 2, 2], [54, 17, 2, 2]]) { try { setIn(L, path, 'v', rnd()); } catch (_) { /* Feld fehlt */ } }
@@ -158,7 +160,8 @@ export async function makeGoodNotesInk({ pages, title, thumb }) {
     noteIds.push(nidS); notes.push(stream(out));
   });
   const LK = parse(TPL.link); setIn(LK, [105, 10], 'd', ts()); setIn(LK, [105, 11], 'b', ev()); setIn(LK, [105, 14], 'v', ck()); recs.push(encode(LK));
-  recs.push(TPL.ui);
+  if (debug.rawUi) recs.push(TPL.ui);
+  else { const U = parse(TPL.ui); setIn(U, [10, 2], 'b', lids[0]); setIn(U, [10, 11], 'b', ev()); setIn(U, [10, 14], 'v', ck()); setIn(U, [10, 10], 'd', ts()); recs.push(encode(U)); }
   const files = [
     { name: 'document.info.pb', data: new Uint8Array(0) },
     { name: 'index.search.pb', data: TPL.search },
