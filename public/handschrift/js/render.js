@@ -44,7 +44,7 @@ export const PENS = {
 };
 export const DEF = {
   fmt: 'a4', paper: 'lined', paperColor: 'creme', scan: true, pen: 'kugel_blau', ink: '#1d3a9a', weight: .35, inkAlpha: 1,
-  size: 21, lh: 2.9, sp: .9, wsp: 1, jit: .6, slant: 0, conn: .45, seed: 7,
+  size: 21, lh: 2.9, sp: .9, wsp: 1, jit: .6, slant: 0, seed: 7,
   mt: 140, mb: 120, ml: 120, mr: 100, kz: true, markup: true, sz: false, margin: true,
   header: '', pageNum: false, pageNumFmt: '{n}',
 };
@@ -58,7 +58,6 @@ const FB = {
 };
 const SUPSUB = {}; '⁰¹²³⁴⁵⁶⁷⁸⁹'.split('').forEach((c, i) => SUPSUB[c] = { c: String(i), up: -14 }); '₀₁₂₃₄₅₆₇₈₉'.split('').forEach((c, i) => SUPSUB[c] = { c: String(i), up: 6 });
 Object.assign(SUPSUB, { 'ⁿ': { c: 'n', up: -14 }, '⁺': { c: '+', up: -14 }, '⁻': { c: '-', up: -14 }, '₊': { c: '+', up: 6 }, '₋': { c: '-', up: 6 } });
-const LOW = /[a-zäöüßàâçéèêëîïôùûÿœæáíóúñãõåøìòąćčďěęłńňřśšťůžźżőűğışıțăđ]/;
 const SUP = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹', n: 'ⁿ', '+': '⁺', '-': '⁻' };
 const SUBD = '₀₁₂₃₄₅₆₇₈₉';
 const TEX = { alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', epsilon: 'ε', theta: 'θ', lambda: 'λ', mu: 'μ', pi: 'π', rho: 'ρ', sigma: 'σ', tau: 'τ', phi: 'φ', omega: 'ω', omicron: 'ο',
@@ -224,7 +223,7 @@ export function layout(text, S, font) {
     return { run, w };
   };
   const place = (run, cx0, sc) => {
-    const wordDy = (rng() - .5) * S.size * .14 * S.jit; let cx = cx0, prev = null, startX = cx0, startE = null, endE = null;
+    const wordDy = (rng() - .5) * S.size * .14 * S.jit; let cx = cx0, startX = cx0, startE = null, endE = null;
     const flush = () => {
       if (!startE) return;
       const pg = pages[pages.length - 1], st = startE.g.st, ex = endE.x + endE.g.adv * .8 + S.size * .12, sx = startX - S.size * .1, yb = endE.y;
@@ -234,16 +233,11 @@ export function layout(text, S, font) {
       startE = null;
     };
     for (const g of run) {
-      if (cx + g.adv > right && cx > left + ind + S.size) { flush(); newLine(); cx = x; prev = null; startX = cx; }
+      if (cx + g.adv > right && cx > left + ind + S.size) { flush(); newLine(); cx = x; startX = cx; }
       const m = 1 + nS(cx) * .035 * S.jit;
       const e = { g, m, x: cx, y: y + (slope * (cx - left) + wordDy + nY(cx) * S.size * .09 * S.jit + g.dy) * VJ + g.up * k, rot: nR(cx) * .045 * S.jit + g.rot };
       const pg = pages[pages.length - 1];
-      if (prev && S.conn > 0 && LOW.test(prev.g.ch) && LOW.test(g.ch) && prev.g.v.ex && g.v.en && rng() < S.conn && prev.g.st.col === g.st.col) {
-        const s1 = k * prev.g.sc * prev.m, s2 = k * g.sc * m;
-        const x1 = prev.x + prev.g.v.ex[0] * s1 * prev.g.sx, y1 = prev.y + prev.g.v.ex[1] * s1, x2 = e.x + g.v.en[0] * s2 * g.sx, y2 = e.y + g.v.en[1] * s2, dx = x2 - x1, dy = y2 - y1;
-        if (dx > -.3 * S.size && dx < .5 * S.size && Math.abs(dy) < .55 * S.size) pg.push({ link: { x1, y1, x2, y2, col: g.st.col, b: g.st.b } });
-      }
-      pg.push(e); prev = e; cx += g.adv;
+      pg.push(e); cx += g.adv;
       if (!startE) startE = e; endE = e;
     }
     flush(); return cx;
@@ -353,15 +347,11 @@ export function drawPage(canvas, entries, L, S, scale, transparent) {
   const lay = cv('one', W, H), ic = lay.getContext('2d');
   const tan = Math.tan(S.slant * Math.PI / 180), wgt = S.weight * .55;
   const groups = new Map();
-  for (const e of entries) { if (e.hl) continue; const col = (e.g ? e.g.st.col : e.link ? e.link.col : e.line ? e.line.col : null) || S.ink; (groups.get(col) || groups.set(col, []).get(col)).push(e); }
+  for (const e of entries) { if (e.hl) continue; const col = (e.g ? e.g.st.col : e.line ? e.line.col : null) || S.ink; (groups.get(col) || groups.set(col, []).get(col)).push(e); }
   for (const [col, list] of groups) {
     ic.setTransform(1, 0, 0, 1, 0, 0); ic.globalCompositeOperation = 'source-over'; ic.clearRect(0, 0, W, H);
     ic.setTransform(scale, 0, 0, scale, 0, 0); ic.imageSmoothingEnabled = true; ic.imageSmoothingQuality = 'high'; ic.lineCap = 'round'; ic.lineJoin = 'round';
     for (const e of list) {
-      if (e.link) {
-        const { x1, y1, x2, y2 } = e.link; ic.save(); ic.globalAlpha = .9; ic.strokeStyle = '#000'; ic.lineWidth = k * 2.5 + wgt + (e.link.b ? .8 : 0);
-        ic.beginPath(); ic.moveTo(x1, y1); ic.quadraticCurveTo((x1 + x2) / 2, Math.min(y1, y2) - Math.abs(x2 - x1) * .12, x2, y2); ic.stroke(); ic.restore(); continue;
-      }
       if (e.line) {
         const { x1, y1, x2, y2 } = e.line; ic.save(); ic.globalAlpha = .9; ic.strokeStyle = '#000'; ic.lineWidth = k * 2.1 + wgt;
         ic.beginPath(); ic.moveTo(x1, y1); ic.quadraticCurveTo((x1 + x2) / 2, (y1 + y2) / 2 + 1.6, x2, y2); ic.stroke(); ic.restore(); continue;

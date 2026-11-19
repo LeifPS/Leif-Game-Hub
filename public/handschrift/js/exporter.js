@@ -51,9 +51,6 @@ export async function exportGoodNotesInk(L, S, title, onProgress = () => {}) {
       if (e.hl) {
         const h = e.hl, hh = h.y2 - h.y1, yc = (h.y1 + h.y2) / 2, c = cssRgba(h.col || '#ffe246');
         hl.push({ pts: [T(h.x1 + hh / 2, yc), T(h.x2 - hh / 2, yc)], w: hh * fit, color: [c[0], c[1], c[2], .5], marker: true });
-      } else if (e.link) {
-        const { x1, y1, x2, y2 } = e.link, c = cssRgba(e.link.col || S.ink);
-        ink.push({ pts: quad(x1, y1, (x1 + x2) / 2, Math.min(y1, y2) - Math.abs(x2 - x1) * .12, x2, y2), w: (L.k * 2.5 + wgt + (e.link.b ? .8 : 0)) * fit, color: [...c, S.inkAlpha * .9] });
       } else if (e.line) {
         const { x1, y1, x2, y2 } = e.line, c = cssRgba(e.line.col || S.ink);
         ink.push({ pts: quad(x1, y1, (x1 + x2) / 2, (y1 + y2) / 2 + 1.6, x2, y2), w: (L.k * 2.1 + wgt) * fit, color: [...c, S.inkAlpha * .9] });
