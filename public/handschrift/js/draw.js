@@ -4,6 +4,7 @@ import { h, toast } from './util.js';
 import { btn, confirmBox } from './ui.js';
 import { SC, PAD, XH } from './imgops.js';
 import { smooth, simplify } from './vec.js';
+import { describeChar } from './chardesc.js';
 
 const LB = 0.8, RB = 2.2, PEN = 2.1;
 const CW = 72, CH = 100, BASE = 68;                     // Zeichenfläche in Einheiten (x-Höhe = 27 Einheiten)
@@ -49,13 +50,13 @@ export function openDraw({ cells, onDone, onClose }) {
   const modal = h('div', { class: 'modal on', role: 'dialog', 'aria-label': 'Zeichen zeichnen' }); document.body.append(modal);
   const head = h('div', { class: 'bar' }), mb = h('div', { class: 'mb', style: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 12px', gap: '8px', overflow: 'hidden' } }), mf = h('div', { class: 'mf' });
   modal.append(head, mb, mf);
-  const done = new Map(); let idx = 0, strokes = [], cur = null, once = false, ghost = null, sawPen = false, ppu = 4;
+  const done = new Map(); let idx = 0, strokes = [], cur = null, once = false, ghost = (() => { try { return localStorage.getItem('hs:ghost') !== '0'; } catch (_) { return true; } })(), sawPen = false, ppu = 4;
   const key = (c) => c.ch + '|' + c.v;
   const visible = () => once ? cells.filter(c => c.v === 0) : cells;
-  const label = h('div', { style: { fontSize: '40px', lineHeight: 1, fontWeight: 600, minWidth: '1.2em', textAlign: 'center' } });
-  const grp = h('span', { class: 'chip' }), prog = h('span', { class: 'chip ac' }), cnt = h('span', { class: 'chip' });
+  const label = h('div', { style: { fontSize: '17px', lineHeight: 1.25, fontWeight: 600, textAlign: 'center', maxWidth: '100%' } });
+  const grp = h('span', { class: 'chip', style: { alignSelf: 'center' } }), prog = h('span', { class: 'chip ac' }), cnt = h('span', { class: 'chip' });
   const cv = h('canvas', { style: { touchAction: 'none', background: '#fff', border: '1px solid var(--bd)', borderRadius: '12px', display: 'block', cursor: 'crosshair' } });
-  const ctx = cv.getContext('2d');
+  const ctx = cv.getContext('2d'), base = document.createElement('canvas'), bg = base.getContext('2d');   // base = Hintergrund + fertige Striche (wird nur bei Änderungen neu gemalt)
   const hint = h('p', { class: 'xs mut', style: { margin: 0, textAlign: 'center' } }, 'Schreibe auf die dicke Linie. Kleine Buchstaben reichen bis zur gestrichelten Linie darüber. Nach dem letzten Strich geht es von selbst weiter (der Balken zeigt die Zeit, ein neuer Strich stoppt ihn).');
   // Auto-Weiter: nach dem letzten Strich kurz warten und zum nächsten Zeichen springen (Zeichen mit mehreren Strichen bekommen mehr Zeit)
   const AUTO = { off: ['Auto-Weiter aus', 0], fast: ['Auto-Weiter schnell', 650], normal: ['Auto-Weiter normal', 1000], slow: ['Auto-Weiter langsam', 1600] };
@@ -77,37 +78,54 @@ export function openDraw({ cells, onDone, onClose }) {
     ppu = Math.max(2.4, Math.min(availH / CH, availW / CW, 6));
     const dpr = Math.min(2.5, window.devicePixelRatio || 1);
     cv.style.width = CW * ppu + 'px'; cv.style.height = CH * ppu + 'px'; bar.style.width = CW * ppu + 'px';
-    cv.width = Math.round(CW * ppu * dpr); cv.height = Math.round(CH * ppu * dpr);
-    ctx.setTransform(cv.width / CW, 0, 0, cv.height / CH, 0, 0);
+    cv.width = base.width = Math.round(CW * ppu * dpr); cv.height = base.height = Math.round(CH * ppu * dpr);
+    ctx.setTransform(cv.width / CW, 0, 0, cv.height / CH, 0, 0); bg.setTransform(cv.width / CW, 0, 0, cv.height / CH, 0, 0);
     paint();
   }
-  const pen = (s) => { ctx.strokeStyle = ctx.fillStyle = INK; ctx.lineCap = ctx.lineJoin = 'round'; ctx.lineWidth = PEN; const q = s.p; if (q.length < 2) { ctx.beginPath(); ctx.arc(q[0][0], q[0][1], PEN / 2, 0, 7); ctx.fill(); return; } ctx.beginPath(); q.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke(); };
-  function paint() {
-    ctx.clearRect(0, 0, CW, CH);
-    const line = (y, col, w, dash) => { ctx.beginPath(); ctx.setLineDash(dash || []); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.moveTo(0, y); ctx.lineTo(CW, y); ctx.stroke(); ctx.setLineDash([]); };
+  const pen = (s, g = ctx) => { g.strokeStyle = g.fillStyle = INK; g.lineCap = g.lineJoin = 'round'; g.lineWidth = PEN; const q = s.p; if (q.length < 2) { g.beginPath(); g.arc(q[0][0], q[0][1], PEN / 2, 0, 7); g.fill(); return; } g.beginPath(); q.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke(); };
+  // Vorlage: Schriftgröße so, dass die x-Höhe genau bis zur gestrichelten Linie reicht (Buchstaben, Ziffern, Satzzeichen); Schriftzeichen und Symbole etwas größer
+  const FONT = 'system-ui,"Hiragino Sans","PingFang SC","Noto Sans CJK SC",sans-serif'; let latinPx = 0;
+  const fontPx = (ch) => {
+    if (/[☀-➿　-ヿ一-鿿]/.test(ch)) return XH * 1.7;
+    if (!latinPx) { bg.font = `100px ${FONT}`; const a = bg.measureText('x').actualBoundingBoxAscent; latinPx = a > 10 ? Math.max(XH * 1.6, Math.min(XH * 2.4, XH / a * 100)) : XH * 1.95; }
+    return latinPx;
+  };
+  function paint() {   // alles neu: Hintergrund-Ebene (Linien, Vorlage, fertige Striche) und darüber den laufenden Strich
+    bg.clearRect(0, 0, CW, CH);
+    const line = (y, col, w, dash) => { bg.beginPath(); bg.setLineDash(dash || []); bg.strokeStyle = col; bg.lineWidth = w; bg.moveTo(0, y); bg.lineTo(CW, y); bg.stroke(); bg.setLineDash([]); };
     line(BASE - XH * 1.6, '#e4e6f7', .3, [1.5, 1.5]); line(BASE - XH, '#b9bff0', .35, [1.5, 1.5]); line(BASE + XH * .6, '#e4e6f7', .3, [1.5, 1.5]); line(BASE, '#8d98ea', .6);
     const c = cells[idx];
-    if (ghost && c) { ctx.fillStyle = 'rgba(110,110,140,.16)'; ctx.font = `${XH * 1.55}px system-ui,"Hiragino Sans","PingFang SC",sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText(c.ch, CW / 2, BASE); }
-    for (const s of strokes) pen(s); if (cur && cur.p.length) pen(cur);
+    if (ghost && c) { bg.fillStyle = 'rgba(95,105,150,.26)'; bg.font = `${fontPx(c.ch)}px ${FONT}`; bg.textAlign = 'center'; bg.textBaseline = 'alphabetic'; bg.fillText(c.ch, CW / 2, BASE); }
+    for (const s of strokes) pen(s, bg);
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); ctx.drawImage(base, 0, 0); ctx.restore();
+    if (cur && cur.p.length) pen(cur);
   }
+  // Beim Schreiben wird nur das neue Stück Linie dazugemalt – das bleibt auch bei vielen Strichen flüssig
+  const extend = (from) => {
+    const q = cur.p; ctx.strokeStyle = ctx.fillStyle = INK; ctx.lineCap = ctx.lineJoin = 'round'; ctx.lineWidth = PEN;
+    ctx.beginPath(); ctx.moveTo(q[from - 1][0], q[from - 1][1]); for (let i = from; i < q.length; i++) ctx.lineTo(q[i][0], q[i][1]); ctx.stroke();
+  };
   const pt = (e) => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * CW, (e.clientY - r.top) / r.height * CH]; };
   cv.addEventListener('pointerdown', (e) => {
     if (e.pointerType === 'pen') sawPen = true; if (e.pointerType === 'touch' && sawPen) return;   // Handfläche ignorieren, wenn ein Stift benutzt wird
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    e.preventDefault(); cancelAuto(); cv.setPointerCapture(e.pointerId); cur = { p: [pt(e)], id: e.pointerId }; paint();
+    e.preventDefault(); cancelAuto(); try { cv.setPointerCapture(e.pointerId); } catch (_) { /* Zeiger schon weg */ }
+    if (cur) { const s0 = cur; cur = null; if (s0.p.length) strokes.push({ p: s0.p }); }   // vorheriger Strich war noch offen (verlorenes Loslassen): nicht wegwerfen
+    cur = { p: [pt(e)], id: e.pointerId }; pen(cur);
   });
   cv.addEventListener('pointermove', (e) => {
     if (!cur || e.pointerId !== cur.id) return; e.preventDefault();
-    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [], from = cur.p.length;
     for (const ev of evs.length ? evs : [e]) {
       const p = pt(ev), l = cur.p[cur.p.length - 1]; if (Math.hypot(p[0] - l[0], p[1] - l[1]) > .18) cur.p.push(p);
     }
-    paint();
+    if (cur.p.length > from) extend(from);
   });
   const up = (e) => {
     if (!cur || e.pointerId !== cur.id) return; const s = cur; cur = null;
     let p = s.p; if (p.length > 4) p = simplify(smooth(p), .06);
-    if (p.length) strokes.push({ p }); refresh(); paint(); if (p.length) armAuto();
+    if (p.length) strokes.push({ p });
+    paint(); refresh(); if (p.length) armAuto();
   };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
   cv.addEventListener('contextmenu', e => e.preventDefault());
@@ -116,7 +134,7 @@ export function openDraw({ cells, onDone, onClose }) {
   const posOf = () => { const l = list(), c = cells[idx]; const i = l.indexOf(c); return i < 0 ? l.findIndex(x => cells.indexOf(x) >= idx) : i; };
   function load() {
     cancelAuto(); const c = cells[idx]; strokes = (done.get(key(c)) || []).map(s => ({ p: s.p.map(q => q.slice()) })); cur = null;
-    label.textContent = c.ch; grp.textContent = c.grp + (c.v ? ' · Variante ' + (c.v + 1) : ''); ghost = ghost === null ? c.pack !== 'standard' : ghost;
+    label.textContent = describeChar(c.ch, c.pack); grp.textContent = c.grp + (c.v ? ' · Variante ' + (c.v + 1) : ''); 
     refresh(); paint();
   }
   function refresh() {
@@ -126,7 +144,7 @@ export function openDraw({ cells, onDone, onClose }) {
       btn(strokes.length ? (last ? 'Fertig' : 'Weiter') : (last ? 'Fertig' : 'Überspringen'), { cls: 'pri', onclick: () => last ? finish() : move(1) }));
     tools.replaceChildren(btn('Rückgängig', { cls: 'sm', disabled: !strokes.length, onclick: () => { cancelAuto(); strokes.pop(); refresh(); paint(); } }), btn('Löschen', { cls: 'sm', disabled: !strokes.length, onclick: () => { cancelAuto(); strokes = []; refresh(); paint(); } }),
       btn(AUTO[auto][0], { cls: 'sm' + (auto === 'off' ? '' : ' on'), onclick: () => { const k = Object.keys(AUTO); auto = k[(k.indexOf(auto) + 1) % k.length]; try { localStorage.setItem('hs:autoadv', auto); } catch (_) { /* egal */ } cancelAuto(); refresh(); } }),
-      btn(ghost ? 'Vorlage aus' : 'Vorlage an', { cls: 'sm', onclick: () => { ghost = !ghost; refresh(); paint(); } }),
+      btn(ghost ? 'Vorlage zum Nachzeichnen: an' : 'Vorlage zum Nachzeichnen: aus', { cls: 'sm', onclick: () => { ghost = !ghost; try { localStorage.setItem('hs:ghost', ghost ? '1' : '0'); } catch (_) { /* Speicher gesperrt */ } refresh(); paint(); } }),
       btn(once ? 'Alle Varianten' : 'Nur 1×', { cls: 'sm', onclick: () => { once = !once; if (once && cells[idx].v > 0) { const n = cells.findIndex((c, i) => i > idx && c.v === 0); if (n >= 0) { save(); idx = n; load(); return; } } refresh(); } }));
   }
   const tools = h('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap', justifyContent: 'center' } });
