@@ -1,5 +1,5 @@
 // Export: PDF (A4 für GoodNotes), PNG je Seite, PNG-ZIP, transparente PNG
-import { drawPage, ensureImages, FORMATS } from './render.js';
+import { drawPage, ensureImages, FORMATS, SC } from './render.js';
 import { makePdf, makeZip } from './pdfw.js';
 import { blobOf, tick } from './util.js';
 import { vectorize } from './vec.js';
@@ -59,7 +59,7 @@ export async function exportGoodNotesInk(L, S, title, onProgress = () => {}) {
         ink.push({ pts: quad(x1, y1, (x1 + x2) / 2, (y1 + y2) / 2 + 1.6, x2, y2), w: (L.k * 2.1 + wgt) * fit, color: [...c, S.inkAlpha * .9] });
       } else if (e.g) {
         const { g } = e, v = g.v, im = v.img; if (!im || im.complete === false) continue;
-        const vec = vectorize(im); if (!vec.w) continue;
+        const vec = v.st ? { w: im.naturalWidth || im.width, h: im.naturalHeight || im.height, strokes: v.st.map(q => ({ pts: q.p.map(([x, y]) => [x * SC, y * SC]), w: q.w * SC })) } : vectorize(im); if (!vec.w) continue;
         const s = L.k * g.sc * e.m, kx = v.iw * s * g.sx / vec.w, ky = v.ih * s / vec.h, ox0 = v.ox * s * g.sx, oy0 = v.oy * s, cr = Math.cos(e.rot), sr = Math.sin(e.rot);
         const c = cssRgba(g.st.col || S.ink), al = Math.min(1, g.a * S.inkAlpha), bw = wgt + (g.st.b ? .9 : 0);
         for (const st of vec.strokes) {

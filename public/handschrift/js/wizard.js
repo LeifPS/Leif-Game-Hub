@@ -5,6 +5,7 @@ import { PACKS, PACK_BY_ID, buildCells, pageCount, maskOf, idsOf, hashOf, packIn
 import { renderSheet, cellsOnPage } from './sheet.js';
 import { findMarker, readPage, buildGlyphs } from './reader.js';
 import { pagesOf } from './pdfin.js';
+import { openDraw } from './draw.js';
 import { makePdf, makeZip } from './pdfw.js';
 import { dbPut, kvGet, kvSet, countGlyphs } from './store.js';
 
@@ -21,7 +22,7 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
   const have = new Set(font ? font.packs || [] : []);
   const S = {
     step: skipTo || 1, sel: new Set(preselect.length ? preselect : font ? [] : ['standard', 'sonder']), custom: { chars: customChars, n: 1 },
-    pages: [], busy: false, result: null, name: font ? font.name : 'Meine Schrift', mode: font ? 'add' : 'new', off: new Set(), fromQr: new Set(), customs: {},
+    pages: [], busy: false, result: null, drawn: null, name: font ? font.name : 'Meine Schrift', mode: font ? 'add' : 'new', off: new Set(), fromQr: new Set(), customs: {},
   };
   const modal = h('div', { class: 'modal on', role: 'dialog', 'aria-label': 'Schrift erstellen' }); document.body.append(modal);
   const close = () => { modal.remove(); };
@@ -37,6 +38,16 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
     ({ 1: step1, 2: step2, 3: step3, 4: step4 })[S.step]();
   }
 
+  // Direkt in der App zeichnen statt Bögen drucken und einscannen
+  function startDraw() {
+    const c = cells(); if (!c.length) return;
+    if (S.custom.chars) kvSet('custom:' + hashOf({ chars: clean(S.custom.chars), n: S.custom.n }), { chars: clean(S.custom.chars), n: S.custom.n });
+    openDraw({ cells: c, onDone: (out) => {
+      const g = {}; for (const { ch, d } of out) (g[ch] ||= []).push(d);
+      S.drawn = { g, ref: font && font.ref ? font.ref : { px: 50, s0: 0 }, stats: { cells: out.length } }; S.fromQr = new Set([maskOf([...S.sel])]); S.pages = []; go(4);
+    } });
+  }
+
   // ---------- 1. Auswahl ----------
   function step1() {
     const w = h('div', { class: 'wrap' }); mb.append(w);
@@ -46,7 +57,7 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
     const redraw = () => {
       const c = cells(), uniq = new Set(c.map(x => x.ch)).size, pages = pageCount(c);
       sum.replaceChildren(h('div', { class: 'row wrap2' }, h('span', { class: 'chip ac' }, `${uniq} Zeichen`), h('span', { class: 'chip' }, `${c.length} Kästchen`), h('span', { class: 'chip' }, `${c.length ? pages : 0} ${pages === 1 ? 'Seite' : 'Seiten'}`)));
-      mf.replaceChildren(btn('Schon ausgefüllte Bögen hochladen', { cls: 'sm', onclick: () => go(3) }), h('span', { class: 'sp1' }), sumChips(), btn('Weiter', { cls: 'pri', disabled: !c.length, onclick: () => { if (S.custom.chars) kvSet('custom:' + hashOf({ chars: clean(S.custom.chars), n: S.custom.n }), { chars: clean(S.custom.chars), n: S.custom.n }); go(2); } }));
+      mf.replaceChildren(btn('Schon ausgefüllte Bögen hochladen', { cls: 'sm', onclick: () => go(3) }), btn('Direkt zeichnen', { cls: 'sm', disabled: !c.length, onclick: startDraw }), h('span', { class: 'sp1' }), sumChips(), btn('Weiter', { cls: 'pri', disabled: !c.length, onclick: () => { if (S.custom.chars) kvSet('custom:' + hashOf({ chars: clean(S.custom.chars), n: S.custom.n }), { chars: clean(S.custom.chars), n: S.custom.n }); go(2); } }));
       list.querySelectorAll('.pack').forEach(b => b.classList.toggle('on', S.sel.has(b.dataset.id)));
     };
     const sumChips = () => sum;
@@ -164,6 +175,7 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
   }
   let renderFoot3 = () => {};
   function step3() {
+    S.drawn = null;
     const w = h('div', { class: 'wrap' }); mb.append(w);
     const listEl = h('div', { class: 'pgs' }), statEl = h('p', { class: 'sm mut', style: { minHeight: '20px' } });
     const input = h('input', { type: 'file', accept: 'application/pdf,image/*', multiple: true, class: 'sr', onchange: () => { addFiles([...input.files], listEl, statEl); input.value = ''; } });
@@ -188,7 +200,7 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
     mf.append(btn('Zurück', { onclick: () => go(3), disabled: true }));
     S.busy = true;
     try {
-      S.result = await buildGlyphs(all, font ? font.ref : {}, p => { bar.firstChild.style.width = (p * 100) + '%'; });
+      S.result = S.drawn || await buildGlyphs(all, font ? font.ref : {}, p => { bar.firstChild.style.width = (p * 100) + '%'; });
     } catch (e) { msg.textContent = 'Fehler beim Bauen: ' + e.message; S.busy = false; mf.replaceChildren(btn('Zurück', { onclick: () => go(3) })); return; }
     S.busy = false; S.off = new Set();
     const res = S.result, flagged = new Map(); for (const c of all) if (c.flag === 'rand') flagged.set(c.ch + '|' + c.v, 'rand');
@@ -215,7 +227,7 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
       h('p', { class: 'sm mut' }, 'Gelb umrandet: Zeichen berührt den Kästchenrand (vermutlich abgeschnitten) und ist, wenn genug andere da sind, schon abgewählt. Tippe ein Zeichen an, um es aus- oder wieder einzuschließen.'), tiles,
       h('label', { class: 'f' }, 'Name der Schrift'), nameIn,
       target ? h('div', { style: { marginTop: '10px' } }, h('div', { class: 'seg' }, h('button', { type: 'button', class: S.mode === 'add' ? 'on' : '', onclick: (e) => { S.mode = 'add'; [...e.target.parentNode.children].forEach((b, i) => b.classList.toggle('on', !i)); } }, `Zu „${target.name}“ hinzufügen`), h('button', { type: 'button', class: S.mode === 'new' ? 'on' : '', onclick: (e) => { S.mode = 'new'; [...e.target.parentNode.children].forEach((b, i) => b.classList.toggle('on', !!i)); } }, 'Als neue Schrift'))) : null);
-    mf.replaceChildren(btn('Zurück', { onclick: () => go(3) }), h('span', { class: 'sp1' }), btn('Schrift speichern', { icon: 'check', cls: 'pri', onclick: save }));
+    mf.replaceChildren(btn('Zurück', { onclick: () => go(S.drawn ? 1 : 3) }), h('span', { class: 'sp1' }), btn('Schrift speichern', { icon: 'check', cls: 'pri', onclick: save }));
   }
   async function save() {
     if (S.busy) return; S.busy = true;
