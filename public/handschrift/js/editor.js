@@ -2,7 +2,7 @@
 import { h, debounce, toast, saveFile, fmtSize } from './util.js';
 import { ic, btn, sheet, range, toggle, seg, chips } from './ui.js';
 import { layout, drawPage, ensureImages, FORMATS, PAPERS, PAPER_COLORS, PENS, DEF, SHORTCUTS } from './render.js';
-import { exportPdf, exportGoodNotes, exportPngs, zipOf, fileBase } from './exporter.js';
+import { exportPdf, exportGoodNotes, exportGoodNotesInk, exportPngs, zipOf, fileBase } from './exporter.js';
 import { PACKS } from './packs.js';
 import { openWizard } from './wizard.js';
 import { dbPut, kvSet } from './store.js';
@@ -140,12 +140,14 @@ export function editorView(app) {
       const canShare = !!(navigator.canShare && navigator.canShare({ files: [new File([''], 'a.pdf', { type: 'application/pdf' })] }));
       const pdf = (share) => run(async () => { const blob = await exportPdf(L, S(), doc.title, dpi, prog); const r = await saveFile(blob, fileBase(doc.title) + '.pdf', { share }); msg.textContent = r === 'abgebrochen' ? '' : `PDF ${share ? 'geteilt' : 'gespeichert'} (${fmtSize(blob.size)}, ${L.pages.length} ${L.pages.length === 1 ? 'Seite' : 'Seiten'}).`; });
       const gnote = () => run(async () => { const blob = await exportGoodNotes(L, S(), doc.title, dpi, prog); const r = await saveFile(blob, fileBase(doc.title) + '.goodnotes'); msg.textContent = r === 'abgebrochen' ? '' : `GoodNotes-Datei gespeichert (${fmtSize(blob.size)}, ${L.pages.length} ${L.pages.length === 1 ? 'Seite' : 'Seiten'}).` + (S().fmt === 'gn' ? '' : ' Tipp: Format „GoodNotes Standard“ passt genau auf leere Standardseiten.'); });
+      const gink = () => run(async () => { const blob = await exportGoodNotesInk(L, S(), doc.title, prog); const r = await saveFile(blob, fileBase(doc.title) + '.goodnotes'); msg.textContent = r === 'abgebrochen' ? '' : `GoodNotes-Datei mit echten Strichen gespeichert (${fmtSize(blob.size)}, ${L.pages.length} ${L.pages.length === 1 ? 'Seite' : 'Seiten'}).`; });
       const png = (transparent) => run(async () => { const files = await exportPngs(L, S(), doc.title, dpi, transparent, prog); if (files.length === 1) { await saveFile(files[0].blob, files[0].name); } else await saveFile(zipOf(files), fileBase(doc.title) + (transparent ? '-transparent' : '') + '-PNG.zip'); msg.textContent = 'Bilder gespeichert.'; });
       b.append(h('label', { class: 'f' }, 'Qualität'), chips([[150, 'Standard'], [200, 'Hoch (empfohlen)'], [300, 'Sehr hoch']], () => dpi, v => { dpi = v; }),
         h('div', { style: { display: 'grid', gap: '10px', marginTop: '16px' } },
-          btn('PDF speichern', { icon: 'download', cls: 'pri', onclick: pdf(false) }),
+          btn('GoodNotes: echte Striche (.goodnotes)', { icon: 'download', cls: 'pri', onclick: gink() }),
+          btn('PDF speichern', { icon: 'download', onclick: pdf(false) }),
           canShare ? btn('In GoodNotes öffnen (Teilen)', { icon: 'share', onclick: pdf(true) }) : null,
-          btn('GoodNotes-Datei (.goodnotes)', { icon: 'download', onclick: gnote() }),
+          btn('GoodNotes: Seiten als Bild (.goodnotes)', { icon: 'download', onclick: gnote() }),
           btn('PNG je Seite' + (L.pages.length > 1 ? ' (ZIP)' : ''), { icon: 'image', onclick: png(false) }),
           btn('Nur Schrift, transparent (PNG)', { icon: 'layers', onclick: png(true) })),
         bar, msg, h('div', { class: 'note' }, h('b', null, 'GoodNotes: '), 'Am besten „GoodNotes-Datei“ mit dem Format „GoodNotes Standard“: In GoodNotes auf + → Importieren, die Seiten landen im Standardformat. Alternativ PDF speichern und genauso importieren. Jede Seite wird eine Seite im Heft. Das transparente PNG fügst du als Bild auf eigenes Papier ein.'));
