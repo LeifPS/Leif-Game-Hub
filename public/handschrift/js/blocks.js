@@ -333,7 +333,7 @@ function graphBlock(el, ctx) {
     for (const ln of lines) { if (f.ls === 'solid') items.push(P(ln, lw, col)); else for (const d of dashPoly(ln, f.ls === 'dot' ? 1.2 : 1.1 * u, f.ls === 'dot' ? .9 * u : .7 * u)) items.push(P(d, lw, col, f.ls === 'dot' ? {} : {})); }
     f.col2 = col; f.lines = lines;
     // Beschriftung am rechten Rand
-    if (f.name) { const last = lines.length ? lines[lines.length - 1] : null; const nb = mathBox(ctx, f.name, { sc: .85, col }).box; let px, py; if (last) { const p = last[last.length - 1]; px = Math.min(p[0] - nb.w - 1.3 * u, R.x1 - nb.w); py = p[1] + .2 * u; if (py < R.y0 + nb.asc) py = R.y0 + nb.asc + .3 * u; items.push(...shiftItems(nb.items, Math.max(R.x0, px), py)); } }
+    if (f.name && !bool(getP(el, 'legende'), false)) { const last = lines.length ? lines[lines.length - 1] : null; const nb = mathBox(ctx, f.name, { sc: .85, col }).box; let px, py; if (last) { const p = last[last.length - 1]; px = Math.min(p[0] - nb.w - 1.3 * u, R.x1 - nb.w); py = p[1] + .2 * u; if (py < R.y0 + nb.asc) py = R.y0 + nb.asc + .3 * u; items.push(...shiftItems(nb.items, Math.max(R.x0, px), py)); } }
     // Nullstellen, Extrema
     const wantRoots = f.nst != null ? f.nst : bool(getP(el, 'nullstellen'), false), wantExt = f.ext != null ? f.ext : bool(getP(el, 'extrema'), false);
     const S0 = 2400; let py0 = null, px0 = null, dy0 = null;
