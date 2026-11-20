@@ -23,7 +23,7 @@ export const PAPERS = {
 const PXPT = 150 / 72;
 export const GNPAPER = {
   gnlin: { h0: 49.75, hp: 25, every: 1, size: 18, ml: 110, mr: 70, mt: 60, mb: 50 },
-  gnkar: { h0: 15.75, hp: 16, v0: 15.75, vp: 16, every: 2, size: 22, ml: 110, mr: 70, mt: 60, mb: 50 },
+  gnkar: { h0: 15.75, hp: 16, v0: 15.75, vp: 16, every: 2, size: 18, ml: 110, mr: 70, mt: 60, mb: 50 },
 };
 export const fmtOf = (S) => GNPAPER[S.paper] ? 'gn' : S.fmt;
 // Grundlinien (px) der Schreibzeilen auf einer GoodNotes-Vorlage
@@ -307,6 +307,7 @@ export function layout(text, S, font) {
   const placeBox = (box) => {
     const wid = right - left, snapOn = !inSub && grid && box.snap;
     let bx = box.align === 'rechts' ? right - box.w : box.align === 'links' || box.w >= wid - 1 ? left : left + (wid - box.w) / 2;
+    if (box.ext && !snapOn) bx = Math.max(left, Math.min(bx, right - box.ext));
     if (snapOn) { const c = grid.cell; bx = grid.gx0 + Math.round((bx + box.snap.x - grid.gx0) / c) * c - box.snap.x; if (bx < left - 1) bx += c; if (bx + box.w > right + c) bx -= c; }
     let yb, top, rows;
     const calc = () => {

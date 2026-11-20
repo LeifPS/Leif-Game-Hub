@@ -80,10 +80,10 @@ function lineBlock(L, ctx, o, aligned, blockAlign) {
     y += asc; if (i === 0) base = y;
     if (aligned && r.rest) { items.push(...shiftItems(r.left.items, colX - r.left.w, y), ...shiftItems(r.rest.items, colX, y)); }
     else items.push(...shiftItems(r.whole.items, 0, y));
-    if (r.hint) { items.push(P([[hintX, y - asc * .9], [hintX, y + desc * .9 + .2 * u]], 1, o.col)); items.push(...shiftItems(r.hint.items, hintX + .55 * u, y)); W = Math.max(W, hintX + .55 * u + r.hint.w); }
+    if (r.hint) { const cy = y - (asc - desc) / 2, hh = (asc + desc) / 2 * .92; items.push(P([[hintX, cy - hh], [hintX, cy + hh]], 1, o.col)); items.push(...shiftItems(r.hint.items, hintX + .55 * u, y)); W = Math.max(W, hintX + .55 * u + r.hint.w); }
     y += desc + .75 * u;
   });
-  return { w: W, h: Math.max(0, y - .75 * u), base, items, align: blockAlign };
+  return { w: Math.max(lineW, ...rows.map(r => r.hint ? 0 : 0)), ext: W, h: Math.max(0, y - .75 * u), base, items, align: blockAlign };
 }
 // ---------- Rechenweg ----------
 function calcBlock(el, ctx) {
@@ -94,11 +94,11 @@ function calcBlock(el, ctx) {
   }
   for (const k of ['schritt', 'zeile']) for (const p of allP(el, k)) L.push({ s: p.v, line: p.line });
   if (!L.length) { ctx.err(el.line, '[calculation] ohne Schritte', 'warn'); return null; }
-  const body = lineBlock(L, ctx, o, bool(getP(el, 'ausrichten'), false), 'links');
+  const al = o.align || 'mitte', body = lineBlock(L, ctx, o, bool(getP(el, 'ausrichten'), true), al);
   const t = getP(el, 'titel'); if (!t) return body;
-  const tb = textBox(ctx, ctx.prep(t), 1.05, o.col), gap = .6 * ctx.u;
-  const items = [...shiftItems(tb.items, 0, tb.asc), ...shiftItems(body.items, 0, tb.asc + tb.desc + gap)];
-  return { w: Math.max(body.w, tb.w), h: tb.asc + tb.desc + gap + body.h, base: tb.asc, items, align: 'links' };
+  const tb = textBox(ctx, ctx.prep(t), 1.05, o.col), gap = .6 * ctx.u, W = Math.max(body.w, tb.w), dx = al === 'links' ? 0 : (W - body.w) / 2;
+  const items = [...shiftItems(tb.items, 0, tb.asc), ...shiftItems(body.items, dx, tb.asc + tb.desc + gap)];
+  return { w: W, ext: Math.max(body.ext + dx, tb.w), h: tb.asc + tb.desc + gap + body.h, base: tb.asc, items, align: al };
 }
 // ---------- Bruch / Wurzel als eigene Elemente ----------
 function fractionBlock(el, ctx) {

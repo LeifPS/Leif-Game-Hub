@@ -40,7 +40,7 @@ export function moreView(app) {
       h('div', { class: 'row wrap2' },
         btn('Auftrag für die KI kopieren', { icon: 'copy', cls: 'pri', onclick: async () => { try { await navigator.clipboard.writeText(HDF_PROMPT); toast('Kopiert – in die KI einfügen und das Thema eintragen'); } catch (e) { toast('Kopieren nicht möglich', 3000, 'err'); } } }),
         btn('Nur die Format-Beschreibung', { icon: 'copy', cls: 'sm', onclick: async () => { try { await navigator.clipboard.writeText(HDF_DOC); toast('Beschreibung kopiert'); } catch (e) { toast('Kopieren nicht möglich', 3000, 'err'); } } }),
-        btn('Beispiel-Arbeitsblatt öffnen', { cls: 'sm', onclick: async () => { const d = await app.newDoc({ title: 'Beispiel: Quadratische Funktionen', text: HDF_EXAMPLE, fontId: app.fontId, s: { paper: 'gnkar', fmt: 'gn', paperColor: 'weiss', scan: false, size: 22, ml: 110, mr: 70, mt: 60, mb: 50 } }); await app.openDoc(d.id); } })),
+        btn('Beispiel-Arbeitsblatt öffnen', { cls: 'sm', onclick: async () => { const d = await app.newDoc({ title: 'Beispiel: Quadratische Funktionen', text: HDF_EXAMPLE, fontId: app.fontId, s: { paper: 'gnkar', fmt: 'gn', paperColor: 'weiss', scan: false, size: 18, ml: 110, mr: 70, mt: 60, mb: 50 } }); await app.openDoc(d.id); } })),
       h('p', { class: 'mut sm', style: { margin: '10px 0 0' } }, 'Ablauf: „Auftrag für die KI kopieren“, in ChatGPT/Claude einfügen, Thema eintragen, die Antwort kopieren und in einem neuen Dokument einfügen (oder als .hdf-Datei hochladen).')));
     // Hilfe
     wrap.append(h('div', { class: 'card' }, h('h3', { style: { marginBottom: '4px' } }, 'Hilfe'),

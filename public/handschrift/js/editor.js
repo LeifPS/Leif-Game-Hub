@@ -248,7 +248,7 @@ export function editorView(app) {
       const pickPaper = (v) => {
         const was = GNPAPER[s.paper], gp = GNPAPER[v]; s.paper = v;
         if (gp) Object.assign(s, { fmt: 'gn', paperColor: 'weiss', scan: false, size: gp.size, ml: gp.ml, mr: gp.mr, mt: gp.mt, mb: gp.mb });
-        else if (was) Object.assign(s, { ml: 90, mr: 70, mt: 90, mb: 70, size: 20 });
+        else if (was) Object.assign(s, { ml: 90, mr: 70, mt: 90, mb: 70, size: 18 });
         ch(); if (gp || was) { api.close(); setTimeout(openSettings, 280); }
       };
       const pickFmt = (v) => { const was = GNPAPER[s.paper]; s.fmt = v; if (was && v !== 'gn') s.paper = 'lined'; ch(); if (was && v !== 'gn') { api.close(); setTimeout(openSettings, 280); } };
