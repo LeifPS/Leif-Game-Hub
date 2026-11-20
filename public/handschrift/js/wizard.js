@@ -106,7 +106,7 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
     const canShare = !!(navigator.canShare && navigator.canShare({ files: [new File([''], 'a.pdf', { type: 'application/pdf' })] }));
     w.append(h('h1', null, 'So willst du schreiben'), h('p', { class: 'mut' }, `${c.length} Kästchen auf ${pages} ${pages === 1 ? 'Seite' : 'Seiten'}. Entweder zeichnest du die Zeichen gleich hier in der App, oder du holst dir eine Vorlage zum Ausfüllen.`),
       h('h3', { style: { margin: '16px 0 8px' } }, 'Option 1: Direkt in der App zeichnen'),
-      h('div', { class: 'card' }, h('p', { class: 'sm mut', style: { margin: '0 0 10px' } }, 'Jedes Zeichen kommt einzeln in ein Feld mit Hilfslinien und einer Nachzeichen-Vorlage. Mit Finger oder Apple Pencil, ohne Drucken und Hochladen.'),
+      h('div', { class: 'card' }, h('p', { class: 'sm mut', style: { margin: '0 0 10px' } }, 'Jedes Zeichen kommt einzeln in ein Feld mit Hilfslinien (die Vorlage zum Nachzeichnen lässt sich zuschalten). Mit Finger oder Apple Pencil, ohne Drucken und Hochladen.'),
         btn('Jetzt zeichnen', { icon: 'edit', cls: 'pri', disabled: !c.length, onclick: startDraw })),
       h('h3', { style: { margin: '20px 0 8px' } }, 'Option 2: Vorlage holen und ausfüllen'),
       h('p', { class: 'sm mut', style: { margin: '0 0 8px' } }, 'Jeder Bogen hat einen eigenen QR-Code, daran erkennt die App später automatisch, welche Zeichen darauf stehen.'),

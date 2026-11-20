@@ -53,7 +53,7 @@ export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra
   modal.append(head, mb, mf);
   const flag = (k, dflt) => { try { const v = localStorage.getItem(k); return v == null ? dflt : v !== '0'; } catch (_) { return dflt; } };
   const setFlag = (k, v) => { try { localStorage.setItem(k, v ? '1' : '0'); } catch (_) { /* Speicher gesperrt */ } };
-  const done = new Map(); let idx = 0, once = false, ghost = flag('hs:ghost', true), multi = flag('hs:multi', true), sawPen = false, ppu = 4;
+  const done = new Map(); let idx = 0, once = false, ghost = flag('hs:ghost2', false), multi = flag('hs:multi', true), sawPen = false, ppu = 4;
   let fields = [], act = 0;   // fields: { c, cv, ctx, base, bg, strokes, cur } – ein Feld je Variante der aktuellen Gruppe
   const key = (c) => c.ch + '|' + c.v;
   const label = h('div', { style: { fontSize: '17px', lineHeight: 1.25, fontWeight: 600, textAlign: 'center', maxWidth: '100%' } });
@@ -64,9 +64,10 @@ export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra
   const AUTO = { off: ['Auto-Weiter aus', 0], fast: ['Auto-Weiter schnell', 650], normal: ['Auto-Weiter normal', 1000], slow: ['Auto-Weiter langsam', 1600] };
   let auto = 'normal'; try { const a = localStorage.getItem('hs:autoadv'); if (AUTO[a]) auto = a; } catch (_) { /* Speicher gesperrt */ }
   const MULTI = /[ijtfxkäöüÄÖÜ!?:;=+%#"'…÷±]/; let timer = 0;
-  const bar = h('div', { style: { width: '100%', maxWidth: '100%', height: '4px', borderRadius: '2px', background: 'var(--surf2)', overflow: 'hidden', flex: 'none' } }, h('i', { style: { display: 'block', height: '100%', width: '0', background: 'var(--ac)' } }));
+  const bar = h('div', { style: { width: '100%', maxWidth: '100%', height: '4px', borderRadius: '2px', background: 'var(--surf2)', overflow: 'hidden', flex: 'none' } }, h('i', { style: { display: 'block', height: '100%', width: '100%', background: 'var(--ac)', transformOrigin: 'left', transform: 'scaleX(0)', willChange: 'transform' } }));
   const fill = bar.firstChild;
-  function cancelAuto() { clearTimeout(timer); timer = 0; fill.style.transition = 'none'; fill.style.width = '0'; }
+  let deb = 0, raf = 0;
+  function cancelAuto() { clearTimeout(timer); timer = 0; cancelAnimationFrame(raf); fill.style.transition = 'none'; fill.style.transform = 'scaleX(0)'; }
 
   // Gruppen: aufeinanderfolgende Zellen mit demselben Zeichen (höchstens 4) – nur wenn „nebeneinander“ an ist
   const grpLen = (i) => { if (!multi || once) return 1; let n = 1; while (n < 4 && cells[i + n] && cells[i + n].ch === cells[i].ch && cells[i + n].pack === cells[i].pack && !(once && cells[i + n].v > 0)) n++; return n; };
@@ -77,7 +78,7 @@ export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra
     if (!fields.length || !fields.every(f => f.strokes.length)) return;   // erst weiter, wenn alle Felder gezeichnet sind
     const { p, n } = posOf(); if (p >= n - 1) return;   // bei der letzten Gruppe nicht automatisch weiter
     const ms = base * (MULTI.test(c.ch) || c.ch.normalize('NFD').length > 1 ? 1.7 : 1);
-    void fill.offsetWidth; fill.style.transition = `width ${ms}ms linear`; fill.style.width = '100%';
+    raf = requestAnimationFrame(() => { raf = requestAnimationFrame(() => { fill.style.transition = `transform ${ms}ms linear`; fill.style.transform = 'scaleX(1)'; }); });
     timer = setTimeout(() => { timer = 0; move(1); }, ms);
   }
 
@@ -97,8 +98,8 @@ export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra
     bar.style.width = (m * CW * ppu + 8 * (m - 1)) + 'px';
     for (const f of fields) {
       f.cv.style.width = CW * ppu + 'px'; f.cv.style.height = CH * ppu + 'px';
-      f.cv.width = f.base.width = Math.round(CW * ppu * dpr); f.cv.height = f.base.height = Math.round(CH * ppu * dpr);
-      f.ctx.setTransform(f.cv.width / CW, 0, 0, f.cv.height / CH, 0, 0); f.bg.setTransform(f.cv.width / CW, 0, 0, f.cv.height / CH, 0, 0);
+      f.cv.width = f.base.width = f.back.width = Math.round(CW * ppu * dpr); f.cv.height = f.base.height = f.back.height = Math.round(CH * ppu * dpr);
+      for (const g of [f.ctx, f.bg, f.bk]) g.setTransform(f.cv.width / CW, 0, 0, f.cv.height / CH, 0, 0);
       paint(f);
     }
   }
@@ -113,15 +114,22 @@ export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra
     }
     return TALL.test(ch) || ch !== ch.toLowerCase() ? latinPx[1] : latinPx[0];   // Großbuchstaben, Ziffern und lange Buchstaben bis zur oberen Linie
   };
-  function paint(f) {   // alles neu: Hintergrund-Ebene (Linien, Vorlage, fertige Striche) und darüber den laufenden Strich
-    const { bg, ctx, cv, base } = f;
-    bg.clearRect(0, 0, CW, CH);
-    const line = (y, col, w, dash) => { bg.beginPath(); bg.setLineDash(dash || []); bg.strokeStyle = col; bg.lineWidth = w; bg.moveTo(0, y); bg.lineTo(CW, y); bg.stroke(); bg.setLineDash([]); };
-    line(BASE - XH * CAP, '#b9bff0', .35, [1.5, 1.5]); line(BASE - XH, '#b9bff0', .35, [1.5, 1.5]); line(BASE + XH * .6, '#e4e6f7', .3, [1.5, 1.5]); line(BASE, '#8d98ea', .6);
-    if (ghost && f.c) { bg.fillStyle = 'rgba(95,105,150,.26)'; bg.font = `${fontPx(f.c.ch, bg)}px ${FONT}`; bg.textAlign = 'center'; bg.textBaseline = 'alphabetic'; bg.fillText(f.c.ch, CW / 2, BASE); }
-    for (const s of f.strokes) pen(s, bg);
+  const show = (f) => {   // Anzeige = base + laufender Strich
+    const { ctx, cv, base } = f;
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); ctx.drawImage(base, 0, 0); ctx.restore();
     if (f.cur && f.cur.p.length) pen(f.cur, ctx);
+  };
+  function paintBack(f) {   // statische Ebene: Linien und Vorlage (nur bei Größen-/Zeichenwechsel neu)
+    const bk = f.bk; bk.clearRect(0, 0, CW, CH);
+    const line = (y, col, w, dash) => { bk.beginPath(); bk.setLineDash(dash || []); bk.strokeStyle = col; bk.lineWidth = w; bk.moveTo(0, y); bk.lineTo(CW, y); bk.stroke(); bk.setLineDash([]); };
+    line(BASE - XH * CAP, '#b9bff0', .35, [1.5, 1.5]); line(BASE - XH, '#b9bff0', .35, [1.5, 1.5]); line(BASE + XH * .6, '#e4e6f7', .3, [1.5, 1.5]); line(BASE, '#8d98ea', .6);
+    if (ghost && f.c) { bk.fillStyle = 'rgba(95,105,150,.26)'; bk.font = `${fontPx(f.c.ch, bk)}px ${FONT}`; bk.textAlign = 'center'; bk.textBaseline = 'alphabetic'; bk.fillText(f.c.ch, CW / 2, BASE); }
+  }
+  function paint(f, back = true) {   // alles neu: statische Ebene, fertige Striche, Anzeige
+    if (back) paintBack(f);
+    const bg = f.bg; bg.save(); bg.setTransform(1, 0, 0, 1, 0, 0); bg.clearRect(0, 0, f.base.width, f.base.height); bg.drawImage(f.back, 0, 0); bg.restore();
+    for (const s of f.strokes) pen(s, bg);
+    show(f);
   }
   // Beim Schreiben wird nur das neue Stück Linie dazugemalt – das bleibt auch bei vielen Strichen flüssig
   const extend = (f, from) => {
@@ -131,14 +139,14 @@ export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra
   const hilite = () => fields.forEach((f, i) => { f.cv.style.borderColor = fields.length > 1 && i === act ? 'var(--ac)' : 'var(--bd)'; });
   function makeField(c) {
     const cv = h('canvas', { style: { touchAction: 'none', background: '#fff', border: '1px solid var(--bd)', borderRadius: '12px', display: 'block', cursor: 'crosshair', flex: 'none' } });
-    const base = document.createElement('canvas');   // base = Hintergrund + fertige Striche (wird nur bei Änderungen neu gemalt)
-    const f = { c, cv, ctx: cv.getContext('2d'), base, bg: base.getContext('2d'), strokes: (done.get(key(c)) || []).map(s => ({ p: s.p.map(q => q.slice()) })), cur: null };
-    const pt = (e) => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * CW, (e.clientY - r.top) / r.height * CH]; };
+    const base = document.createElement('canvas'), back = document.createElement('canvas');   // back = Linien + Vorlage, base = back + fertige Striche (beide werden nur bei Änderungen neu gemalt)
+    const f = { c, cv, ctx: cv.getContext('2d'), base, bg: base.getContext('2d'), back, bk: back.getContext('2d'), rect: null, strokes: (done.get(key(c)) || []).map(s => ({ p: s.p.map(q => q.slice()) })), cur: null };
+    const pt = (e) => { const r = f.rect || (f.rect = cv.getBoundingClientRect()); return [(e.clientX - r.left) / r.width * CW, (e.clientY - r.top) / r.height * CH]; };
     cv.addEventListener('pointerdown', (e) => {
       if (e.pointerType === 'pen') sawPen = true; if (e.pointerType === 'touch' && sawPen) return;   // Handfläche ignorieren, wenn ein Stift benutzt wird
       if (e.pointerType === 'mouse' && e.button !== 0) return;
-      e.preventDefault(); cancelAuto(); try { cv.setPointerCapture(e.pointerId); } catch (_) { /* Zeiger schon weg */ }
-      if (act !== fields.indexOf(f)) { act = fields.indexOf(f); hilite(); refresh(); }
+      e.preventDefault(); cancelAuto(); clearTimeout(deb); f.rect = cv.getBoundingClientRect(); try { cv.setPointerCapture(e.pointerId); } catch (_) { /* Zeiger schon weg */ }
+      if (act !== fields.indexOf(f)) { act = fields.indexOf(f); hilite(); }   // Knöpfe werden nach dem Strich aktualisiert
       if (f.cur) { const s0 = f.cur; f.cur = null; if (s0.p.length) f.strokes.push({ p: s0.p }); }   // vorheriger Strich war noch offen (verlorenes Loslassen): nicht wegwerfen
       f.cur = { p: [pt(e)], id: e.pointerId }; pen(f.cur, f.ctx);
     });
@@ -153,10 +161,11 @@ export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra
     const up = (e) => {
       if (!f.cur || e.pointerId !== f.cur.id) return; const s = f.cur; f.cur = null;
       let p = s.p; if (p.length > 4) p = simplify(smooth(p), .06);
-      if (p.length) f.strokes.push({ p });
-      paint(f);
+      if (p.length) { const st = { p }; f.strokes.push(st); pen(st, f.bg); }   // nur den neuen Strich dazumalen
+      show(f);
       if (p.length && fields.length > 1 && !MULTI.test(f.c.ch) && f.c.ch.normalize('NFD').length === 1) { const nx = fields.findIndex((g, i) => i > act && !g.strokes.length); if (nx >= 0) { act = nx; hilite(); } }   // Einstrich-Zeichen: nächstes leeres Feld vormerken
-      refresh(); if (p.length) armAuto();
+      // Knöpfe und Auto-Weiter erst nach einer kurzen Pause aktualisieren, damit schnelles Schreiben (Punkte, Strich auf Strich) nicht ausgebremst wird
+      clearTimeout(deb); deb = setTimeout(() => { refresh(); if (p.length && !fields.some(g => g.cur)) armAuto(); }, 90);
     };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
     cv.addEventListener('contextmenu', e => e.preventDefault());
@@ -165,10 +174,12 @@ export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra
 
   function load() {
     cancelAuto(); const n = grpLen(idx), group = cells.slice(idx, idx + n), c = cells[idx];
-    fields = group.map(makeField); fieldsEl.replaceChildren(...fields.map(f => f.cv));
+    clearTimeout(deb); const same = fields.length === n && fields.every(f => !f.cur);
+    if (same) fields.forEach((f, i) => { f.c = group[i]; f.strokes = (done.get(key(f.c)) || []).map(s => ({ p: s.p.map(q => q.slice()) })); f.cur = null; });   // Canvas wiederverwenden: kein neues Anlegen beim Weiterspringen
+    else { fields = group.map(makeField); fieldsEl.replaceChildren(...fields.map(f => f.cv)); }
     act = Math.max(0, fields.findIndex(f => !f.strokes.length)); hilite();
     label.textContent = describeChar(c.ch, c.pack); grp.textContent = c.grp + (n > 1 ? ` · ${n} Varianten` : c.v ? ' · Variante ' + (c.v + 1) : '');
-    refresh(); size();
+    refresh(); if (same) fields.forEach(f => paint(f)); else size();
   }
   const anyStrokes = () => fields.some(f => f.strokes.length);
   const actF = () => fields[act] || fields[0];
@@ -178,9 +189,9 @@ export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra
       btn('Zurück', { disabled: p <= 0, onclick: () => move(-1) }), h('span', { class: 'sp1' }),
       btn(anyStrokes() ? (last ? 'Fertig' : 'Weiter') : (last ? 'Fertig' : 'Überspringen'), { cls: 'pri', onclick: () => last ? finish() : move(1) }));
     const a = actF();
-    tools.replaceChildren(...[btn('Rückgängig', { cls: 'sm', disabled: !a || !a.strokes.length, onclick: () => { cancelAuto(); a.strokes.pop(); refresh(); paint(a); } }), btn('Löschen', { cls: 'sm', disabled: !a || !a.strokes.length, onclick: () => { cancelAuto(); a.strokes = []; refresh(); paint(a); } }),
+    tools.replaceChildren(...[btn('Rückgängig', { cls: 'sm', disabled: !a || !a.strokes.length, onclick: () => { cancelAuto(); a.strokes.pop(); refresh(); paint(a, false); } }), btn('Löschen', { cls: 'sm', disabled: !a || !a.strokes.length, onclick: () => { cancelAuto(); a.strokes = []; refresh(); paint(a, false); } }),
       btn(AUTO[auto][0], { cls: 'sm' + (auto === 'off' ? '' : ' on'), onclick: () => { const k = Object.keys(AUTO); auto = k[(k.indexOf(auto) + 1) % k.length]; try { localStorage.setItem('hs:autoadv', auto); } catch (_) { /* egal */ } cancelAuto(); refresh(); } }),
-      btn(ghost ? 'Vorlage zum Nachzeichnen: an' : 'Vorlage zum Nachzeichnen: aus', { cls: 'sm', onclick: () => { ghost = !ghost; setFlag('hs:ghost', ghost); refresh(); fields.forEach(paint); } }),
+      btn(ghost ? 'Vorlage zum Nachzeichnen: an' : 'Vorlage zum Nachzeichnen: aus', { cls: 'sm', onclick: () => { ghost = !ghost; setFlag('hs:ghost2', ghost); refresh(); fields.forEach(paint); } }),
       btn(multi ? 'Wiederholungen nebeneinander: an' : 'Wiederholungen nebeneinander: aus', { cls: 'sm', onclick: () => { save(); multi = !multi; setFlag('hs:multi', multi); regroup(); } }),
       extra ? null : btn(once ? 'Alle Varianten' : 'Nur 1×', { cls: 'sm', onclick: () => { save(); once = !once; regroup(); } })].filter(Boolean));
   }
