@@ -73,9 +73,15 @@ export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra
     timer = setTimeout(() => { timer = 0; move(1); }, ms);
   }
 
+  // Feldgröße: kleineres Feld = kleinere, natürlichere Schrift beim Zeichnen (die Striche selbst bleiben gleich gespeichert)
+  let fsc = 1; try { const v = parseFloat(localStorage.getItem('hs:fieldsc')); if (v >= .4 && v <= 1) fsc = v; } catch (_) { /* Speicher gesperrt */ }
+  const fval = h('span', { class: 'xs mut', style: { minWidth: '34px', textAlign: 'right' } }, Math.round(fsc * 100) + ' %');
+  const fsl = h('input', { type: 'range', min: 40, max: 100, step: 5, value: Math.round(fsc * 100), 'aria-label': 'Größe des Zeichenfelds', style: { flex: '1 1 120px', maxWidth: '240px' },
+    oninput: () => { fsc = fsl.value / 100; fval.textContent = fsl.value + ' %'; try { localStorage.setItem('hs:fieldsc', String(fsc)); } catch (_) { /* egal */ } size(); } });
+  const fieldRow = h('label', { class: 'row', style: { gap: '8px', alignItems: 'center', justifyContent: 'center', width: '100%' } }, h('span', { class: 'sm' }, 'Feldgröße'), fsl, fval);
   function size() {
     const availH = window.innerHeight - 56 - 76 - 120, availW = window.innerWidth - 24;
-    ppu = Math.max(2.4, Math.min(availH / CH, availW / CW, 6));
+    ppu = Math.max(1.5, Math.min(availH / CH, availW / CW, 6) * fsc);
     const dpr = Math.min(2.5, window.devicePixelRatio || 1);
     cv.style.width = CW * ppu + 'px'; cv.style.height = CH * ppu + 'px'; bar.style.width = CW * ppu + 'px';
     cv.width = base.width = Math.round(CW * ppu * dpr); cv.height = base.height = Math.round(CH * ppu * dpr);
@@ -170,7 +176,7 @@ export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra
   }
   head.append(btn('Abbrechen', { cls: 'ghost icon', icon: 'x', onclick: close }), h('div', { class: 't', style: { display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' } }, prog, cnt),
     btn('Speichern', { cls: 'sm', onclick: finish }));
-  mb.append(h('div', { class: 'row', style: { gap: '10px', alignItems: 'center', justifyContent: 'center' } }, label, grp), cv, bar, tools, hint);
+  mb.append(h('div', { class: 'row', style: { gap: '10px', alignItems: 'center', justifyContent: 'center' } }, label, grp), cv, bar, tools, fieldRow, hint);
   window.addEventListener('resize', size);
   load(); size();
   return { close };
