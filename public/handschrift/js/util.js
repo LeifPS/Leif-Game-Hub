@@ -50,3 +50,25 @@ export async function saveFile(blob, name, { share = false } = {}) {
   setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 4000);
   return 'gespeichert';
 }
+
+// Dokumentname aus dem Text ableiten: [titel], erste Überschrift oder erste Textzeile
+export function titleFromText(t) {
+  const strip = (s) => s.replace(/\[\s*\/?\s*(?:rot|blau|gruen|grün|schwarz|orange|lila|gelb|grau)?\s*\]/gi, '').replace(/(\*\*|__|~~|==)/g, '').replace(/^\s*(#{1,3}|[-*•]|\d{1,3}[.)])\s+/, '').replace(/\s+/g, ' ').trim();
+  const cut = (s) => s.length <= 42 ? s : (s.slice(0, 42).replace(/\s+\S*$/, '') || s.slice(0, 42)) + '…';
+  const lines = (t || '').split('\n'); let first = '';
+  for (let i = 0; i < lines.length && i < 80; i++) {
+    const L = lines[i].trim(); if (!L) continue;
+    let m = /^\[\s*(?:titel|title)\s*[^\]]*\]\s*(.*?)\s*(?:\[\s*\/\s*(?:titel|title)\s*\])?$/i.exec(L);
+    if (m) { let v = m[1]; if (!v) { for (let j = i + 1; j < lines.length && !v; j++) { const n = lines[j].trim(); if (/^\[/.test(n)) break; v = n.replace(/^(?:ausdruck|text)\s*:\s*/i, ''); } } v = strip(v); if (v) return cut(v); continue; }
+    if (/^#\s+/.test(L)) { const v = strip(L); if (v) return cut(v); }
+    if (/^\[\s*\/?\s*[A-Za-zÄÖÜäöüß][\w-]*[^\]]*\]/.test(L) && !/^\[\s*(?:rot|blau|gruen|grün|schwarz|orange|lila|gelb|grau|\/)\s*\]/i.test(L)) continue;   // HDF-Tag-Zeile überspringen
+    if (/^\s*[A-Za-zÄÖÜäöüß][\w -]{0,24}:\s/.test(L) && lines.slice(0, i).some(x => /^\s*\[[A-Za-z]/.test(x)) && !first) continue;   // Eigenschaftszeile
+    if (!first) { const v = strip(L); if (v) first = v; }
+  }
+  return first ? cut(first) : '';
+}
+export function autoName(doc) {
+  if (!doc || !(doc.autoT || !doc.title || doc.title === 'Neues Dokument')) return false;
+  const t = titleFromText(doc.text); if (!t || t === doc.title) return false;
+  doc.title = t; doc.autoT = true; return true;
+}

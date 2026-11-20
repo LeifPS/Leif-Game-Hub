@@ -46,7 +46,7 @@ export function docsView(app) {
   function draw() {
     if (!loaded) return;
     wrap.replaceChildren();
-    const imp = h('input', { type: 'file', accept: '.txt,.md,.markdown,text/plain', multiple: true, class: 'sr', onchange: async () => { let last; for (const f of imp.files) last = await app.newDoc({ title: f.name.replace(/\.[^.]+$/, ''), text: await f.text() }); imp.value = ''; if (last) { toast('Hochgeladen'); draw(); } } });
+    const imp = h('input', { type: 'file', accept: '.txt,.md,.markdown,.hdf,text/plain', multiple: true, class: 'sr', onchange: async () => { let last; for (const f of imp.files) last = await app.newDoc({ title: f.name.replace(/\.[^.]+$/, ''), text: await f.text() }); imp.value = ''; if (last) { toast('Hochgeladen'); draw(); } } });
     wrap.append(h('div', { class: 'row', style: { marginBottom: '12px' } }, h('div', { class: 'sp1' }, h('h1', { style: { margin: 0 } }, 'Dokumente'), h('p', { class: 'mut sm', style: { margin: '2px 0 0' } }, `${app.docs.length} ${app.docs.length === 1 ? 'Dokument' : 'Dokumente'} · alles wird auf diesem Gerät gespeichert`)),
       btn('Textdatei hochladen', { icon: 'upload', cls: 'icon', onclick: () => imp.click(), title: 'Textdateien (.txt, .md) hochladen' }), btn('Neues Dokument', { icon: 'plus', cls: 'pri icon', onclick: async () => { const d = await app.newDoc(); app.openDoc(d.id); }, title: 'Neues Dokument' }), imp));
     const s = h('input', { type: 'search', placeholder: 'Dokumente durchsuchen …', value: q, 'aria-label': 'Dokumente durchsuchen', oninput: () => { q = s.value; grid(); } });
@@ -102,7 +102,7 @@ export function docsView(app) {
       const move = (dir) => async () => { api.close(); const ids = sorted().map(x => x.id), i = ids.indexOf(d.id), j = dir < 0 ? 0 : ids.length - 1; ids.splice(i, 1); ids.splice(j, 0, d.id); saveOrder(ids); sort = 'custom'; kvSet('docSort', 'custom'); draw(); };
       b.append(h('div', { style: { display: 'grid', gap: '8px' } },
         btn('Öffnen', { icon: 'pen', onclick: () => { api.close(); app.openDoc(d.id); } }),
-        btn('Umbenennen', { icon: 'edit', onclick: async () => { api.close(); const nm = await promptBox('Name des Dokuments', d.title || ''); if (nm) { d.title = nm; d.updated = Date.now(); await dbPut('docs', d); app.docSaved(d); draw(); } } }),
+        btn('Umbenennen', { icon: 'edit', onclick: async () => { api.close(); const nm = await promptBox('Name des Dokuments', d.title || ''); if (nm) { d.title = nm; d.autoT = false; d.updated = Date.now(); await dbPut('docs', d); app.docSaved(d); draw(); } } }),
         btn('Duplizieren', { icon: 'copy', onclick: async () => { api.close(); await app.newDoc({ ...d, id: undefined, title: (d.title || 'Dokument') + ' (Kopie)', created: Date.now(), updated: Date.now(), opened: 0 }); draw(); toast('Dupliziert'); } }),
         btn('An den Anfang', { icon: 'cl', onclick: move(-1) }), btn('Ans Ende', { icon: 'cr', onclick: move(1) }),
         btn('Text als Datei speichern', { icon: 'download', onclick: () => { api.close(); saveFile(new Blob([d.text], { type: 'text/plain' }), fileBase(d.title) + '.txt'); } }),

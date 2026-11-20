@@ -1,22 +1,23 @@
 // Ansicht „Schreiben“: Textfeld, Werkzeugleiste, Live-Vorschau, Einstellungen, Export, Sonderzeichen
-import { h, debounce, toast, saveFile, fmtSize } from './util.js';
+import { h, debounce, toast, saveFile, fmtSize, autoName } from './util.js';
 import { ic, btn, sheet, range, toggle, seg, chips, confirmBox } from './ui.js';
 import { layout, drawPage, ensureImages, FORMATS, PAPERS, PAPER_COLORS, PENS, DEF, GNPAPER, fmtOf } from './render.js';
 import { exportPdf, exportGoodNotes, exportGoodNotesInk, exportPngs, zipOf, fileBase } from './exporter.js';
 import { PACKS } from './packs.js';
 import { openWizard } from './wizard.js';
 import { openTopUp } from './extra.js';
+import { checkText } from './grammar.js';
 import { dbPut, kvSet } from './store.js';
 
 const MARGINS = { schmal: [70, 60, 90, 80], normal: [120, 100, 140, 120], breit: [170, 150, 180, 150] };
 
 export function editorView(app) {
-  let doc = null, L = null, version = 0, pagesEl, fontObj = null, pane = 'ed', info, missEl, ta;
+  let doc = null, L = null, version = 0, pagesEl, fontObj = null, pane = 'ed', info, missEl, errEl, ta;
   const root = h('div', { class: 'editor' });
   const S = () => doc.s;
 
   // ---------- Kopf ----------
-  const title = h('input', { class: 'title', type: 'text', maxlength: 80, placeholder: 'Titel', 'aria-label': 'Titel des Dokuments', oninput: () => { doc.title = title.value; saveSoon(); } });
+  const title = h('input', { class: 'title', type: 'text', maxlength: 80, placeholder: 'Titel', 'aria-label': 'Titel des Dokuments', oninput: () => { doc.title = title.value; doc.autoT = !title.value.trim(); saveSoon(); } });
   const bar = h('div', { class: 'bar' }, btn('Zurück zu den Dokumenten', { icon: 'cl', cls: 'icon', onclick: async () => { await saveNow(); app.show('docs'); } }), h('div', { class: 't' }, title),
     btn('Einstellungen', { icon: 'sliders', cls: 'icon', onclick: () => openSettings() }), btn('Exportieren', { icon: 'download', cls: 'pri', onclick: () => openExport() }));
   const segEl = h('div', { class: 'seg2' }, seg([['ed', 'Schreiben'], ['pv', 'Vorschau']], () => pane, v => { pane = v; showPane(); }));
@@ -79,15 +80,39 @@ export function editorView(app) {
   function toggleFind(on) { findBar.hidden = !on; if (on) { const sel = ta.value.slice(ta.selectionStart, ta.selectionEnd); if (sel && !sel.includes('\n')) fq.value = sel; fcount(); fq.focus(); fq.select(); } else ta.focus(); }
   // Weitere Funktionen: Datei laden/speichern, Datum, Rechtschreibung, alles löschen
   const spellOn = () => { try { return localStorage.getItem('hs:spell') !== '0'; } catch (_) { return true; } };
+  async function grammarCheck() {
+    let ok = false; try { ok = localStorage.getItem('hs:ltok') === '1'; } catch (_) { /* egal */ }
+    if (!ok) { if (!(await confirmBox('Für die Prüfung wird dein Text (ohne Formeln und Befehle) an den Dienst LanguageTool (languagetool.org) geschickt. Nur dann, wenn du hier bestätigst. Fortfahren?', 'Prüfen'))) return; try { localStorage.setItem('hs:ltok', '1'); } catch (_) { /* egal */ } }
+    toast('Prüfe Text …', 6000);
+    let ms; try { ms = await checkText(ta.value); } catch (e) { toast(e.message && !/fetch|network/i.test(e.message) ? e.message : 'Keine Verbindung zum Prüfdienst.', 4200, 'err'); return; }
+    if (!ms.length) { toast('Keine Fehler gefunden ✓', 3000); return; }
+    const snap = ta.value, list = ms.map(m => ({ ...m, word: snap.substr(m.offset, m.length) }));
+    sheet(`${list.length} ${list.length === 1 ? 'Vorschlag' : 'Vorschläge'}`, (b, api) => {
+      const cards = new Map();
+      const shift = (from, d) => { for (const x of list) if (x.offset > from) x.offset += d; };
+      const drop = (m) => { list.splice(list.indexOf(m), 1); const c = cards.get(m); c && c.remove(); if (!list.length) api.close(); };
+      for (const m of list) {
+        const ctxS = snap.slice(Math.max(0, m.offset - 28), m.offset).replace(/\n/g, ' '), ctxE = snap.slice(m.offset + m.length, m.offset + m.length + 28).replace(/\n/g, ' ');
+        const card = h('div', { class: 'pack', style: { display: 'block' } },
+          h('div', { class: 'sm mut' }, m.kind), h('div', null, '…' + ctxS, h('b', { style: { background: 'rgba(255,200,0,.35)' } }, m.word), ctxE + '…'), h('div', { class: 'sm' }, m.msg),
+          h('div', { style: { display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' } },
+            ...m.repl.map(r => btn(r === '' ? '(löschen)' : r, { cls: 'sm pri', onclick: () => { hPush(); const cur = ta.value; if (cur.substr(m.offset, m.length) !== m.word) { toast('Der Text wurde inzwischen geändert – bitte neu prüfen.', 3400, 'err'); return; } ta.setRangeText(r, m.offset, m.offset + m.length, 'preserve'); fire(); shift(m.offset, r.length - m.length); drop(m); } })),
+            btn('Ignorieren', { cls: 'sm ghost', onclick: () => drop(m) })));
+        cards.set(m, card); b.append(card);
+      }
+    });
+  }
   function openMore() {
     sheet('Weitere Textfunktionen', (b, api) => {
       const item = (label, sub, icon, fn) => h('button', { type: 'button', class: 'pack', onclick: () => { api.close(); setTimeout(fn, 120); } }, h('div', { class: 'pi' }, ic(icon)), h('div', { class: 'pt' }, h('b', null, label), h('span', { class: 'sm mut' }, sub)));
       b.append(
-        item('Textdatei einfügen', '.txt oder .md vom Gerät an der Cursorposition einfügen', 'folder', () => { const f = h('input', { type: 'file', accept: '.txt,.md,.markdown,text/plain,text/markdown', style: { display: 'none' }, onchange: async () => { const file = f.files[0]; f.remove(); if (!file) return; try { insert(await file.text()); toast(`„${file.name}“ eingefügt`); } catch (e) { toast('Datei konnte nicht gelesen werden', 3200, 'err'); } } }); document.body.append(f); f.click(); }),
+        item('Textdatei einfügen', '.txt oder .md vom Gerät an der Cursorposition einfügen', 'folder', () => { const f = h('input', { type: 'file', accept: '.txt,.md,.markdown,.hdf,text/plain,text/markdown', style: { display: 'none' }, onchange: async () => { const file = f.files[0]; f.remove(); if (!file) return; try { insert(await file.text()); toast(`„${file.name}“ eingefügt`); } catch (e) { toast('Datei konnte nicht gelesen werden', 3200, 'err'); } } }); document.body.append(f); f.click(); }),
         item('Als Textdatei speichern', 'Den Text als .txt sichern (ohne Handschrift)', 'download', () => saveFile(new Blob([ta.value], { type: 'text/plain;charset=utf-8' }), `${fileBase(doc.title)}.txt`)),
+        item('Als HDF-Datei speichern', 'Den Text mit Visuals als .hdf sichern', 'download', () => saveFile(new Blob([ta.value], { type: 'text/plain;charset=utf-8' }), `${fileBase(doc.title)}.hdf`)),
         item('Alles markieren', 'Den ganzen Text auswählen', 'check', () => { ta.focus(); ta.select(); }),
         item('Datum einfügen', 'Heutiges Datum an der Cursorposition', 'info', () => insert(new Date().toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' }))),
         item(spellOn() ? 'Rechtschreibprüfung ausschalten' : 'Rechtschreibprüfung einschalten', 'Rote Wellenlinien im Textfeld', 'edit', () => { const on = !spellOn(); try { localStorage.setItem('hs:spell', on ? '1' : '0'); } catch (_) { /* egal */ } ta.spellcheck = on; toast(on ? 'Rechtschreibprüfung an' : 'Rechtschreibprüfung aus'); }),
+        item('Grammatik und Rechtschreibung prüfen', 'Prüft den Fließtext mit LanguageTool (Text wird dafür online gesendet)', 'check', () => grammarCheck()),
         item('Alles löschen', 'Den ganzen Text entfernen (mit Rückgängig)', 'trash', async () => { if (!ta.value) return; if (await confirmBox('Den ganzen Text löschen? Mit „Rückgängig“ holst du ihn zurück.', 'Löschen')) { hPush(); ta.value = ''; fire(); } }));
     });
   }
@@ -119,8 +144,8 @@ export function editorView(app) {
       }
     }
   });
-  info = h('div', { class: 'stat' }); missEl = h('div', { class: 'miss', hidden: true });
-  const edPane = h('div', { class: 'pane ed on' }, tb, findBar, ta, missEl, info);
+  info = h('div', { class: 'stat' }); missEl = h('div', { class: 'miss', hidden: true }); errEl = h('div', { class: 'miss', hidden: true });
+  const edPane = h('div', { class: 'pane ed on' }, tb, findBar, ta, missEl, errEl, info);
   pagesEl = h('div', { class: 'preview' });
   const pvPane = h('div', { class: 'pane pv' }, pagesEl);
   const split = h('div', { class: 'split' }, edPane, pvPane);
@@ -128,7 +153,7 @@ export function editorView(app) {
   const showPane = () => { edPane.classList.toggle('on', pane === 'ed'); pvPane.classList.toggle('on', pane === 'pv'); segEl.replaceChildren(seg([['ed', 'Schreiben'], ['pv', 'Vorschau']], () => pane, v => { pane = v; showPane(); })); if (pane === 'pv') drawVisible(); };
 
   // ---------- Speichern ----------
-  const saveNow = async () => { if (!doc) return; doc.updated = Date.now(); await dbPut('docs', doc); app.docSaved(doc); };
+  const saveNow = async () => { if (!doc) return; if (autoName(doc)) title.value = doc.title; doc.updated = Date.now(); await dbPut('docs', doc); app.docSaved(doc); };
   const saveSoon = debounce(saveNow, 500);
   const renderSoon = debounce(() => render(), 140);
 
@@ -172,6 +197,27 @@ export function editorView(app) {
       missEl.hidden = false;
       missEl.replaceChildren(ic('alert'), h('span', null, 'Fehlt in dieser Schrift: ', h('b', null, L.missing.slice(0, 14).join(' ') + (L.missing.length > 14 ? ' …' : ''))), btn('Hinzufügen', { cls: 'sm', onclick: () => addMissing(L.missing) }));
     } else missEl.hidden = true;
+    const er = L.errors || [];
+    if (er.length) {
+      const bad = er.filter(e => e.level !== 'warn').length;
+      errEl.hidden = false;
+      errEl.replaceChildren(ic('alert'), h('span', null, bad ? `${bad} ${bad === 1 ? 'Fehler' : 'Fehler'} im Dokument` + (er.length > bad ? ` und ${er.length - bad} Hinweis${er.length - bad === 1 ? '' : 'e'}` : '') : `${er.length} Hinweis${er.length === 1 ? '' : 'e'} zum Dokument`), btn('Anzeigen', { cls: 'sm', onclick: () => showErrors(er) }));
+    } else errEl.hidden = true;
+  }
+  function showErrors(er) {
+    sheet('Fehler und Hinweise', (b, api) => {
+      b.append(h('p', { class: 'sm mut' }, 'Der Rest des Dokuments wird trotzdem gezeichnet. Tippe auf einen Eintrag, um zur Zeile zu springen.'));
+      for (const e of er.slice().sort((a, c) => a.line - c.line)) {
+        b.append(h('button', { type: 'button', class: 'pack', onclick: () => { api.close(); gotoLine(e.line); } },
+          h('div', { class: 'pi' }, ic(e.level === 'warn' ? 'info' : 'alert')), h('div', { class: 'pt' }, h('b', null, `Zeile ${e.line}`), h('span', { class: 'sm mut' }, e.msg))));
+      }
+    });
+  }
+  function gotoLine(n) {
+    const lines = ta.value.split('\n'); let pos = 0; for (let i = 0; i < n - 1 && i < lines.length; i++) pos += lines[i].length + 1;
+    if (pane !== 'ed') { pane = 'ed'; showPane(); }
+    ta.focus(); ta.setSelectionRange(pos, pos + (lines[n - 1] || '').length);
+    const lh = parseFloat(getComputedStyle(ta).lineHeight) || 22; ta.scrollTop = Math.max(0, (n - 4) * lh);
   }
   function addMissing(chars) {
     const need = new Set(), loose = [];

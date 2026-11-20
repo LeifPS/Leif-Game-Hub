@@ -1,5 +1,7 @@
 // Text -> Seitenlayout -> Zeichnen (Handschrift-Motor)
 import { components, bboxOf } from './imgops.js';
+import { parseHdf } from './hdf.js';
+import { renderBlock } from './blocks.js';
 
 export const SC = 3;
 export const FORMATS = {
@@ -171,10 +173,10 @@ async function composeGlyph(v, kinds, seed, pen) {
 }
 
 // ---------------- Layout ----------------
-function parseInline(para, S) {
+function parseInline(para, S, mk) {
   // -> [{c, b, u, s, h, col}]
   const out = []; let b = false, u = false, s = false, h = false, col = null;
-  if (!S.markup) { for (const c of para) out.push({ c }); return out; }
+  if (!mk) { for (const c of para) out.push({ c }); return out; }
   const COL = { rot: '#c62828', blau: '#1d3a9a', gruen: '#1b7a3a', 'grün': '#1b7a3a', schwarz: '#16161c', orange: '#d9730d', lila: '#7b3fa0', gelb: '#c7a600', grau: '#666' };
   const cs = [...para];
   for (let i = 0; i < cs.length; i++) {
@@ -190,21 +192,24 @@ function parseInline(para, S) {
 }
 
 export function layout(text, S, font) {
-  text = prep(text, S);
+  const errors = [];
+  let hdf = null; try { hdf = /^\s*\[\s*\/?\s*[A-Za-zÄÖÜäöüß]/m.test(text) ? parseHdf(text) : null; } catch (e) { errors.push({ line: 1, level: 'error', msg: 'HDF-Parser: ' + e.message }); }
+  if (hdf) errors.push(...hdf.errors);
+  const hasEl = !!(hdf && hdf.root.kids.some(k => k.name));
   const FM = FORMATS[fmtOf(S)], PW = FM.w, PH = FM.h, XH = font.XH;
   const MT = S.mt, MB = S.mb, rul = gnRuler(S, MT), VJ = rul ? .25 : 1;
-  const rng = mulberry32(S.seed), k = S.size / XH, lineH = rul ? rul.step : S.size * S.lh, left = rul ? rul.snapX(S.ml) : S.ml, right = PW - S.mr;
+  const rng = mulberry32(S.seed), k = S.size / XH, lineH = rul ? rul.step : S.size * S.lh; let left = rul ? rul.snapX(S.ml) : S.ml, right = PW - S.mr; const mainLeft = left, mainRight = right;
   // Variationen: Gesamtregler (jit) × jeweiliger Einzelregler (fehlt er, gilt 100 %); 0 = aus
   const jv = (k) => (S.jit || 0) * (S[k] == null ? 1 : S[k]), jW = jv('jw'), jL = jv('jl'), jB = jv('jb'), jG = jv('jg'), jA = jv('ja');
   const firstY = () => rul ? rul.snapY(MT + lineH) : MT + lineH;
-  const pages = [[]], missing = new Set();
+  let pages = [[]], inSub = false; const missing = new Set();
   let y = firstY(), x = left, slope = 0, lastVar = {}, ind = 0;
   let nY = makeNoise(rng), nR = makeNoise(rng), nS = makeNoise(rng);
   let lastHl = null, lastUl = null;
   const newLine = () => {
     y += lineH; x = left + ind + (rng() - .5) * jL * S.size;
     slope = (rng() - .5) * 0.012 * jB; nY = makeNoise(rng); nR = makeNoise(rng); nS = makeNoise(rng);
-    if (y > PH - MB) { pages.push([]); y = firstY(); }
+    if (!inSub && y > PH - MB) { pages.push([]); y = firstY(); }
     lastHl = lastUl = null;
   };
   const makeWord = (chars, scl = 1) => {
@@ -245,10 +250,11 @@ export function layout(text, S, font) {
     flush(); return cx;
   };
   slope = (rng() - .5) * 0.012 * jB;
-  const paras = text.replace(/\t/g, '    ').split('\n');
+  const flowText = (txt, mk) => {
+  const paras = prep(txt, S).replace(/\t/g, '    ').split('\n');
   for (const raw of paras) {
     let para = raw, scl = 1, bullet = false, head = 0, lab = '•';
-    if (S.markup) {
+    if (mk) {
       let m;
       if ((m = /^(#{1,3}) +(.*)$/.exec(para))) { head = m[1].length; scl = [0, 1.5, 1.28, 1.12][head]; para = m[2]; }
       else if ((m = /^[-*•] +(.*)$/.exec(para))) { bullet = true; para = m[1]; }
@@ -258,7 +264,7 @@ export function layout(text, S, font) {
     ind = bullet ? S.size * (lab.length > 1 ? 2.1 : 1.6) : 0;
     let p = '', prevc = ' ';
     for (const c of para) { p += (c === '"') ? (/[\s(\[]/.test(prevc) ? '„' : '“') : c; prevc = c; }
-    const chars = parseInline(p, S).map(o => ({ ...o, b: o.b || head > 0 }));
+    const chars = parseInline(p, S, mk).map(o => ({ ...o, b: o.b || head > 0 }));
     let first = true;
     // in Wörter teilen
     const words = []; let cur = [];
@@ -277,6 +283,64 @@ export function layout(text, S, font) {
     }
     newLine();
   }
+  };
+  // ---- HDF: Blöcke einsortieren ----
+  const gst = S.paper === 'grid' || S.paper === 'dots' ? lineH / 2 : 0, gpp = GNPAPER[S.paper];
+  const grid = gpp && gpp.vp ? { cell: gpp.hp * PXPT, gx0: gpp.v0 * PXPT, gy0: gpp.h0 * PXPT } : gst ? { cell: gst, gx0: S.ml - Math.floor(S.ml / gst) * gst, gy0: (S.mt + lineH + 3) - Math.floor((S.mt + lineH + 3) / gst) * gst } : null;
+  const bctx = {
+    grid, get gridOk() { return !!grid && !inSub; },
+    u: S.size, k, lineH, lineMul: 1, PH, MT, MB, space: S.size * 1.1 * S.wsp,
+    get W() { return right - left; },
+    has: (c) => !!font.resolve(c), prep: (t) => prep(t, S),
+    run: (str, scl = 1, col) => makeWord([...str].map(c => ({ c, col: col || null })), scl),
+    err: (line, msg, level = 'error') => errors.push({ line, level, msg }),
+    sub: (kids, width) => subLayout(kids, width),
+  };
+  const subLayout = (kids, width) => {
+    const sv = { pages, y, x, left, right, ind, lastHl, lastUl, inSub };
+    pages = [[]]; left = 0; right = width; y = lineH; x = 0; ind = 0; lastHl = lastUl = null; inSub = true;
+    processKids(kids);
+    const items = pages[0], rows = Math.max(1, Math.round((y - lineH) / lineH));
+    ({ pages, y, x, left, right, ind, lastHl, lastUl, inSub } = sv);
+    return { items, rows };
+  };
+  const placeBox = (box) => {
+    const wid = right - left, snapOn = !inSub && grid && box.snap;
+    let bx = box.align === 'rechts' ? right - box.w : box.align === 'links' || box.w >= wid - 1 ? left : left + (wid - box.w) / 2;
+    if (snapOn) { const c = grid.cell; bx = grid.gx0 + Math.round((bx + box.snap.x - grid.gx0) / c) * c - box.snap.x; if (bx < left - 1) bx += c; if (bx + box.w > right + c) bx -= c; }
+    let yb, top, rows;
+    const calc = () => {
+      if (snapOn) {
+        const c = grid.cell, topMin = y - lineH + .5 * S.size; top = grid.gy0 + Math.ceil((topMin + box.snap.y - grid.gy0) / c - 1e-6) * c - box.snap.y;
+        rows = Math.max(1, Math.ceil((top + box.h + 1.3 * S.size - y) / lineH - .1)); yb = y; return top + box.h;
+      }
+      const eff = box.flat ? Math.min(box.base, .85 * lineH) : box.base, pre = Math.max(0, Math.ceil(eff / lineH - .1) - 1), rem = Math.max(0, box.h - eff);
+      rows = pre + Math.max(1, Math.ceil((rem + 1.3 * S.size) / lineH - .1)); yb = y + pre * lineH; top = yb - eff; return yb + rem;
+    };
+    let bottom = calc();
+    if (!inSub && bottom > PH - MB + lineH * .3 && pages[pages.length - 1].length) { pages.push([]); y = firstY(); bottom = calc(); }
+    const pg = pages[pages.length - 1];
+    for (const it of box.items) {
+      if (it.path) pg.push({ path: { ...it.path, pts: it.path.pts.map(([px, py]) => [px + bx, py + top]) } });
+      else pg.push({ ...it, x: it.x + bx, y: it.y + top });
+    }
+    y = y + rows * lineH - lineH; newLine();
+  };
+  const processKids = (kids) => {
+    let buf = [];
+    const flush = () => { if (buf.length) { flowText(buf.join('\n'), hasEl || S.markup); buf = []; } };
+    for (const kd of kids) {
+      if (kd.text != null) { buf.push(kd.text); continue; }
+      flush();
+      if (kd.name === 'pagebreak') { if (!inSub) { pages.push([]); y = firstY(); x = left; } continue; }
+      let r = null; try { r = renderBlock(kd, bctx); } catch (e) { errors.push({ line: kd.line, level: 'error', msg: 'Fehler in [' + kd.rawName + ']: ' + e.message }); }
+      if (!r) continue;
+      if (r.md != null) { if (Array.isArray(r.md)) processKids(r.md); else flowText(r.md, true); }
+      else placeBox(r);
+    }
+    flush();
+  };
+  if (hasEl) processKids(hdf.root.kids); else flowText(text, S.markup);
   // Kopf- und Fußzeile
   const live = pages.filter((p, i) => p.length || i === 0), total = live.length;
   const stat = (str, align, yy, seed, scl = .8) => {
@@ -291,7 +355,7 @@ export function layout(text, S, font) {
     if (S.header && S.header.trim()) pg.push(...stat(prep(S.header.replace(/\{n\}/g, i + 1).replace(/\{datum\}/g, new Date().toLocaleDateString('de-DE')), S), 'l', Math.max(60, MT - lineH * .25), 100 + i));
     if (S.pageNum) pg.push(...stat((S.pageNumFmt || '{n}').replace(/\{n\}/g, i + 1).replace(/\{gesamt\}/g, total), 'c', PH - Math.max(40, MB * .45), 200 + i));
   });
-  return { pages: live, lineH, k, missing: [...missing], PW, PH };
+  return { pages: live, lineH, k, missing: [...missing], PW, PH, errors };
 }
 
 // ---------------- Zeichnen ----------------
@@ -350,11 +414,15 @@ export function drawPage(canvas, entries, L, S, scale, transparent) {
   const lay = cv('one', W, H), ic = lay.getContext('2d');
   const tan = Math.tan(S.slant * Math.PI / 180), wgt = S.weight * .55;
   const groups = new Map();
-  for (const e of entries) { if (e.hl) continue; const col = (e.g ? e.g.st.col : e.line ? e.line.col : null) || S.ink; (groups.get(col) || groups.set(col, []).get(col)).push(e); }
+  for (const e of entries) { if (e.hl) continue; const col = (e.g ? e.g.st.col : e.line ? e.line.col : e.path ? e.path.col : null) || S.ink; (groups.get(col) || groups.set(col, []).get(col)).push(e); }
   for (const [col, list] of groups) {
     ic.setTransform(1, 0, 0, 1, 0, 0); ic.globalCompositeOperation = 'source-over'; ic.clearRect(0, 0, W, H);
     ic.setTransform(scale, 0, 0, scale, 0, 0); ic.imageSmoothingEnabled = true; ic.imageSmoothingQuality = 'high'; ic.lineCap = 'round'; ic.lineJoin = 'round';
     for (const e of list) {
+      if (e.path) {
+        const p = e.path, pts = p.pts; if (pts.length < 2) continue; ic.save(); ic.globalAlpha = .92 * (p.a == null ? 1 : p.a); ic.strokeStyle = '#000'; ic.lineWidth = (k * 2.1 + wgt) * (p.w || 1);
+        ic.beginPath(); ic.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) ic.lineTo(pts[i][0], pts[i][1]); ic.stroke(); ic.restore(); continue;
+      }
       if (e.line) {
         const { x1, y1, x2, y2 } = e.line; ic.save(); ic.globalAlpha = .9; ic.strokeStyle = '#000'; ic.lineWidth = k * 2.1 + wgt;
         ic.beginPath(); ic.moveTo(x1, y1); ic.quadraticCurveTo((x1 + x2) / 2, (y1 + y2) / 2 + 1.6, x2, y2); ic.stroke(); ic.restore(); continue;

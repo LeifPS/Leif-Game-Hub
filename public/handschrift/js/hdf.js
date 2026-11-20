@@ -24,7 +24,7 @@ const DEFS = {
   valuetable: { text: false, props: ['funktion', 'xvon', 'xbis', 'schritt', 'titel', 'spaltenname', 'nachkommastellen', 'dezimal', 'kopf'] },
   table: { text: false, props: ['titel', 'kopf', 'zeile', 'spaltenbreiten', 'rahmen', 'zellabstand', 'kopfzeile', 'dezimal'], kids: ['row'] },
   row: { text: true, props: ['hoehe'], kids: ['cell'] }, cell: { text: true, props: ['spalten'] },
-  graph: { text: false, props: ['titel', 'xmin', 'xmax', 'ymin', 'ymax', 'xbereich', 'ybereich', 'raster', 'rasterx', 'rastery', 'achsen', 'achsenbeschriftung', 'xbeschriftung', 'ybeschriftung', 'skala', 'skalax', 'skalay', 'marken', 'legende', 'gleichskaliert', 'nullstellen', 'extrema', 'schnittpunkte', 'funktion', 'punkt', 'strecke', 'dezimal', 'zahlen'], kids: ['function', 'point', 'segment', 'label'] },
+  graph: { text: false, props: ['titel', 'xmin', 'xmax', 'ymin', 'ymax', 'xbereich', 'ybereich', 'raster', 'rasterx', 'rastery', 'achsen', 'achsenbeschriftung', 'xbeschriftung', 'ybeschriftung', 'skala', 'skalax', 'skalay', 'marken', 'legende', 'gleichskaliert', 'nullstellen', 'extrema', 'schnittpunkte', 'funktion', 'punkt', 'strecke', 'dezimal', 'zahlen', 'einheit'], kids: ['function', 'point', 'segment', 'label'] },
   function: { text: false, props: ['ausdruck', 'name', 'bereich', 'linienbreite', 'linienart', 'nullstellen', 'extrema'] },
   point: { text: false, props: ['name', 'x', 'y', 'marke', 'beschriftung'] }, segment: { text: false, props: ['von', 'bis', 'pfeil', 'linienbreite', 'linienart', 'name'] },
   label: { text: true, props: ['x', 'y', 'name', 'text'] },
@@ -48,7 +48,7 @@ const KEY_ALIAS = {
   xfrom: 'xvon', xto: 'xbis', step: 'schritt', lines: 'linien', size: 'groesse', background: 'hintergrund', border: 'rand', pen: 'stiftfarbe', number: 'nummer', points: 'punkte', roots: 'nullstellen',
   zeros: 'nullstellen', extrema: 'extrema', intersections: 'schnittpunkte', xlabel: 'xbeschriftung', ylabel: 'ybeschriftung', ticks: 'marken', source: 'quelle', target: 'ziel', type: 'typ', count: 'anzahl',
   begruendung: 'begruendung', reason: 'begruendung', note: 'hinweis', hint: 'hinweis', decimals: 'nachkommastellen', decimal: 'dezimal', cols: 'spalten', colspan: 'spalten',
-  gridx: 'rasterx', gridy: 'rastery', scale: 'skala', equalscale: 'gleichskaliert', multiplication: 'malzeichen', times: 'malzeichen', top: 'oben', pagebreak: 'umbruch',
+  unit: 'einheit', squares: 'einheit', kaestchenproeinheit: 'einheit', gridx: 'rasterx', gridy: 'rastery', scale: 'skala', equalscale: 'gleichskaliert', multiplication: 'malzeichen', times: 'malzeichen', top: 'oben', pagebreak: 'umbruch',
 };
 export const normKey = (k) => { const a = ALNUM(k); return KEY_ALIAS[a] || a; };
 export const normEl = (n) => { const a = ALNUM(n); return EL_ALIAS[a] || a; };
