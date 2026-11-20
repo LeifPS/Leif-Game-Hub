@@ -43,9 +43,9 @@ export const PENS = {
   gruen:       { name: 'Grün', ink: '#1b7a3a', weight: .35, alpha: 1 },
 };
 export const DEF = {
-  fmt: 'a4', paper: 'lined', paperColor: 'creme', scan: true, pen: 'kugel_blau', ink: '#1d3a9a', weight: .35, inkAlpha: 1,
-  size: 21, lh: 2.9, sp: .9, wsp: 1, jit: .6, slant: 0, capsc: 1, seed: 7,
-  mt: 140, mb: 120, ml: 120, mr: 100, kz: true, markup: true, sz: false, margin: true,
+  fmt: 'gn', paper: 'gnlin', paperColor: 'weiss', scan: false, pen: 'kugel_schwarz', ink: '#16161c', weight: .3, inkAlpha: 1,
+  size: 18, lh: 2.9, sp: .9, wsp: 1, jit: .6, slant: 0, capsc: 1, seed: 7,
+  mt: 90, mb: 80, ml: 70, mr: 60, kz: true, markup: true, sz: false, margin: true,
   header: '', pageNum: false, pageNumFmt: '{n}',
 };
 
