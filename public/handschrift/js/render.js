@@ -330,10 +330,12 @@ export function layout(text, S, font) {
   const processKids = (kids) => {
     let buf = [];
     const flush = () => { if (buf.length) { flowText(buf.join('\n'), hasEl || S.markup); buf = []; } };
-    for (const kd of kids) {
+    for (let ki = 0; ki < kids.length; ki++) {
+      const kd = kids[ki];
       if (kd.text != null) { buf.push(kd.text); continue; }
       flush();
-      if ((kd.name === 'heading' || kd.name === 'title') && !inSub && y + 6 * lineH > PH - MB && pages[pages.length - 1].length) { pages.push([]); y = firstY(); x = left; }
+      const nxt = kids.slice(ki + 1).find(q => q.text == null || q.text.trim()), big = nxt && nxt.text == null && /^(graph|chart|flow|tree|mindmap|venn|timeline|pyramid|cycle|table|valuetable|calculation|equation|note|example|task)$/.test(nxt.name);
+      if ((kd.name === 'heading' || kd.name === 'title') && !inSub && y + (big ? 20 : 6) * lineH > PH - MB && pages[pages.length - 1].length) { pages.push([]); y = firstY(); x = left; }
       if (kd.name === 'pagebreak') { if (!inSub) { pages.push([]); y = firstY(); x = left; } continue; }
       let r = null; try { r = renderBlock(kd, bctx); } catch (e) { errors.push({ line: kd.line, level: 'error', msg: 'Fehler in [' + kd.rawName + ']: ' + e.message }); }
       if (!r) continue;

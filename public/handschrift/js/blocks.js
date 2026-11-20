@@ -57,7 +57,15 @@ const stripFx = (s) => s.replace(/^\s*[A-Za-z]\w*\s*\(\s*x\s*\)\s*=\s*/, '');
 function formulaBlock(el, ctx) {
   const o = opts(el, ctx), L = srcLines(el, ['ausdruck']);
   if (!L.length) { ctx.err(el.line, '[formula] ohne Inhalt', 'warn'); return null; }
-  const boxes = L.map(l => mathBox(ctx, l.s, o, l.line).box);
+  const boxes = L.flatMap(l => {
+    const m = mathBox(ctx, l.s, o, l.line);
+    if (m.ok && m.box.w > ctx.W * .98 && m.ast.t === 'bin' && m.ast.rel) {       // zu lang -> an den Gleichheitszeichen umbrechen
+      const sp = splitRel(m.ast), mc = mathCtx(ctx, o), out = [layoutMath(sp.first, mc, o.sc)];
+      for (const p of sp.parts) { const r = layoutMath({ t: 'rest', parts: [p] }, mc, o.sc); out.push({ ...r, items: shiftItems(r.items, 2 * ctx.u, 0), w: r.w + 2 * ctx.u }); }
+      const vs = vstack(out, .5 * ctx.u * o.sc, 'links'); return [{ w: vs.w, asc: vs.base, desc: vs.h - vs.base, items: vs.items }];
+    }
+    return [m.box];
+  });
   if (boxes.length > 1) { return { multi: boxes.map(bx => { const v = vstack([{ ...bx, asc: bx.asc + .8 * ctx.u * o.sc, desc: bx.desc + .6 * ctx.u * o.sc }], 0, 'mitte'); v.align = o.align || 'mitte'; return v; }) }; }
   const v = vstack(boxes, .7 * ctx.u * o.sc, 'mitte'); v.align = o.align || 'mitte'; return v;
 }
