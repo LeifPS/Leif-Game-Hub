@@ -57,7 +57,7 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
     const redraw = () => {
       const c = cells(), uniq = new Set(c.map(x => x.ch)).size, pages = pageCount(c);
       sum.replaceChildren(h('div', { class: 'row wrap2' }, h('span', { class: 'chip ac' }, `${uniq} Zeichen`), h('span', { class: 'chip' }, `${c.length} Kästchen`), h('span', { class: 'chip' }, `${c.length ? pages : 0} ${pages === 1 ? 'Seite' : 'Seiten'}`)));
-      mf.replaceChildren(h('div', { class: 'mfstack' }, sum, h('div', { class: 'row' }, btn('Bögen hochladen', { cls: 'sm', title: 'Schon ausgefüllte Bögen hochladen', onclick: () => go(3) }), btn('Direkt zeichnen', { cls: 'sm', disabled: !c.length, onclick: startDraw }), h('span', { class: 'sp1' }), btn('Weiter', { cls: 'pri', disabled: !c.length, onclick: () => { if (S.custom.chars) kvSet('custom:' + hashOf({ chars: clean(S.custom.chars), n: S.custom.n }), { chars: clean(S.custom.chars), n: S.custom.n }); go(2); } }))));
+      mf.replaceChildren(h('div', { class: 'mfstack' }, sum, h('div', { class: 'row' }, btn('Bögen hochladen', { cls: 'sm', title: 'Schon ausgefüllte Bögen hochladen', onclick: () => go(3) }), h('span', { class: 'sp1' }), btn('Weiter', { cls: 'pri', disabled: !c.length, onclick: () => { if (S.custom.chars) kvSet('custom:' + hashOf({ chars: clean(S.custom.chars), n: S.custom.n }), { chars: clean(S.custom.chars), n: S.custom.n }); go(2); } }))));
       list.querySelectorAll('.pack').forEach(b => b.classList.toggle('on', S.sel.has(b.dataset.id)));
     };
     const list = h('div');
@@ -99,18 +99,23 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
       } catch (e) { msg.textContent = 'Das hat nicht geklappt: ' + e.message; } finally { S.busy = false; bar.style.display = 'none'; bar.firstChild.style.width = '0'; }
     };
     const canShare = !!(navigator.canShare && navigator.canShare({ files: [new File([''], 'a.pdf', { type: 'application/pdf' })] }));
-    w.append(h('h1', null, 'Vorlage holen'), h('p', { class: 'mut' }, `${c.length} Kästchen auf ${pages} ${pages === 1 ? 'Seite' : 'Seiten'}. Jeder Bogen hat einen eigenen QR-Code, daran erkennt die App später automatisch, welche Zeichen darauf stehen.`),
+    w.append(h('h1', null, 'So willst du schreiben'), h('p', { class: 'mut' }, `${c.length} Kästchen auf ${pages} ${pages === 1 ? 'Seite' : 'Seiten'}. Entweder zeichnest du die Zeichen gleich hier in der App, oder du holst dir eine Vorlage zum Ausfüllen.`),
+      h('h3', { style: { margin: '16px 0 8px' } }, 'Option 1: Direkt in der App zeichnen'),
+      h('div', { class: 'card' }, h('p', { class: 'sm mut', style: { margin: '0 0 10px' } }, 'Jedes Zeichen kommt einzeln in ein Feld mit Hilfslinien und einer Nachzeichen-Vorlage. Mit Finger oder Apple Pencil, ohne Drucken und Hochladen.'),
+        btn('Jetzt zeichnen', { icon: 'edit', cls: 'pri', disabled: !c.length, onclick: startDraw })),
+      h('h3', { style: { margin: '20px 0 8px' } }, 'Option 2: Vorlage holen und ausfüllen'),
+      h('p', { class: 'sm mut', style: { margin: '0 0 8px' } }, 'Jeder Bogen hat einen eigenen QR-Code, daran erkennt die App später automatisch, welche Zeichen darauf stehen.'),
       h('div', { class: 'card' },
         h('div', { class: 'grid2' }, btn('Als PDF laden', { icon: 'download', cls: 'pri', onclick: () => make('pdf', false) }), btn('Als Bilder (ZIP)', { icon: 'image', onclick: () => make('png', false) })),
         canShare ? h('div', { style: { marginTop: '10px' } }, btn('Teilen / in GoodNotes öffnen', { icon: 'share', cls: 'sm', onclick: () => make('pdf', true) })) : null, bar, msg),
-      h('h3', { style: { margin: '20px 0 8px' } }, 'So geht es weiter'),
+      h('h3', { style: { margin: '20px 0 8px' } }, 'So geht es bei Option 2 weiter'),
       h('div', { class: 'card sm' }, h('ol', { style: { margin: 0, paddingLeft: '20px', display: 'grid', gap: '8px' } },
         h('li', null, h('b', null, 'Ausfüllen: '), 'Öffne die PDF in GoodNotes (oder druck sie aus) und schreib jedes Zeichen in sein Kästchen, so wie du es sonst schreibst. Die blaue Linie ist die Grundlinie.'),
         h('li', null, h('b', null, 'Stift: '), 'Am besten ein dunkler Stift in normaler Schreibgröße. Nicht den Kästchenrand berühren.'),
         h('li', null, h('b', null, 'Exportieren: '), 'In GoodNotes über Teilen → „Als PDF exportieren“ (oder als Bilder). Bei Papier: scannen oder gerade von oben fotografieren.'),
         h('li', null, h('b', null, 'Hochladen: '), 'Im nächsten Schritt wählst du die Datei aus. Alles läuft auf deinem Gerät, nichts wird hochgeladen.'))),
       h('div', { class: 'note' }, 'Du musst nicht alles auf einmal schaffen: Du kannst Seite für Seite hochladen und später weitere Seiten ergänzen.'));
-    mf.append(btn('Zurück', { onclick: () => go(1) }), h('span', { class: 'sp1' }), btn('Ich habe sie ausgefüllt', { cls: 'pri', onclick: () => go(3) }));
+    mf.append(btn('Zurück', { onclick: () => go(1) }), h('span', { class: 'sp1' }), btn('Ich habe sie ausgefüllt', { onclick: () => go(3) }));
   }
 
   // ---------- 3. Hochladen ----------
