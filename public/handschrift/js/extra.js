@@ -54,8 +54,7 @@ export function openTopUp(app, font, { chars = '' } = {}) {
       // 1. Fehlende Zeichen
       if (missing.length) {
         const cells = [];
-        const maxN = Math.max(...missing.map(c => Math.min(3, (inf.get(c) || { n: 1 }).n)));
-        for (let v = 0; v < maxN; v++) for (const ch of missing) if (v < Math.min(3, (inf.get(ch) || { n: 1 }).n)) cells.push(cellOf(ch, v));
+        for (const ch of missing) for (let v = 0, n = Math.min(3, (inf.get(ch) || { n: 1 }).n); v < n; v++) cells.push(cellOf(ch, v));   // Wiederholungen eines Zeichens direkt hintereinander, damit sie nebeneinander gezeichnet werden können
         body.append(h('h3', { style: { margin: '4px 0 6px' } }, 'Fehlende Zeichen'),
           h('p', { class: 'sm mut', style: { margin: '0 0 8px' } }, 'Diese Zeichen gehören zu deinen Paketen, sind aber noch nicht gezeichnet:'),
           h('div', { class: 'pal' }, ...missing.slice(0, 120).map(c => h('button', { type: 'button', style: { cursor: 'default' } }, c))),
@@ -66,12 +65,12 @@ export function openTopUp(app, font, { chars = '' } = {}) {
       const typed = clean(S.txt), chosen = [];
       for (const g of groups) if (S.sel.has(g.name)) for (const c of g.chars) if (!chosen.includes(c)) chosen.push(c);
       for (const c of typed) if (!chosen.includes(c)) chosen.push(c);
-      const cells = []; for (let r = 0; r < S.extra; r++) for (const ch of chosen) cells.push(cellOf(ch, count(ch) + r));
+      const cells = []; for (const ch of chosen) for (let r = 0; r < S.extra; r++) cells.push(cellOf(ch, count(ch) + r));
       const ta = h('textarea', { class: 'f', rows: 2, placeholder: 'z. B. a e n  oder ein neues Zeichen wie ✿', value: S.txt, oninput: () => { S.txt = ta.value; refreshBtn(); } }); ta.value = S.txt;
       const startBtn = btn('', { cls: 'pri', onclick: () => start(cells) });
       const refreshBtn = () => {   // nur die Zahl am Knopf aktualisieren, damit das Textfeld beim Tippen nicht neu gebaut wird
         const t = clean(S.txt), ch2 = []; for (const g of groups) if (S.sel.has(g.name)) for (const c of g.chars) if (!ch2.includes(c)) ch2.push(c); for (const c of t) if (!ch2.includes(c)) ch2.push(c);
-        cells.length = 0; for (let r = 0; r < S.extra; r++) for (const ch of ch2) cells.push(cellOf(ch, count(ch) + r));
+        cells.length = 0; for (const ch of ch2) for (let r = 0; r < S.extra; r++) cells.push(cellOf(ch, count(ch) + r));
         startBtn.textContent = cells.length ? `${cells.length} ${cells.length === 1 ? 'Zeichen' : 'Zeichen'} zeichnen` : 'Zeichen auswählen'; startBtn.disabled = !cells.length;
       };
       body.append(h('h3', { style: { margin: '20px 0 6px' } }, 'Weitere Varianten zeichnen'),
