@@ -20,7 +20,7 @@ const app = {
   refreshFontLabel() { this.fontCache.clear(); this.views.write.refresh(); },
   async loadFonts() {
     let builtin = this._builtin;
-    if (!builtin) { const d = await (await fetch('data/leif.json')).json(); builtin = this._builtin = { id: 'leif', name: 'Leifs Schrift (Beispiel)', builtin: true, meta: d.meta, g: d.g, packs: ['standard', 'sonder', 'mathe', 'franz'], updated: 0 }; }
+    if (!builtin) { const d = await (await fetch('data/leif.json')).json(); builtin = this._builtin = { id: 'leif', name: 'always * forever (Beispiel)', builtin: true, meta: d.meta, g: d.g, packs: ['standard', 'sonder', 'mathe', 'franz'], updated: 0 }; }
     const mine = (await dbAll('fonts')).sort((a, b) => (b.updated || 0) - (a.updated || 0));
     this.fonts = [...mine, builtin];
   },
@@ -55,7 +55,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => appl
 
 const NAV = [['write', 'Schreiben', 'pen'], ['fonts', 'Schriften', 'type'], ['docs', 'Dokumente', 'folder'], ['more', 'Mehr', 'more']];
 const WELCOME = `# Hallo!
-Das hier ist **deine Handschrift** – na ja, noch die Beispielschrift. Unter ==Schriften== machst du in wenigen Minuten deine eigene.
+Das hier ist noch die Beispielschrift „always * forever“ von Brittney Murphy. Unter ==Schriften== machst du in wenigen Minuten deine eigene.
 
 - Text links tippen oder einfügen, rechts siehst du das Ergebnis
 - Hochzahlen gehen so: x^2 + y^3

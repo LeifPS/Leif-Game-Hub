@@ -1,8 +1,9 @@
 // Service Worker: macht die App offline nutzbar (alles wird beim ersten Besuch auf das Gerät geladen)
-const VER = 'hs-9894dacda1';
+const VER = 'hs-d32da4ea18';
 const CORE = [
  "/",
  "/app.css",
+ "/data/LIZENZ-always-forever.txt",
  "/data/leif.json",
  "/icons/apple-touch-icon.png",
  "/icons/favicon-32.png",

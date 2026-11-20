@@ -102,7 +102,7 @@ export class Font {
       if (SPECIAL[ch]) { base = SPECIAL[ch][0]; kinds = [SPECIAL[ch][1]]; }
       this.comp[ch] = null;
       if (!kinds.length || !this.g[base]) continue;
-      try { this.comp[ch] = await Promise.all(this.g[base].map((v, i) => composeGlyph(v, kinds, ch.charCodeAt(0) * 7 + i))); } catch (e) { this.comp[ch] = null; }
+      try { this.comp[ch] = await Promise.all(this.g[base].map((v, i) => composeGlyph(v, kinds, ch.charCodeAt(0) * 7 + i, this.meta.pen))); } catch (e) { this.comp[ch] = null; }
     }
   }
   resolve(ch) {
@@ -127,8 +127,8 @@ export class Font {
 }
 
 // Akzent aus Buchstabe + Strichen zeichnen. Ergebnis: neues Zeichen im selben Format wie echte Zeichen.
-async function composeGlyph(v, kinds, seed) {
-  const rng = mulberry32(seed), PEN = 2.5, u = SC;
+async function composeGlyph(v, kinds, seed, pen) {
+  const rng = mulberry32(seed), PEN = pen || 2.5, u = SC, PF = Math.pow(PEN / 2.5, .6);
   const w = v.img.naturalWidth || Math.round(v.iw * SC), h = v.img.naturalHeight || Math.round(v.ih * SC);
   const extraTop = 16 * u, extraBot = 10 * u, W = w + 6 * u, H = h + extraTop + extraBot, X0 = 3 * u;
   const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d', { willReadFrequently: true });
@@ -145,7 +145,7 @@ async function composeGlyph(v, kinds, seed) {
   g.strokeStyle = '#000'; g.fillStyle = '#000'; g.lineWidth = PEN * u; g.lineCap = 'round'; g.lineJoin = 'round';
   const P = (x, y) => [cx + x * u, top + y * u], j = () => (rng() - .5);
   const line = (pts) => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke(); };
-  const dot = (p, r = 1.9) => { g.beginPath(); g.arc(p[0], p[1], r * u, 0, 6.3); g.fill(); };
+  const dot = (p, r = 1.9) => { g.beginPath(); g.arc(p[0], p[1], r * PF * u, 0, 6.3); g.fill(); };
   for (const kd of kinds) {
     if (kd === 'acute') line([P(-2.5 + j(), -gap - .5 + j()), P(2.8 + j(), -gap - 6.5 + j())]);
     else if (kd === 'grave') line([P(-2.8 + j(), -gap - 6.5 + j()), P(2.5 + j(), -gap - .5 + j())]);
@@ -219,7 +219,7 @@ export function layout(text, S, font) {
         run.push({ ch, v, sc, sx: r.sx, up: r.up || 0, adv, st, dy: (rng() - .5) * S.jit * S.size * .06, rot: (rng() - .5) * S.jit * .04, a: .86 + .14 * rng() }); w += adv;
       }
     };
-    for (const o of chars) { if (o.c === 'ß' && S.sz) { add('s', o); add('s', o); } else add(o.c, o); }
+    for (const o of chars) { if (o.c === 'ß' && (S.sz || !font.g['ß'])) { add('s', o); add('s', o); } else add(o.c, o); }
     return { run, w };
   };
   const place = (run, cx0, sc) => {
