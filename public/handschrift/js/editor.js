@@ -17,7 +17,7 @@ export function editorView(app) {
 
   // ---------- Kopf ----------
   const title = h('input', { class: 'title', type: 'text', maxlength: 80, placeholder: 'Titel', 'aria-label': 'Titel des Dokuments', oninput: () => { doc.title = title.value; saveSoon(); } });
-  const bar = h('div', { class: 'bar' }, h('div', { class: 't' }, title),
+  const bar = h('div', { class: 'bar' }, btn('Zurück zu den Dokumenten', { icon: 'cl', cls: 'icon', onclick: async () => { await saveNow(); app.show('docs'); } }), h('div', { class: 't' }, title),
     btn('Einstellungen', { icon: 'sliders', cls: 'icon', onclick: () => openSettings() }), btn('Exportieren', { icon: 'download', cls: 'pri', onclick: () => openExport() }));
   const segEl = h('div', { class: 'seg2' }, seg([['ed', 'Schreiben'], ['pv', 'Vorschau']], () => pane, v => { pane = v; showPane(); }));
   // ---------- Werkzeugleiste ----------
@@ -128,7 +128,8 @@ export function editorView(app) {
   const showPane = () => { edPane.classList.toggle('on', pane === 'ed'); pvPane.classList.toggle('on', pane === 'pv'); segEl.replaceChildren(seg([['ed', 'Schreiben'], ['pv', 'Vorschau']], () => pane, v => { pane = v; showPane(); })); if (pane === 'pv') drawVisible(); };
 
   // ---------- Speichern ----------
-  const saveSoon = debounce(async () => { doc.updated = Date.now(); await dbPut('docs', doc); app.docSaved(doc); }, 500);
+  const saveNow = async () => { if (!doc) return; doc.updated = Date.now(); await dbPut('docs', doc); app.docSaved(doc); };
+  const saveSoon = debounce(saveNow, 500);
   const renderSoon = debounce(() => render(), 140);
 
   // ---------- Vorschau ----------

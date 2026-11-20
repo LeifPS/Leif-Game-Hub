@@ -24,7 +24,7 @@ const app = {
     const mine = (await dbAll('fonts')).sort((a, b) => (b.updated || 0) - (a.updated || 0));
     this.fonts = [...mine, builtin];
   },
-  async fontSaved(rec) { this.fontCache.delete(rec.id); await this.loadFonts(); this.fontId = rec.id; kvSet('fontId', rec.id); if (this.doc) { this.doc.fontId = rec.id; dbPut('docs', this.doc); } this.views.fonts.refresh(); await this.views.write.refresh(); this.show('write'); },
+  async fontSaved(rec) { this.fontCache.delete(rec.id); await this.loadFonts(); this.fontId = rec.id; kvSet('fontId', rec.id); if (this.doc) { this.doc.fontId = rec.id; dbPut('docs', this.doc); } this.views.fonts.refresh(); await this.views.write.refresh(); this.show(this.doc ? 'write' : 'docs'); },
   async fontsChanged() { await this.loadFonts(); if (!this.fonts.find(f => f.id === this.fontId)) this.fontId = this.fonts[0].id; this.fontCache.clear(); this.views.write.refresh(); },
   async loadDocs() { this.docs = (await dbAll('docs')).sort((a, b) => (b.updated || 0) - (a.updated || 0)); },
   docSaved(d) { const i = this.docs.findIndex(x => x.id === d.id); if (i < 0) this.docs.unshift(d); else this.docs[i] = d; this.docs.sort((a, b) => (b.updated || 0) - (a.updated || 0)); },
@@ -33,14 +33,15 @@ const app = {
     const d = { id: uid(), title: 'Neues Dokument', text: '', s: { ...DEF, ...last }, fontId: this.fontId, created: now, updated: now, ...o, ...(o.s ? { s: { ...DEF, ...o.s } } : {}) };
     if (!o.id) d.id = uid(); await dbPut('docs', d); this.docSaved(d); return d;
   },
-  async openDoc(id) { const d = this.docs.find(x => x.id === id); if (!d) return; this.doc = d; kvSet('docId', id); if (d.fontId && this.fonts.find(f => f.id === d.fontId)) this.fontId = d.fontId; await this.views.write.load(d); this.show('write'); },
-  async docsChanged(deletedId) { await this.loadDocs(); if (this.doc && this.doc.id === deletedId) { const d = this.docs[0] || await this.newDoc(); await this.openDoc(d.id); } },
+  async openDoc(id) { const d = this.docs.find(x => x.id === id); if (!d) return; this.doc = d; d.opened = Date.now(); dbPut('docs', d); kvSet('docId', id); if (d.fontId && this.fonts.find(f => f.id === d.fontId)) this.fontId = d.fontId; await this.views.write.load(d); this.show('write'); },
+  async docsChanged(deletedId) { await this.loadDocs(); if (this.doc && this.doc.id === deletedId) this.doc = null; if (!this.docs.length) await this.newDoc({ title: 'Willkommen', text: WELCOME, fontId: this.fontId }); },
   async wipe() { for (const n of ['fonts', 'docs', 'kv']) { for (const r of await dbAll(n)) await (await import('./store.js')).dbDel(n, r.id || r.k); } if (navigator.serviceWorker) for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); if (self.caches) for (const k of await caches.keys()) await caches.delete(k); location.reload(); },
   setTheme(t) { this.theme = t; kvSet('theme', t); applyTheme(t); },
   show(v) {
     this.view = v;
     for (const [k, el] of Object.entries(viewEls)) el.classList.toggle('on', k === v);
-    for (const b of document.querySelectorAll('[data-nav]')) { b.classList.toggle('on', b.dataset.nav === v); b.setAttribute('aria-current', b.dataset.nav === v ? 'page' : 'false'); }
+    const nv = v === 'write' ? 'docs' : v;   // das Schreiben gehört zu „Dokumente“
+    for (const b of document.querySelectorAll('[data-nav]')) { b.classList.toggle('on', b.dataset.nav === nv); b.setAttribute('aria-current', b.dataset.nav === nv ? 'page' : 'false'); }
     if (v !== 'write') this.views[v].refresh && this.views[v].refresh();
     else this.views.write.refresh();
   },
@@ -53,7 +54,7 @@ function applyTheme(t) {
 }
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme(app.theme));
 
-const NAV = [['write', 'Schreiben', 'pen'], ['fonts', 'Schriften', 'type'], ['docs', 'Dokumente', 'folder'], ['more', 'Mehr', 'more']];
+const NAV = [['docs', 'Dokumente', 'folder'], ['fonts', 'Schriften', 'type'], ['more', 'Mehr', 'more']];
 const WELCOME = `# Hallo!
 Das hier ist noch die Beispielschrift „always * forever“ von Brittney Murphy. Unter ==Schriften== machst du in wenigen Minuten deine eigene.
 
@@ -78,7 +79,7 @@ async function boot() {
   const lastId = await kvGet('docId', null);
   let d = app.docs.find(x => x.id === lastId) || app.docs[0];
   if (!d) d = await app.newDoc({ title: 'Willkommen', text: WELCOME, fontId: app.fontId });
-  app.doc = d; await app.views.write.load(d); app.show('write');
+  app.doc = d; await app.views.write.load(d); app.show('docs');
   { const bt = document.getElementById('boot'); if (bt) { bt.style.transition = 'opacity .25s'; bt.style.opacity = '0'; setTimeout(() => bt.remove(), 280); } }
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); app.installPrompt = e; if (app.view === 'more') app.views.more.refresh(); });
   window.addEventListener('online', () => app.view === 'more' && app.views.more.refresh()); window.addEventListener('offline', () => app.view === 'more' && app.views.more.refresh());

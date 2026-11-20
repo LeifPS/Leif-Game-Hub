@@ -182,3 +182,16 @@ kbd{font-family:ui-monospace,Menlo,monospace;background:var(--surf2);border-radi
 @media print{body *{display:none}}
 
 .tg{border:1.5px solid var(--bd);background:var(--surf);border-radius:99px;padding:6px 12px;font-weight:600;font-size:13px;color:var(--tx)}.tg.on{border-color:var(--ac);background:var(--acs);color:var(--ac)}
+
+/* ---- Dokumente: Kachelansicht ---- */
+.wrap.wide{max-width:1100px}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px 14px;align-items:start}
+.dcard{display:flex;flex-direction:column;gap:5px;cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;min-width:0;border-radius:12px;outline-offset:3px}
+.dcard .dprev{width:100%;background:#fff;border:1px solid var(--bd);border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08);display:flex;transition:transform .12s,box-shadow .12s}
+.dcard:hover .dprev{box-shadow:0 4px 14px rgba(0,0,0,.14);border-color:var(--ac)}
+.dcard .dtxt{font-size:9px;line-height:1.4;color:#999;padding:10px;overflow:hidden}
+.dcard .dtitle{display:flex;align-items:center;gap:4px;min-width:0}
+.dcard .dtitle b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.dcard .dtitle .btn{flex:none;padding:2px;min-width:30px;min-height:30px}
+.dcard.drag{opacity:.85;z-index:5}.dcard.drag .dprev{transform:scale(1.04);box-shadow:0 10px 26px rgba(0,0,0,.28)}
+@media(min-width:700px){.dgrid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:20px 18px}}
