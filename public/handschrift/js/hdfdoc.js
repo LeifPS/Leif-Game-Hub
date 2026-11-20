@@ -69,8 +69,25 @@ figur: A(2,2) B(4,2) C(3,4) | blau | ABC
 abbildung: ABC | streckung | zentrum=1,1 | faktor=2 | hilfslinien
 [/geometrie]
 figur: Ecken mit Namen und Koordinaten (A(2,2) oder A(2|2)), dazu Farbe, optional Name der Figur, "offen" für nicht geschlossen. abbildung: Figurname | Art | Angaben. Arten: streckung (zentrum=x,y faktor=k), spiegelung (achse=x | y | x=3 | y=2 | y=x | x1,y1..x2,y2), punktspiegelung (zentrum=x,y), drehung (zentrum=x,y winkel=90, positiv = gegen den Uhrzeigersinn), verschiebung (vektor=dx,dy). Optional: hilfslinien (gestrichelte Verbindungen), Farbe, name=Neuname. Bildpunkte heißen A', B', C'. Weitere Zeilen in jedem Graphen/jeder Geometrie: kreis: mx,my | radius | Farbe | Name; gerade: x1,y1 | x2,y2 | Farbe | Name (unendliche Gerade).
+### Diagramme (Element [diagramm], alternativ [balkendiagramm] [kreisdiagramm] [liniendiagramm])
+[diagramm titel="Lieblingsfächer"]
+typ: balken | kreis | linie
+wert: Mathe | 12 | blau
+wert: Sport | 15 | gruen
+einheit: Schüler
+[/diagramm]
+Mehrere Reihen (gruppierte Balken oder mehrere Linien): kategorien: Mo, Di, Mi  und  reihe: Berlin | blau | 3, 5, 4  (pro Reihe eine Zeile). Optional: ymax, werte: ja|nein (Zahlen an den Balken), prozent: ja (beim Kreis), legende: ja.
+### Schaubilder
+[ablauf titel="…"] Flussdiagramm: knoten: id | Text | oval|raute|rechteck (optional, sonst ist der Name der Text) und pfeil: A -> B -> C | Beschriftung. richtung: runter|rechts.
+[baum] / [hierarchie]: pfeil: Start -> K | 0,5 (Kante mit Beschriftung, z. B. Wahrscheinlichkeit), richtung: rechts (Standard)|runter.
+[mindmap]: zentrum: Thema, dann zweig: Name | Unterpunkt1; Unterpunkt2 | Farbe.
+[mengen] (Venn, 2 oder 3 Mengen): menge: Name | Farbe | Element1; Element2, dazu schnitt: A,B | Elemente (A, B, C = Reihenfolge der Mengen).
+[zeitstrahl]: ereignis: 1914 | Text | Farbe (bei Jahreszahlen im richtigen Abstand; massstab: nein = gleichmäßig).
+[pyramide]: stufe: Text | Farbe (von oben nach unten).   [kreislauf]: stufe: Text | Farbe (im Kreis mit Pfeilen).
+### Chemie
+[reaktion]  gleichung: 2 H2 + O2 -> 2 H2O | Hinweis. Indexzahlen werden automatisch tiefgestellt, <-> wird ⇌. Ladungen mit ^: Na^+ , SO4^2- .
 ### Noch nicht umgesetzt (werden als roter Platzhalter angezeigt)
-Balken-/Kreis-/Liniendiagramme, Geometrie, Mindmap, Flussdiagramm, Baum, Venn, Zeitstrahl, Chemie, Schaltbilder, Karten, Bilder. Nutze dafür vorerst Text, Tabellen und Graphen.
+Streudiagramm, Physik-Schaltbilder, Karten, Bilder, Strukturformeln. Nutze dafür vorerst Text, Tabellen und Graphen.
 
 ## Qualitätsregeln für dich
 - Ein Arbeitsblatt: Titel, kurze Erklärung/Merkkasten, Beispiel mit Rechenweg, Aufgaben (aufgabe) mit Antwortfeldern (antwort).

@@ -2,6 +2,7 @@
 // Box: { w, h, base, items, align?, md? }  items-Koordinaten relativ zur linken oberen Ecke; base = Abstand von oben bis zur ersten Grundlinie.
 // Einträge: Zeichen { g, m, x, y, rot }, Strich { path:{ pts, w, col?, a? } }.
 import { parseMath, layoutMath, compile, splitRel, MathError } from './mathx.js';
+import { visualBlock } from './visuals.js';
 import { getP, allP, text, textLines, elems, bool, num, splitBar, range, color, isColor, size, MM, KNOWN, normKey } from './hdf.js';
 
 export const shiftItems = (items, dx, dy) => items.map(it => it.path ? { path: { ...it.path, pts: it.path.pts.map(([x, y]) => [x + dx, y + dy]) } }
@@ -59,6 +60,14 @@ function formulaBlock(el, ctx) {
   const boxes = L.map(l => mathBox(ctx, l.s, o, l.line).box);
   if (boxes.length > 1) { return { multi: boxes.map(bx => { const v = vstack([{ ...bx, asc: bx.asc + .8 * ctx.u * o.sc, desc: bx.desc + .6 * ctx.u * o.sc }], 0, 'mitte'); v.align = o.align || 'mitte'; return v; }) }; }
   const v = vstack(boxes, .7 * ctx.u * o.sc, 'mitte'); v.align = o.align || 'mitte'; return v;
+}
+// ---------- Reaktionsgleichungen: H2O -> H_2 O, Hinweise rechts hinter | ----------
+function chemBlock(el, ctx) {
+  const o = opts(el, ctx), L = srcLines(el, ['gleichung', 'zeile', 'ausdruck']);
+  if (!L.length) { ctx.err(el.line, '[reaktion] ohne Gleichung', 'warn'); return null; }
+  const fix = (s) => s.replace(/([A-Z][a-z]?|\))(\d+)/g, '$1_$2').replace(/<->|<=>/g, '⇌');
+  const lines = L.map(l => ({ s: splitBar(l.s).map((p, i) => i ? p : fix(p)).join(' | '), line: l.line }));
+  return lineBlock(lines, ctx, o, false, 'mitte');
 }
 // ---------- Gleichungen (am Gleichheitszeichen ausgerichtet) ----------
 function equationBlock(el, ctx) {
@@ -435,6 +444,8 @@ export function renderBlock(el, ctx) {
     case 'table': return tableBlock(el, ctx);
     case 'valuetable': return valueTableBlock(el, ctx);
     case 'graph': return graphBlock(el, ctx);
+    case 'chart': case 'flow': case 'tree': case 'mindmap': case 'venn': case 'timeline': case 'pyramid': case 'cycle': return visualBlock(el, { ...ctx, textBox: (s, sc, col) => textBox(ctx, s, sc, col) }, el.name);
+    case 'chem': return chemBlock(el, ctx);
     case 'note': return noteBlock(el, ctx, 'Merke');
     case 'example': return noteBlock(el, ctx, 'Beispiel');
     case 'task': return taskBlock(el, ctx);

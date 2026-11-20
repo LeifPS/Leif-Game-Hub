@@ -9,7 +9,7 @@ const EL_ALIAS = {
   titel: 'title', ueberschrift: 'heading', absatz: 'paragraph', hinweis: 'note', merke: 'note', beispiel: 'example', aufgabe: 'task', antwort: 'answer', zitat: 'quote',
   fussnote: 'footnote', beschriftung: 'label', abstand: 'spacer', trennlinie: 'divider', seitenumbruch: 'pagebreak', liste: 'list', eintrag: 'item', formel: 'formula',
   gleichung: 'equation', bruch: 'fraction', wurzel: 'root', rechenweg: 'calculation', schritt: 'step', wertetabelle: 'valuetable', tabelle: 'table', zeile: 'row', zelle: 'cell',
-  koordinatensystem: 'graph', geometrie: 'graph', geometry: 'graph', konstruktion: 'graph', graf: 'graph', funktionsgraph: 'graph', funktion: 'function', punkt: 'point', strecke: 'segment', spalten: 'columns', spalte: 'column', gruppe: 'group',
+  koordinatensystem: 'graph', diagramm: 'chart', balkendiagramm: 'chart', saeulendiagramm: 'chart', kreisdiagramm: 'chart', liniendiagramm: 'chart', ablauf: 'flow', flussdiagramm: 'flow', flowchart: 'flow', baum: 'tree', baumdiagramm: 'tree', hierarchie: 'tree', hierarchy: 'tree', mengen: 'venn', zeitstrahl: 'timeline', pyramide: 'pyramid', kreislauf: 'cycle', zyklus: 'cycle', reaktion: 'chem', chemie: 'chem', reaktionsgleichung: 'chem', geometrie: 'graph', geometry: 'graph', konstruktion: 'graph', graf: 'graph', funktionsgraph: 'graph', funktion: 'function', punkt: 'point', strecke: 'segment', spalten: 'columns', spalte: 'column', gruppe: 'group',
   metadaten: 'metadata', seite: 'page', bild: 'image', verweis: 'reference', text: 'text',
 };
 // Elemente, die in Stufe 1 gerendert werden (Rest: sichtbarer Platzhalter, siehe KNOWN_LATER)
@@ -26,14 +26,18 @@ const DEFS = {
   row: { text: true, props: ['hoehe'], kids: ['cell'] }, cell: { text: true, props: ['spalten'] },
   graph: { text: false, props: ['titel', 'xmin', 'xmax', 'ymin', 'ymax', 'xbereich', 'ybereich', 'raster', 'rasterx', 'rastery', 'achsen', 'achsenbeschriftung', 'xbeschriftung', 'ybeschriftung', 'skala', 'skalax', 'skalay', 'marken', 'legende', 'gleichskaliert', 'nullstellen', 'extrema', 'schnittpunkte', 'funktion', 'punkt', 'strecke', 'figur', 'abbildung', 'kreis', 'gerade', 'dezimal', 'zahlen', 'einheit'], kids: ['function', 'point', 'segment', 'label'] },
   function: { text: false, props: ['ausdruck', 'name', 'bereich', 'linienbreite', 'linienart', 'nullstellen', 'extrema'] },
+  chart: { text: false, props: ['titel', 'typ', 'wert', 'reihe', 'kategorien', 'ymax', 'einheit', 'werte', 'prozent', 'legende', 'breite'] },
+  flow: { text: false, props: ['titel', 'knoten', 'pfeil', 'richtung', 'breite'] }, tree: { text: false, props: ['titel', 'knoten', 'kante', 'pfeil', 'richtung', 'breite'] },
+  mindmap: { text: false, props: ['titel', 'zentrum', 'zweig', 'breite'] }, venn: { text: false, props: ['titel', 'menge', 'schnitt', 'breite'] }, timeline: { text: false, props: ['titel', 'ereignis', 'massstab', 'breite'] },
+  pyramid: { text: false, props: ['titel', 'stufe', 'breite'] }, cycle: { text: false, props: ['titel', 'stufe', 'breite'] }, chem: { text: true, props: ['gleichung', 'zeile', 'ausdruck'] },
   point: { text: false, props: ['name', 'x', 'y', 'marke', 'beschriftung'] }, segment: { text: false, props: ['von', 'bis', 'pfeil', 'linienbreite', 'linienart', 'name'] },
   label: { text: true, props: ['x', 'y', 'name', 'text'] },
   columns: { text: false, props: ['anzahl', 'verteilung'], kids: ['column'] }, column: { text: true }, group: { text: true },
   metadata: { text: false }, page: { text: true, props: ['format', 'papier'] }, image: { text: false, props: ['quelle'] }, reference: { text: false, props: ['ziel'] },
 };
 // bekannte, aber noch nicht umgesetzte Elemente der HDF-Grundbibliothek -> Platzhalter
-const LATER = new Set(['columnchart', 'barchart', 'piechart', 'linechart', 'scatterchart', 'mindmap', 'flowchart', 'tree', 'venn', 'timeline', 'pyramid', 'cycle', 'hierarchy',
-  'chemical', 'reaction', 'physicsdiagram', 'map', 'illustration']);
+const LATER = new Set(['scatterchart',
+  'physicsdiagram', 'map', 'illustration']);
 // Unterelemente, die nur innerhalb bestimmter Elemente Sinn haben (werden bei Platzhaltern mit übersprungen)
 const SUBS = new Set(['entry', 'series', 'branch', 'node', 'connection', 'reactant', 'product', 'component', 'marker', 'label', 'line', 'angle', 'circle', 'polygon']);
 const GENERIC = ['breite', 'hoehe', 'minbreite', 'maxbreite', 'minhoehe', 'maxhoehe', 'ausrichtung', 'abstand', 'innenabstand', 'rand', 'randbreite', 'randfarbe', 'hintergrund', 'position',
