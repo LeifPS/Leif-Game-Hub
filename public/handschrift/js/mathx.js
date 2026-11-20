@@ -254,11 +254,11 @@ export function layoutMath(ast, ctx, sc = 1, depth = 0) {
       const name = text(ast.name), inner = ast.inner;
       return hcat([name, gapOf(.12), parens('(', ')', sub(inner), U, ctx, text, path, sc)]);
     }
-    case 'fnpow': { const name = text(ast.name), ex = sub(ast.exp, sc * .65, depth + 1); const b = supBox(name, ex, U, 0); return hcat([b, gapOf(.12), parens('(', ')', sub(ast.arg), U, ctx, text, path, sc)]); }
-    case 'sup': { const base = sub(ast.base), ex = sub(ast.exp, sc * (depth > 1 ? .6 : .66), depth + 1); return supBox(base, ex, U, 0); }
-    case 'sub': { const base = sub(ast.base), s = sub(ast.sub, sc * .66, depth + 1); return subBox(base, s, U); }
+    case 'fnpow': { const name = text(ast.name), ex = sub(ast.exp, sc * .52, depth + 1); const b = supBox(name, ex, U, 0); return hcat([b, gapOf(.12), parens('(', ')', sub(ast.arg), U, ctx, text, path, sc)]); }
+    case 'sup': { const base = sub(ast.base), ex = sub(ast.exp, sc * (depth > 1 ? .45 : .52), depth + 1); return supBox(base, ex, U, 0); }
+    case 'sub': { const base = sub(ast.base), s = sub(ast.sub, sc * .52, depth + 1); return subBox(base, s, U); }
     case 'subsup': {
-      const base = sub(ast.base), s1 = sub(ast.sub, sc * .66, depth + 1), ex = sub(ast.sup, sc * .66, depth + 1), rise = supRise(base, ex, U), d = sbShift(U), x0 = base.w + .05 * U;
+      const base = sub(ast.base), s1 = sub(ast.sub, sc * .52, depth + 1), ex = sub(ast.sup, sc * .52, depth + 1), rise = supRise(base, ex, U), d = sbShift(U), x0 = base.w + .05 * U;
       return mk(x0 + Math.max(s1.w, ex.w), Math.max(base.asc, rise + ex.asc), Math.max(base.desc, d + s1.desc), [...shift(base, 0, 0), ...shift(s1, x0, d), ...shift(ex, x0, -rise)]);
     }
     case 'frac': {
