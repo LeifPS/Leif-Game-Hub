@@ -1,3 +1,4 @@
+html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 :root{
   --bg:#f5f4f0;--surf:#fff;--surf2:#f0eee8;--tx:#1b1a1f;--mut:#6c6b74;--bd:#e3e1da;--ac:#3b4fd8;--ac2:#2f3fb5;--acs:#e8ebfd;--ok:#1f8a4c;--warn:#b45309;--err:#c0392b;--sh:0 1px 2px rgba(20,20,30,.06),0 6px 20px rgba(20,20,30,.07);--r:14px;
   --nav:#fff;--paper-bd:#d8d5cc;color-scheme:light;

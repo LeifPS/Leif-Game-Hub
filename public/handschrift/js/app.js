@@ -83,6 +83,7 @@ async function boot() {
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); app.installPrompt = e; if (app.view === 'more') app.views.more.refresh(); });
   window.addEventListener('online', () => app.view === 'more' && app.views.more.refresh()); window.addEventListener('offline', () => app.view === 'more' && app.views.more.refresh());
   registerSw(); startSession();
+  for (const ev of ["gesturestart", "gesturechange"]) document.addEventListener(ev, e => e.preventDefault(), { passive: false });   // iOS: kein Pinch-Zoom
   window.__app = app;
 }
 function registerSw() {
