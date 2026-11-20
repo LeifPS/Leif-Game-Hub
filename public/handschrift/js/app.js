@@ -1,4 +1,5 @@
 // Start der App: Zustand, Gerüst, Ansichten
+import { startSession } from './session.js';
 import { h, uid } from './util.js';
 import { ic, mark } from './ui.js';
 import { Font, DEF } from './render.js';
@@ -81,7 +82,7 @@ async function boot() {
   { const bt = document.getElementById('boot'); if (bt) { bt.style.transition = 'opacity .25s'; bt.style.opacity = '0'; setTimeout(() => bt.remove(), 280); } }
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); app.installPrompt = e; if (app.view === 'more') app.views.more.refresh(); });
   window.addEventListener('online', () => app.view === 'more' && app.views.more.refresh()); window.addEventListener('offline', () => app.view === 'more' && app.views.more.refresh());
-  registerSw();
+  registerSw(); startSession();
   window.__app = app;
 }
 function registerSw() {

@@ -2,6 +2,7 @@
 import { h, toast, fmtSize } from './util.js';
 import { btn, seg, confirmBox } from './ui.js';
 import { usage, persist } from './store.js';
+import { lastSync, daysLeft, checkNow, SYNC_DAYS } from './session.js';
 
 export const VERSION = '1.0';
 export function moreView(app) {
@@ -21,6 +22,11 @@ export function moreView(app) {
     const sw = app.swState;
     wrap.append(h('div', { class: 'card' }, h('h3', null, 'Offline nutzen'), h('div', { class: 'row', style: { marginTop: '8px' } }, h('span', { class: 'chip ' + (sw === 'ready' ? 'ok' : 'warn') }, sw === 'ready' ? 'Offline bereit' : sw === 'unsupported' ? 'Nicht unterstützt' : 'Wird vorbereitet …'), h('span', { class: 'chip' }, navigator.onLine ? 'Online' : 'Offline')),
       h('p', { class: 'mut sm', style: { margin: '8px 0 0' } }, 'Nach dem ersten Laden funktioniert alles ohne Internet: Schreiben, Schriften, Export und sogar das Einlesen von Bögen.')));
+    // Updates / Sitzung
+    { const l = lastSync(), tage = l ? Math.floor((Date.now() - l) / 864e5) : 0, rest = daysLeft();
+      wrap.append(h('div', { class: 'card' }, h('h3', null, 'Updates'),
+        h('p', { class: 'mut sm', style: { margin: '8px 0' } }, `Zuletzt mit dem Server verbunden: ${!l || tage === 0 ? 'heute' : tage === 1 ? 'vor 1 Tag' : `vor ${tage} Tagen`}. Die App funktioniert offline, muss aber mindestens alle ${SYNC_DAYS} Tage einmal online gehen, um Updates zu laden (noch ${rest} ${rest === 1 ? 'Tag' : 'Tage'}).`),
+        btn('Jetzt prüfen', { cls: 'sm', onclick: async () => { const ok = await checkNow(); toast(ok ? 'Verbunden – die App ist auf dem neuesten Stand.' : 'Keine Verbindung zum Server.', 3200, ok ? undefined : 'err'); draw(); } }))); }
     // Speicher
     const u = await usage(), persisted = navigator.storage && navigator.storage.persisted ? await navigator.storage.persisted() : false;
     wrap.append(h('div', { class: 'card' }, h('h3', null, 'Speicher'), h('p', { class: 'mut sm', style: { margin: '8px 0' } }, u ? `Diese App belegt ca. ${fmtSize(u.usage || 0)} auf deinem Gerät.` : 'Speicherangaben sind in diesem Browser nicht verfügbar.'),
