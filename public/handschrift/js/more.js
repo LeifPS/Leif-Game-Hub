@@ -37,7 +37,7 @@ export function moreView(app) {
       faq('Wie komme ich in GoodNotes?', 'Beim Export „GoodNotes: echte Striche“ wählen und die .goodnotes-Datei speichern. In GoodNotes dann auf + → Importieren tippen. Du bekommst echte Handschrift-Striche, die du radieren und weiterbearbeiten kannst. Als Papier kannst du unter Einstellungen „GoodNotes liniert“ oder „GoodNotes kariert“ wählen, dann sitzt die Schrift genau auf den Linien. Alternativ geht auch PDF.'),
       faq('Kann ich Zeichen direkt in der App zeichnen?', 'Ja. Beim Erstellen einer Schrift unten auf „Direkt zeichnen“ tippen, oder später bei „Ergänzen“. Jedes Zeichen zeichnest du mit Finger oder Apple Pencil in ein Feld mit Hilfslinien. Die Striche bleiben als echte Striche erhalten und landen im GoodNotes-Export 1:1.'),
       faq('Wo liegen meine Daten?', 'Nur auf diesem Gerät, in diesem Browser. Es gibt kein Konto und es wird nichts hochgeladen. Mit dem Export einer Schrift (.hsfont) kannst du sie auf ein anderes Gerät mitnehmen.')));
-    wrap.append(h('p', { class: 'xs mut', style: { textAlign: 'center', margin: '18px 0 0' } }, `Handschrift ${VERSION} · läuft komplett auf deinem Gerät`));
+    wrap.append(h('p', { class: 'xs mut', style: { textAlign: 'center', margin: '18px 0 0' } }, `STools ${VERSION} · läuft komplett auf deinem Gerät`));
   }
   draw();
   return { el: root, refresh: draw };

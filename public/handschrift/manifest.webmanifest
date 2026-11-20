@@ -1,7 +1,7 @@
 {
-  "name": "Handschrift",
-  "short_name": "Handschrift",
-  "description": "Text in die eigene Handschrift umwandeln",
+  "name": "STools",
+  "short_name": "STools",
+  "description": "Text in die eigene Handschrift umwandeln und in GoodNotes importieren",
   "lang": "de",
   "start_url": "/",
   "scope": "/",
