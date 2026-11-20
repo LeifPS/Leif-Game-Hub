@@ -333,6 +333,7 @@ export function layout(text, S, font) {
     for (const kd of kids) {
       if (kd.text != null) { buf.push(kd.text); continue; }
       flush();
+      if ((kd.name === 'heading' || kd.name === 'title') && !inSub && y + 6 * lineH > PH - MB && pages[pages.length - 1].length) { pages.push([]); y = firstY(); x = left; }
       if (kd.name === 'pagebreak') { if (!inSub) { pages.push([]); y = firstY(); x = left; } continue; }
       let r = null; try { r = renderBlock(kd, bctx); } catch (e) { errors.push({ line: kd.line, level: 'error', msg: 'Fehler in [' + kd.rawName + ']: ' + e.message }); }
       if (!r) continue;

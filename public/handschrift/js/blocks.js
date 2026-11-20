@@ -189,9 +189,10 @@ function framed(el, ctx, o) {
 function noteBlock(el, ctx, label) { const o = opts(el, ctx); return framed(el, ctx, { title: getP(el, 'titel') || label, border: bool(getP(el, 'rand'), true), bcol: color(getP(el, 'randfarbe')) || o.col }); }
 function taskBlock(el, ctx) {
   const o = opts(el, ctx), u = ctx.u, W = ctx.W, nr = getP(el, 'nummer'), pt = getP(el, 'punkte'), ind = 2.6 * u;
-  const s = ctx.sub(el.kids, W - ind), items = [], lab = textBox(ctx, nr ? nr + '.' : '•', 1.05, o.col);
+  const pb = pt ? textBox(ctx, ctx.prep('(' + pt + (/p/i.test(pt) ? '' : ' P.') + ')'), .85, o.col) : null;
+  const s = ctx.sub(el.kids, W - ind - (pb ? pb.w + 1.2 * u : 0)), items = [], lab = textBox(ctx, nr ? nr + '.' : '•', 1.05, o.col);
   items.push(...shiftItems(lab.items, 0, ctx.lineH), ...shiftItems(s.items, ind, 0));
-  if (pt) { const pb = textBox(ctx, ctx.prep('(' + pt + (/p/i.test(pt) ? '' : ' P.') + ')'), .85, o.col); items.push(...shiftItems(pb.items, W - pb.w, ctx.lineH)); }
+  if (pb) items.push(...shiftItems(pb.items, W - pb.w, ctx.lineH));
   return { w: W, h: s.rows * ctx.lineH, base: ctx.lineH, items, align: 'links' };
 }
 function answerBlock(el, ctx) {
