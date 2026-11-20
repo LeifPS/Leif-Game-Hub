@@ -237,7 +237,8 @@ export function layoutMath(ast, ctx, sc = 1, depth = 0) {
             const mode = ctx.mal || 'auto', hide = mode === 'weg' || (mode === 'auto' && !startsNum(it) && !(endsNum(prev) && false));
             if (!hide) parts.push(gapOf(.22), opBox('*', ctx, U, text, path, mode === 'kreuz'), gapOf(.22));
             else if (startsNum(it)) parts.push(gapOf(.22));
-          } else if (startsNum(it) && endsNum(prev)) parts.push(gapOf(.3));
+          } else if (it.t === 'word' || prev.t === 'word' || it.t === 'str' || prev.t === 'str') parts.push(gapOf(.55));
+          else if (startsNum(it) && endsNum(prev)) parts.push(gapOf(.3));
           else parts.push(gapOf(.04));
         }
         parts.push(sub(it));
