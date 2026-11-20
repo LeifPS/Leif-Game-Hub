@@ -15,6 +15,7 @@ Du schreibst ein Dokument als reinen Text. Die App STools setzt es in echter Han
 
 ## Formelschreibweise (überall, wo ein Ausdruck steht)
 Einfache Tastaturzeichen: x^2, x^(n+1), a_1, (a+b)/2, sqrt(x), root(x, 3), frac(a, b), abs(x-2), pi, alpha, beta, Delta, inf, sin(x), cos(x), ln(x), log_2(8), <=, >=, !=, ->, =>, <=>, +-, *, :, ·, ×, °, %. Griechische Namen werden zu Buchstaben. Brüche mit / werden gestapelt gesetzt, Klammern passen sich an. Multiplikation "2*x" wird als "2x" gesetzt, "3*4" als "3·4". Punkt-Koordinaten: P(2|3).
+Große Operatoren: int_a^b f(x) dx (Integral, auch iint, iiint, oint), sum_(i=1)^n a_i, prod_(k=1)^n k, lim_(x->0) sin(x)/x (Bruch gehört zum Limes-Term), [F(x)]_a^b. Vektor: vec(1, 2, 3). Matrix: mat(1, 2; 3, 4) (Zeilen mit ; trennen). Fallunterscheidung: cases(x^2, x>0; 0, x<=0). Nach int steht dx, dy, dt automatisch als Differential.
 Wörter in Formeln (z. B. "und", "oder", Einheiten) in Anführungszeichen setzen: x_1 = 2 "und" x_2 = -2. Ein Ausdruck, der mit = oder einem Relationszeichen beginnt, wird als Fortsetzung gesetzt (z. B. "= 4").
 
 ## Elemente

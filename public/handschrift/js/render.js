@@ -337,6 +337,7 @@ export function layout(text, S, font) {
       if (kd.name === 'pagebreak') { if (!inSub) { pages.push([]); y = firstY(); x = left; } continue; }
       let r = null; try { r = renderBlock(kd, bctx); } catch (e) { errors.push({ line: kd.line, level: 'error', msg: 'Fehler in [' + kd.rawName + ']: ' + e.message }); }
       if (!r) continue;
+      if (r.multi) { for (const bx of r.multi) placeBox(bx); continue; }
       if (r.md != null) { if (Array.isArray(r.md)) processKids(r.md); else flowText(r.md, true); }
       else placeBox(r);
     }

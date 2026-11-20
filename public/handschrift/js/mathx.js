@@ -4,7 +4,9 @@
 const GREEK = { alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', epsilon: 'ε', zeta: 'ζ', eta: 'η', theta: 'θ', iota: 'ι', kappa: 'κ', lambda: 'λ', mu: 'μ', nu: 'ν', xi: 'ξ', pi: 'π', rho: 'ρ', sigma: 'σ', tau: 'τ', upsilon: 'υ', phi: 'φ', chi: 'χ', psi: 'ψ', omega: 'ω',
   Gamma: 'Γ', Delta: 'Δ', Theta: 'Θ', Lambda: 'Λ', Xi: 'Ξ', Pi: 'Π', Sigma: 'Σ', Phi: 'Φ', Psi: 'Ψ', Omega: 'Ω', inf: '∞', infty: '∞', unendlich: '∞', deg: '°', grad: '°', degree: '°', pm: '±', cdot: '·', times: '×' };
 const FUNCS = new Set(['sin', 'cos', 'tan', 'cot', 'sec', 'csc', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh', 'ln', 'log', 'lg', 'exp', 'lim', 'min', 'max', 'sgn', 'det', 'ggT', 'kgV']);
-const SPECIAL_CALLS = new Set(['sqrt', 'wurzel', 'abs', 'betrag', 'root', 'frac', 'bruch', 'cbrt']);
+const SPECIAL_CALLS = new Set(['sqrt', 'wurzel', 'abs', 'betrag', 'root', 'frac', 'bruch', 'cbrt', 'vec', 'vektor', 'mat', 'matrix', 'cases', 'fall']);
+const LIMFN = new Set(['lim', 'max', 'min']);
+const BIGOPS = new Set(['int', 'iint', 'iiint', 'oint', 'sum', 'prod']);
 const SUPD = { '⁰': '0', '¹': '1', '²': '2', '³': '3', '⁴': '4', '⁵': '5', '⁶': '6', '⁷': '7', '⁸': '8', '⁹': '9', '⁺': '+', '⁻': '-', 'ⁿ': 'n' };
 const SUBD = { '₀': '0', '₁': '1', '₂': '2', '₃': '3', '₄': '4', '₅': '5', '₆': '6', '₇': '7', '₈': '8', '₉': '9', '₊': '+', '₋': '-' };
 const REL = new Set(['=', '≠', '<', '>', '≤', '≥', '≈', '→', '⇒', '⇔', '←', '↔', '∈', '∉', '⊂', '⊆', '≡', '≅', '∼', '∝', '∥', '⊥', '⇌']);
@@ -36,6 +38,7 @@ function tokenize(src, opt) {
     if ('+-*/^_=<>:;,!%°\'′″'.includes(c)) { toks.push({ t: 'op', v: c === '-' ? '-' : c }); i++; continue; }
     if ('([{)]}'.includes(c)) { toks.push({ t: 'br', v: c }); i++; continue; }
     if (c === '√') { toks.push({ t: 'rt' }); i++; continue; }
+    if (c === '∫' || c === '∑' || c === '∏' || c === '∮') { toks.push({ t: 'id', v: { '∫': 'int', '∑': 'sum', '∏': 'prod', '∮': 'oint' }[c] }); i++; continue; }
     if (c === '·' || c === '×' || c === '⋅' || c === '∙') { toks.push({ t: 'op', v: '*', shown: c === '×' ? '×' : '·' }); i++; continue; }
     if (c === '÷') { toks.push({ t: 'op', v: ':' }); i++; continue; }
     if (c === '−' || c === '–') { toks.push({ t: 'op', v: '-' }); i++; continue; }
@@ -50,7 +53,7 @@ function tokenize(src, opt) {
 
 // ---------- Parser ----------
 export function parseMath(src, opt = {}) {
-  const T = tokenize(src, opt); let p = 0;
+  const T = tokenize(src, opt); let p = 0, sawInt = false;
   const peek = (o = 0) => T[p + o], eat = () => T[p++];
   const isOp = (t, v) => t && t.t === 'op' && (v == null || (Array.isArray(v) ? v.includes(t.v) : v instanceof Set ? v.has(t.v) : t.v === v));
   const fail = (m) => { throw new MathError(m); };
@@ -74,12 +77,16 @@ export function parseMath(src, opt = {}) {
       if (isOp(t, '*')) { eat(); explicit.push(items.length); items.push(parseSignedFactor()); }
       else if (isOp(t, ':') && peek(1) && startsAtom(peek(1)) && !peek(1).sp) { eat(); items.push({ t: 'opmark', v: ':' }); items.push(parseSignedFactor()); }
       else if (isOp(t, '/')) {
-        eat(); const den = parseSignedFactor(); const num = fold(items, explicit); items = [{ t: 'frac', n: num, d: den }]; explicit = [];
+        eat(); const den = parseSignedFactor();
+        let hd = -1; items.forEach((q, j) => { if (isHead(q)) hd = j; });
+        if (hd >= 0 && hd < items.length - 1) { const tail = items.slice(hd + 1), te = explicit.filter(e => e > hd + 1).map(e => e - hd - 1); items = [...items.slice(0, hd + 1), { t: 'frac', n: fold(tail, te), d: den }]; explicit = explicit.filter(e => e <= hd); }
+        else { const num = fold(items, explicit); items = [{ t: 'frac', n: num, d: den }]; explicit = []; }
       } else if (startsAtom(t)) items.push(parseFactor());
       else break;
     }
     return fold(items, explicit);
   }
+  const isHead = (q) => q.t === 'bigop' || ((q.t === 'sub' || q.t === 'sup' || q.t === 'subsup') && (q.base.t === 'bigop' || (q.base.t === 'fn' && LIMFN.has(q.base.v))));
   function fold(items, explicit) {
     if (items.length === 1) return items[0];
     return { t: 'mul', items, explicit };
@@ -130,11 +137,18 @@ export function parseMath(src, opt = {}) {
     }
     if (t.t === 'id') {
       const w = t.v;
+      if (BIGOPS.has(w)) { if (w.endsWith('int')) sawInt = true; return { t: 'bigop', v: w }; }
+      if (sawInt && /^d[xyztsuvrφ]$/.test(w)) return { t: 'diff', v: w[1] };
       if (SPECIAL_CALLS.has(w) || FUNCS.has(w)) {
         const nx = peek();
         if (nx && nx.t === 'br' && nx.v === '(' && !nx.sp) {
           eat(); const args = []; const inner = parseList(); const c = eat(); if (!c || c.v !== ')') fail('Klammer bei ' + w + ' wird nicht geschlossen');
           const flat = inner.t === 'list' ? inner.items.filter(q => q.t !== 'sep') : [inner];
+          if (w === 'vec' || w === 'vektor' || w === 'mat' || w === 'matrix' || w === 'cases' || w === 'fall') {
+            const raw = inner.t === 'list' ? inner.items : [inner], rows = [[]];
+            for (const q of raw) { if (q.t === 'sep') { if (q.v === ';' || w === 'vec' || w === 'vektor') rows.push([]); continue; } rows[rows.length - 1].push(q); }
+            return { t: 'matrix', rows: rows.filter(r => r.length), kind: (w === 'cases' || w === 'fall') ? 'cases' : (w[0] === 'v' ? 'vec' : 'mat') };
+          }
           if (w === 'sqrt' || w === 'wurzel') return { t: 'sqrt', x: flat[0] };
           if (w === 'cbrt') return { t: 'sqrt', x: flat[0], idx: { t: 'num', v: '3' } };
           if (w === 'root') return { t: 'sqrt', x: flat[0], idx: flat[1] };
@@ -255,9 +269,10 @@ export function layoutMath(ast, ctx, sc = 1, depth = 0) {
       return hcat([name, gapOf(.12), parens('(', ')', sub(inner), U, ctx, text, path, sc)]);
     }
     case 'fnpow': { const name = text(ast.name), ex = sub(ast.exp, sc * .52, depth + 1); const b = supBox(name, ex, U, 0); return hcat([b, gapOf(.12), parens('(', ')', sub(ast.arg), U, ctx, text, path, sc)]); }
-    case 'sup': { const base = sub(ast.base), ex = sub(ast.exp, sc * (depth > 1 ? .45 : .52), depth + 1); return supBox(base, ex, U, 0); }
-    case 'sub': { const base = sub(ast.base), s = sub(ast.sub, sc * .52, depth + 1); return subBox(base, s, U); }
+    case 'sup': { if (ast.base.t === 'bigop') return bigBox(ast.base, null, ast.exp); const base = sub(ast.base), ex = sub(ast.exp, sc * (depth > 1 ? .45 : .52), depth + 1); return supBox(base, ex, U, 0); }
+    case 'sub': { if (ast.base.t === 'bigop') return bigBox(ast.base, ast.sub, null); if (ast.base.t === 'fn' && LIMFN.has(ast.base.v)) return limBox(ast.base, ast.sub); const base = sub(ast.base), s = sub(ast.sub, sc * .52, depth + 1); return subBox(base, s, U); }
     case 'subsup': {
+      if (ast.base.t === 'bigop') return bigBox(ast.base, ast.sub, ast.sup);
       const base = sub(ast.base), s1 = sub(ast.sub, sc * .52, depth + 1), ex = sub(ast.sup, sc * .52, depth + 1), rise = supRise(base, ex, U), d = sbShift(U), x0 = base.w + .05 * U;
       return mk(x0 + Math.max(s1.w, ex.w), Math.max(base.asc, rise + ex.asc), Math.max(base.desc, d + s1.desc), [...shift(base, 0, 0), ...shift(s1, x0, d), ...shift(ex, x0, -rise)]);
     }
@@ -273,12 +288,52 @@ export function layoutMath(ast, ctx, sc = 1, depth = 0) {
       const ib = sub(ast.x), idx = ast.idx ? sub(ast.idx, sc * .55, depth + 1) : null;
       const top = -(ib.asc + .28 * U), bot = Math.max(ib.desc, .15 * U) + .12 * U, h = bot - top, rw = .95 * U;
       const ix = idx ? Math.max(0, idx.w - .45 * U) : 0;
-      const x0 = ix, pts = [[x0, -.38 * U], [x0 + .2 * U, -.52 * U], [x0 + .5 * U, bot], [x0 + rw, top], [x0 + rw + ib.w + .3 * U, top]];
+      const x0 = ix, pts = hand([[x0, -.40 * U], [x0 + .17 * U, -.56 * U], [x0 + .52 * U, bot], [x0 + rw, top], [x0 + rw + ib.w + .3 * U, top - .05 * U]], U, { smooth: 1, amp: .03, seed: ib.w * .37 + 1 });
       const items = [path(pts), ...shift(ib, x0 + rw + .12 * U, 0)];
       if (idx) items.push(...shift(idx, 0, -.62 * U));
       return mk(x0 + rw + ib.w + .3 * U, Math.max(-top, idx ? .62 * U + idx.asc : 0), bot, items);
     }
+    case 'bigop': return bigBox(ast, null, null);
+    case 'diff': return hcat([gapOf(.18), text('d'), gapOf(.03), text(ast.v)]);
+    case 'matrix': {
+      const rows = ast.rows.map(r => r.map(c => sub(c))); const nc = Math.max(...rows.map(r => r.length));
+      const cw = Array.from({ length: nc }, (_, j) => Math.max(0, ...rows.map(r => r[j] ? r[j].w : 0)));
+      const cg = ast.kind === 'cases' ? 1.0 * U : .9 * U, rg = .5 * U, items = []; let y = 0, W = 0, first = null, lastB = 0;
+      rows.forEach((r, i) => {
+        const asc = Math.max(1.2 * U, ...r.map(c => c.asc)), desc = Math.max(.3 * U, ...r.map(c => c.desc)); if (i) y += rg + asc; else y = asc;
+        let x = 0; r.forEach((c, j) => { const dx = ast.kind === 'cases' ? 0 : (cw[j] - c.w) / 2; items.push(...shift(c, x + dx, y)); x += cw[j] + cg; }); W = Math.max(W, x - cg);
+        if (first == null) first = asc; lastB = y + desc; y += desc;
+      });
+      const H = y, dy = axisY - H / 2; for (const it of items) { if (it.path) it.path.pts = it.path.pts.map(([px, py]) => [px, py + dy]); else it.y += dy; }
+      const body = mk(W, H / 2 - axisY, H / 2 + axisY, items);
+      if (ast.kind === 'cases') {
+        const top = -(body.asc + .1 * U), bot = body.desc + .1 * U, h = bot - top, mid = (top + bot) / 2, w = .55 * U, bw = .2 * U;
+        const br = hand([[w, top], [w - bw, top + .15 * h * .5], [w - bw, mid - .12 * h], [0, mid], [w - bw, mid + .12 * h], [w - bw, bot - .15 * h * .5], [w, bot]], U, { smooth: 2, amp: .015, seed: 3 });
+        return mk(w + .25 * U + body.w, -top, bot, [path(br), ...shift(body, w + .25 * U, 0)]);
+      }
+      return parens('(', ')', body, U, ctx, text, path, sc);
+    }
     default: return text('?');
+  }
+  function limBox(base, lo) {
+    const b = sub(base), l = sub(lo, sc * .55, depth + 1), W = Math.max(b.w, l.w), d = b.desc + .35 * U + l.asc;
+    return mk(W, b.asc, d + l.desc, [...shift(b, (W - b.w) / 2, 0), ...shift(l, (W - l.w) / 2, d)]);
+  }
+  function bigBox(op, lo, hi) {
+    const sym = bigSym(op.v, U, path), s2 = sc * .55, l = lo ? sub(lo, s2, depth + 1) : null, h = hi ? sub(hi, s2, depth + 1) : null;
+    const integral = op.v.endsWith('int');
+    if (integral) {
+      const items = [...sym.items]; let W = sym.w;
+      if (h) { items.push(...shift(h, sym.w - .05 * U, -(sym.asc - h.desc - .05 * U))); }
+      if (l) { items.push(...shift(l, sym.w - .55 * U, sym.desc - .1 * U + l.asc * .2 + .1 * U)); }
+      W = sym.w + Math.max(h ? h.w - .05 * U : 0, l ? l.w - .55 * U : 0, 0) + .1 * U;
+      return mk(W, Math.max(sym.asc, h ? sym.asc + h.asc * .3 : 0), sym.desc + (l ? l.asc * .2 + l.desc * .5 : 0), items);
+    }
+    const W = Math.max(sym.w, l ? l.w : 0, h ? h.w : 0), items = [...shift(sym, (W - sym.w) / 2, 0)];
+    let asc = sym.asc, desc = sym.desc;
+    if (h) { const y = -(sym.asc + .15 * U + h.desc); items.push(...shift(h, (W - h.w) / 2, y)); asc = -y + h.asc; }
+    if (l) { const y = sym.desc + .15 * U + l.asc; items.push(...shift(l, (W - l.w) / 2, y)); desc = y + l.desc; }
+    return mk(W + .1 * U, asc, desc, items);
   }
 }
 const startsNum = (n) => n.t === 'num' || (n.t === 'un' && startsNum(n.e)) || (n.t === 'sup' && startsNum(n.base)) || n.t === 'frac' && false;
@@ -297,6 +352,12 @@ function opBox(op, ctx, U, text, path, cross) {
   const sh = { '-': '−', ':': ':' }[op] || op;
   if (sh === '=' && !has('=')) { const y1 = -.38 * U, y2 = -.78 * U, w = .85 * U; return { w, asc: .9 * U, desc: 0, items: [path([[0, y1], [w, y1]]), path([[0, y2], [w, y2]])] }; }
   if (sh === '+' && !has('+')) { const y = -.55 * U, w = .8 * U; return { w, asc: .9 * U, desc: 0, items: [path([[0, y], [w, y]]), path([[w / 2, y - w / 2], [w / 2, y + w / 2]])] }; }
+  if (!has(sh)) {
+    const y = -.55 * U, w = 1.0 * U, q = .28 * U;
+    if (sh === '→' || sh === '⇒') { const items = [path([[0, y], [w, y]]), path([[w - q, y - q], [w, y], [w - q, y + q]])]; if (sh === '⇒') items.push(path([[0, y - .18 * U], [w * .85, y - .18 * U]]), path([[0, y + .18 * U], [w * .85, y + .18 * U]])); return { w: w + .1 * U, asc: .9 * U, desc: 0, items }; }
+    if (sh === '≤' || sh === '≥') { const l = sh === '≤'; const items = [path(l ? [[w * .8, y - q - .1 * U], [0, y], [w * .8, y + q - .1 * U]] : [[0, y - q - .1 * U], [w * .8, y], [0, y + q - .1 * U]]), path([[0, y + q + .12 * U], [w * .8, y + q + .12 * U]])]; return { w: w * .85, asc: .9 * U, desc: .1 * U, items }; }
+    if (sh === '≠') { const items = [path([[0, y - .2 * U], [w * .8, y - .2 * U]]), path([[0, y + .2 * U], [w * .8, y + .2 * U]]), path([[w * .55, y - .6 * U], [w * .25, y + .6 * U]])]; return { w: w * .85, asc: 1.1 * U, desc: .1 * U, items }; }
+  }
   return text(sh);
 }
 function parens(o, c, ib, U, ctx, text, path, sc) {
@@ -316,4 +377,35 @@ function parens(o, c, ib, U, ctx, text, path, sc) {
   const rx = x0 + ib.w + .1 * U;
   const r = sq ? path([[rx + .05 * U, top], [rx + .3 * U, top], [rx + .3 * U, bot], [rx + .05 * U, bot]]) : path(arc(1).map(([x, y]) => [x - (w - .2 * U - bulge) + rx + .1 * U, y]));
   return mk(rx + .1 * U + bulge + .2 * U, -top, bot, [...items, ...inner, r]);
+}
+
+// Handschriftlicher Strich: verdichten, leicht abrunden, minimal wackeln (damit Symbole nicht zu perfekt aussehen)
+function hand(pts, U, o = {}) {
+  const { smooth = 1, amp = .03, seed = 0, step = .35 } = o;
+  let p = [pts[0]];
+  for (let i = 1; i < pts.length; i++) { const a = pts[i - 1], b = pts[i], n = Math.max(1, Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]) / (step * U))); for (let k = 1; k <= n; k++) p.push([a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n]); }
+  for (let it = 0; it < smooth; it++) {
+    const q = [p[0]];
+    for (let i = 0; i < p.length - 1; i++) { const a = p[i], b = p[i + 1]; q.push([a[0] * .75 + b[0] * .25, a[1] * .75 + b[1] * .25], [a[0] * .25 + b[0] * .75, a[1] * .25 + b[1] * .75]); }
+    q.push(p[p.length - 1]); p = q;
+  }
+  return p.map((q, i) => (i === 0 || i === p.length - 1) ? q : [q[0] + Math.sin(i * .9 + seed) * amp * U, q[1] + Math.cos(i * 1.3 + seed * 1.7) * amp * U]);
+}
+// Große Operatoren als Striche: Integral, Summe, Produkt
+function bigSym(kind, U, path) {
+  if (kind.endsWith('int')) {
+    const n = kind === 'iiint' ? 3 : kind === 'iint' ? 2 : 1, asc = 2.2 * U, desc = 1.0 * U, h = asc + desc, w = .8 * U, top = -asc, off = .42 * U;
+    const N = [[0, .93], [.1, 1.0], [.26, .97], [.38, .82], [.44, .52], [.5, .2], [.6, .05], [.76, 0], [.92, .06], [1, .2]];
+    const items = [];
+    for (let k = 0; k < n; k++) items.push(path(hand(N.map(([a, b]) => [a * w + k * off, top + b * h]), U, { smooth: 2, amp: .015, seed: 2 + k }), 1.1));
+    if (kind === 'oint') { const cx = w * .45, cy = top + h * .5, r = .42 * U; items.push(path(hand(Array.from({ length: 14 }, (_, i) => [cx + Math.cos(i / 13 * 6.5) * r, cy + Math.sin(i / 13 * 6.5) * r * .8]), U, { smooth: 1, amp: .01, seed: 5 }), .8)); }
+    return { w: w + (n - 1) * off + .15 * U, asc, desc, items };
+  }
+  const asc = 1.75 * U, desc = .55 * U, h = asc + desc, w = 1.25 * U, top = -asc;
+  if (kind === 'sum') {
+    const P = [[w * .95, top + h * .04], [w * .98, top], [0, top], [w * .55, top + h * .5], [0, top + h], [w, top + h], [w * 1.0, top + h * .93]];
+    return { w, asc, desc, items: [path(hand(P, U, { smooth: 1, amp: .03, seed: 4 }), 1.1)] };
+  }
+  const L = (x) => path(hand([[x, top + .02 * h], [x + .02 * U, top + h]], U, { smooth: 0, amp: .03, seed: x }), 1.1);
+  return { w, asc, desc, items: [path(hand([[0, top], [w, top + .03 * h]], U, { smooth: 0, amp: .03, seed: 7 }), 1.1), L(w * .18), L(w * .82)] };
 }

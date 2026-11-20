@@ -57,6 +57,7 @@ function formulaBlock(el, ctx) {
   const o = opts(el, ctx), L = srcLines(el, ['ausdruck']);
   if (!L.length) { ctx.err(el.line, '[formula] ohne Inhalt', 'warn'); return null; }
   const boxes = L.map(l => mathBox(ctx, l.s, o, l.line).box);
+  if (boxes.length > 1) { return { multi: boxes.map(bx => { const v = vstack([{ ...bx, asc: bx.asc + .8 * ctx.u * o.sc, desc: bx.desc + .6 * ctx.u * o.sc }], 0, 'mitte'); v.align = o.align || 'mitte'; return v; }) }; }
   const v = vstack(boxes, .7 * ctx.u * o.sc, 'mitte'); v.align = o.align || 'mitte'; return v;
 }
 // ---------- Gleichungen (am Gleichheitszeichen ausgerichtet) ----------
