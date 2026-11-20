@@ -62,11 +62,11 @@ export function chips(opts, get, set, cls = 'opt') {
 }
 export function confirmBox(text, ok = 'Löschen') {
   return new Promise(res => {
-    sheet('Bist du sicher?', (b, api) => { b.append(h('p', null, text), h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '14px' } }, btn('Abbrechen', { onclick: () => { api.close(); res(false); } }), btn(ok, { cls: 'pri', onclick: () => { api.close(); res(true); } }))); }, { onclose: () => res(false) });
+    sheet('Bist du sicher?', (b, api) => { b.append(h('p', null, text), h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '14px' } }, btn('Abbrechen', { onclick: () => { res(false); api.close(); } }), btn(ok, { cls: 'pri', onclick: () => { res(true); api.close(); } }))); }, { onclose: () => res(false) });
   });
 }
 export function promptBox(title, val = '', ok = 'Speichern') {
   return new Promise(res => {
-    sheet(title, (b, api) => { const i = h('input', { type: 'text', value: val, maxlength: 60 }); b.append(i, h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '14px' } }, btn('Abbrechen', { onclick: () => { api.close(); res(null); } }), btn(ok, { cls: 'pri', onclick: () => { api.close(); res(i.value.trim() || null); } }))); setTimeout(() => i.focus(), 300); i.addEventListener('keydown', e => { if (e.key === 'Enter') { api.close(); res(i.value.trim() || null); } }); }, { onclose: () => res(null) });
+    sheet(title, (b, api) => { const i = h('input', { type: 'text', value: val, maxlength: 60 }); b.append(i, h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '14px' } }, btn('Abbrechen', { onclick: () => { res(null); api.close(); } }), btn(ok, { cls: 'pri', onclick: () => { res(i.value.trim() || null); api.close(); } }))); setTimeout(() => i.focus(), 300); i.addEventListener('keydown', e => { if (e.key === 'Enter') { res(i.value.trim() || null); api.close(); } }); }, { onclose: () => res(null) });
   });
 }
