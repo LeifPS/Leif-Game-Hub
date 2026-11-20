@@ -1,6 +1,6 @@
 // Ansicht „Schreiben“: Textfeld, Werkzeugleiste, Live-Vorschau, Einstellungen, Export, Sonderzeichen
 import { h, debounce, toast, saveFile, fmtSize } from './util.js';
-import { ic, btn, sheet, range, toggle, seg, chips } from './ui.js';
+import { ic, btn, sheet, range, toggle, seg, chips, confirmBox } from './ui.js';
 import { layout, drawPage, ensureImages, FORMATS, PAPERS, PAPER_COLORS, PENS, DEF, GNPAPER, fmtOf } from './render.js';
 import { exportPdf, exportGoodNotes, exportGoodNotesInk, exportPngs, zipOf, fileBase } from './exporter.js';
 import { PACKS } from './packs.js';
@@ -22,21 +22,105 @@ export function editorView(app) {
   const segEl = h('div', { class: 'seg2' }, seg([['ed', 'Schreiben'], ['pv', 'Vorschau']], () => pane, v => { pane = v; showPane(); }));
   // ---------- Werkzeugleiste ----------
   const fontBtn = h('button', { type: 'button', class: 'btn fontsel', onclick: () => pickFont(), title: 'Schrift wechseln' }, ic('type'), h('span'));
-  const wrap = (a, b = a) => () => { const s = ta.selectionStart, e = ta.selectionEnd, v = ta.value, sel = v.slice(s, e); ta.setRangeText(a + sel + b, s, e, 'end'); if (!sel) ta.setSelectionRange(s + a.length, s + a.length); ta.focus(); ta.dispatchEvent(new Event('input')); };
-  const linePre = (p) => () => { const s = ta.selectionStart, v = ta.value, ls = v.lastIndexOf('\n', s - 1) + 1, m = /^(#{1,3} |[-*] )/.exec(v.slice(ls)); if (m && m[0] === p) ta.setRangeText('', ls, ls + p.length, 'preserve'); else { if (m) ta.setRangeText('', ls, ls + m[0].length, 'preserve'); ta.setRangeText(p, ls, ls, 'preserve'); } ta.focus(); ta.dispatchEvent(new Event('input')); };
-  const insert = (t) => { const s = ta.selectionStart; ta.setRangeText(t, s, ta.selectionEnd, 'end'); ta.focus(); ta.dispatchEvent(new Event('input')); };
+  // ---------- Verlauf (Rückgängig / Wiederholen) ----------
+  let hist = [], hi = 0, hTimer = 0, applying = false, undoB, redoB;
+  const updUndo = () => { if (undoB) undoB.disabled = hi <= 0; if (redoB) redoB.disabled = hi >= hist.length - 1; };
+  const hReset = () => { clearTimeout(hTimer); hist = [{ v: ta.value, s: 0, e: 0 }]; hi = 0; updUndo(); };
+  const hPush = () => { clearTimeout(hTimer); hTimer = 0; if (applying || !ta) return; const v = ta.value; if (hist[hi] && hist[hi].v === v) { updUndo(); return; } hist = hist.slice(0, hi + 1); hist.push({ v, s: ta.selectionStart, e: ta.selectionEnd }); if (hist.length > 300) hist.shift(); hi = hist.length - 1; updUndo(); };
+  const hSoon = () => { clearTimeout(hTimer); hTimer = setTimeout(hPush, 450); };
+  const fire = () => { ta.focus(); ta.dispatchEvent(new Event('input')); hPush(); };
+  function hGo(d) {
+    hPush(); const n = hi + d; if (n < 0 || n >= hist.length) return; hi = n; applying = true;
+    ta.value = hist[n].v; ta.setSelectionRange(hist[n].s, hist[n].e); applying = false; doc.text = ta.value; saveSoon(); renderSoon(); updUndo(); ta.focus();
+  }
+  const wrap = (a, b = a) => () => { hPush(); const s = ta.selectionStart, e = ta.selectionEnd, v = ta.value, sel = v.slice(s, e); ta.setRangeText(a + sel + b, s, e, 'end'); if (!sel) ta.setSelectionRange(s + a.length, s + a.length); fire(); };
+  const linePre = (p) => () => { hPush(); const s = ta.selectionStart, v = ta.value, ls = v.lastIndexOf('\n', s - 1) + 1, m = /^(#{1,3} |[-*] |\d{1,3}[.)] )/.exec(v.slice(ls)); if (m && m[0] === p) ta.setRangeText('', ls, ls + p.length, 'preserve'); else { if (m) ta.setRangeText('', ls, ls + m[0].length, 'preserve'); ta.setRangeText(p, ls, ls, 'preserve'); } fire(); };
+  const insert = (t) => { hPush(); const s = ta.selectionStart; ta.setRangeText(t, s, ta.selectionEnd, 'end'); fire(); };
   const colorMenu = () => sheet('Textfarbe', (b, api) => {
     b.append(h('p', { class: 'sm mut' }, 'Markiere Text und wähle eine Farbe. Ohne Markierung gilt sie für das, was du als Nächstes tippst.'), h('div', { class: 'chips' }, ...[['rot', '#c62828'], ['blau', '#1d3a9a'], ['gruen', '#1b7a3a'], ['orange', '#d9730d'], ['lila', '#7b3fa0'], ['schwarz', '#16161c']].map(([n, c]) => h('button', { type: 'button', class: 'sw', style: { background: c }, 'aria-label': n, onclick: () => { api.close(); wrap(`[${n}]`, '[/]')(); } }))));
   });
+  // ---------- Einfügen, Kopieren, Suchen ----------
+  async function pasteTxt() {
+    try { const t = await navigator.clipboard.readText(); if (!t) { toast('Die Zwischenablage ist leer.'); return; } insert(t); }
+    catch (_) { toast('Einfügen per Knopf ist hier nicht erlaubt. Tippe ins Textfeld, halte gedrückt und wähle „Einfügen“.', 5200, 'err'); }
+  }
+  async function copyTxt() {
+    const sel = ta.value.slice(ta.selectionStart, ta.selectionEnd), t = sel || ta.value; if (!t) return;
+    try { await navigator.clipboard.writeText(t); } catch (_) { const a = ta.selectionStart, b = ta.selectionEnd; if (!sel) ta.select(); document.execCommand('copy'); ta.setSelectionRange(a, b); }
+    toast(sel ? 'Auswahl kopiert' : 'Ganzer Text kopiert');
+  }
+  const fq = h('input', { type: 'text', class: 'f', placeholder: 'Suchen', 'aria-label': 'Suchen', style: { flex: '1 1 110px', minWidth: 0 } }), fr = h('input', { type: 'text', class: 'f', placeholder: 'Ersetzen durch', 'aria-label': 'Ersetzen durch', style: { flex: '1 1 110px', minWidth: 0 } });
+  const fcnt = h('span', { class: 'xs mut', style: { minWidth: '70px' } }); let fcase = false;
+  const esc = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const fre = () => fq.value ? new RegExp(esc(fq.value), fcase ? 'g' : 'gi') : null;
+  const fcount = () => { const r = fre(); fcnt.textContent = r ? `${(ta.value.match(r) || []).length} Treffer` : ''; };
+  function findNext(dir = 1) {
+    const r = fre(); if (!r) return false; const v = ta.value, hay = fcase ? v : v.toLowerCase(), q = fcase ? fq.value : fq.value.toLowerCase();
+    let i = dir > 0 ? hay.indexOf(q, ta.selectionEnd) : hay.lastIndexOf(q, ta.selectionStart - 1);
+    if (i < 0) i = dir > 0 ? hay.indexOf(q) : hay.lastIndexOf(q);
+    if (i < 0) { toast('Nichts gefunden'); return false; }
+    ta.focus(); ta.setSelectionRange(i, i + q.length);
+    const lines = v.slice(0, i).split('\n').length, lh = parseFloat(getComputedStyle(ta).lineHeight) || 22; ta.scrollTop = Math.max(0, (lines - 3) * lh);   // Fundstelle ins Bild holen
+    return true;
+  }
+  function replaceOne() {
+    const q = fq.value; if (!q) return; const sel = ta.value.slice(ta.selectionStart, ta.selectionEnd);
+    if (sel && (fcase ? sel === q : sel.toLowerCase() === q.toLowerCase())) { hPush(); ta.setRangeText(fr.value, ta.selectionStart, ta.selectionEnd, 'end'); fire(); fcount(); }
+    findNext();
+  }
+  function replaceAll() {
+    const r = fre(); if (!r) return; const n = (ta.value.match(r) || []).length; if (!n) { toast('Nichts gefunden'); return; }
+    hPush(); ta.value = ta.value.replace(r, () => fr.value); fire(); fcount(); toast(`${n} ${n === 1 ? 'Stelle' : 'Stellen'} ersetzt`);
+  }
+  const caseB = btn('Aa', { cls: 'sm', title: 'Groß-/Kleinschreibung beachten', onclick: () => { fcase = !fcase; caseB.classList.toggle('on', fcase); fcount(); } });
+  const findBar = h('div', { class: 'row', hidden: true, style: { gap: '6px', flexWrap: 'wrap', padding: '8px 10px', borderBottom: '1px solid var(--bd)', background: 'var(--surf)', flex: 'none' } },
+    fq, fr, caseB, btn('Weiter', { cls: 'sm', onclick: () => findNext(1) }), btn('Zurück', { cls: 'sm', onclick: () => findNext(-1) }), btn('Ersetzen', { cls: 'sm', onclick: replaceOne }), btn('Alle', { cls: 'sm', onclick: replaceAll, title: 'Alle ersetzen' }), fcnt, h('span', { class: 'sp1' }), btn('Schließen', { icon: 'x', cls: 'ghost icon sm', onclick: () => toggleFind(false) }));
+  fq.addEventListener('input', fcount); fq.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); findNext(e.shiftKey ? -1 : 1); } });
+  function toggleFind(on) { findBar.hidden = !on; if (on) { const sel = ta.value.slice(ta.selectionStart, ta.selectionEnd); if (sel && !sel.includes('\n')) fq.value = sel; fcount(); fq.focus(); fq.select(); } else ta.focus(); }
+  // Weitere Funktionen: Datei laden/speichern, Datum, Rechtschreibung, alles löschen
+  const spellOn = () => { try { return localStorage.getItem('hs:spell') !== '0'; } catch (_) { return true; } };
+  function openMore() {
+    sheet('Weitere Textfunktionen', (b, api) => {
+      const item = (label, sub, icon, fn) => h('button', { type: 'button', class: 'pack', onclick: () => { api.close(); setTimeout(fn, 120); } }, h('div', { class: 'pi' }, ic(icon)), h('div', { class: 'pt' }, h('b', null, label), h('span', { class: 'sm mut' }, sub)));
+      b.append(
+        item('Textdatei einfügen', '.txt oder .md vom Gerät an der Cursorposition einfügen', 'folder', () => { const f = h('input', { type: 'file', accept: '.txt,.md,.markdown,text/plain,text/markdown', style: { display: 'none' }, onchange: async () => { const file = f.files[0]; f.remove(); if (!file) return; try { insert(await file.text()); toast(`„${file.name}“ eingefügt`); } catch (e) { toast('Datei konnte nicht gelesen werden', 3200, 'err'); } } }); document.body.append(f); f.click(); }),
+        item('Als Textdatei speichern', 'Den Text als .txt sichern (ohne Handschrift)', 'download', () => saveFile(new Blob([ta.value], { type: 'text/plain;charset=utf-8' }), `${fileBase(doc.title)}.txt`)),
+        item('Alles markieren', 'Den ganzen Text auswählen', 'check', () => { ta.focus(); ta.select(); }),
+        item('Datum einfügen', 'Heutiges Datum an der Cursorposition', 'info', () => insert(new Date().toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' }))),
+        item(spellOn() ? 'Rechtschreibprüfung ausschalten' : 'Rechtschreibprüfung einschalten', 'Rote Wellenlinien im Textfeld', 'edit', () => { const on = !spellOn(); try { localStorage.setItem('hs:spell', on ? '1' : '0'); } catch (_) { /* egal */ } ta.spellcheck = on; toast(on ? 'Rechtschreibprüfung an' : 'Rechtschreibprüfung aus'); }),
+        item('Alles löschen', 'Den ganzen Text entfernen (mit Rückgängig)', 'trash', async () => { if (!ta.value) return; if (await confirmBox('Den ganzen Text löschen? Mit „Rückgängig“ holst du ihn zurück.', 'Löschen')) { hPush(); ta.value = ''; fire(); } }));
+    });
+  }
   const tb = h('div', { class: 'tb', role: 'toolbar', 'aria-label': 'Formatierung' }, fontBtn, h('i', { class: 'vs' }),
     btn('Fett', { icon: 'bold', cls: 'icon', onclick: wrap('**'), title: 'Fett (**Text**)' }), btn('Unterstrichen', { icon: 'underline', cls: 'icon', onclick: wrap('__'), title: 'Unterstrichen (__Text__)' }),
     btn('Durchgestrichen', { icon: 'strike', cls: 'icon', onclick: wrap('~~'), title: 'Durchgestrichen (~~Text~~)' }), btn('Markiert', { icon: 'hl', cls: 'icon', onclick: wrap('=='), title: 'Textmarker (==Text==)' }),
     btn('Farbe', { icon: 'palette', cls: 'icon', onclick: colorMenu }), h('i', { class: 'vs' }),
-    btn('Überschrift', { icon: 'head', cls: 'icon', onclick: linePre('# '), title: 'Überschrift (# am Zeilenanfang)' }), btn('Liste', { icon: 'list', cls: 'icon', onclick: linePre('- '), title: 'Aufzählung (- am Zeilenanfang)' }),
-    h('i', { class: 'vs' }), btn('Sonderzeichen', { icon: 'omega', cls: 'icon', onclick: () => openPalette(), title: 'Sonderzeichen und Kürzel' }));
-  ta = h('textarea', { id: 'txt', spellcheck: true, lang: 'de', 'aria-label': 'Text', placeholder: 'Schreib oder füg hier deinen Text ein …\n\nTipps: **fett**, __unterstrichen__, ==markiert==, # Überschrift, - Liste\nMathe: x^2, a_1, ->, <=, \\alpha, \\pi', oninput: () => { doc.text = ta.value; saveSoon(); renderSoon(); } });
+    btn('Überschrift', { icon: 'head', cls: 'icon', onclick: linePre('# '), title: 'Überschrift (# am Zeilenanfang)' }), btn('Liste', { icon: 'list', cls: 'icon', onclick: linePre('- '), title: 'Aufzählung (- am Zeilenanfang)' }), btn('Nummerierung', { icon: 'numlist', cls: 'icon', onclick: linePre('1. '), title: 'Nummerierte Liste (1. am Zeilenanfang)' }),
+    h('i', { class: 'vs' }), (undoB = btn('Rückgängig', { icon: 'undo', cls: 'icon', onclick: () => hGo(-1), title: 'Rückgängig (Strg/Cmd+Z)', disabled: true })), (redoB = btn('Wiederholen', { icon: 'redo', cls: 'icon', onclick: () => hGo(1), title: 'Wiederholen (Strg/Cmd+Umschalt+Z)', disabled: true })),
+    h('i', { class: 'vs' }), btn('Einfügen', { icon: 'paste', cls: 'icon', onclick: pasteTxt, title: 'Text aus der Zwischenablage einfügen' }), btn('Kopieren', { icon: 'copy', cls: 'icon', onclick: copyTxt, title: 'Auswahl (oder alles) kopieren' }), btn('Suchen und Ersetzen', { icon: 'search', cls: 'icon', onclick: () => toggleFind(true), title: 'Suchen und Ersetzen (Strg/Cmd+F)' }),
+    h('i', { class: 'vs' }), btn('Sonderzeichen', { icon: 'omega', cls: 'icon', onclick: () => openPalette(), title: 'Sonderzeichen und Kürzel' }), btn('Mehr', { icon: 'more', cls: 'icon', onclick: () => openMore(), title: 'Weitere Textfunktionen' }));
+  ta = h('textarea', { id: 'txt', spellcheck: true, lang: 'de', 'aria-label': 'Text', placeholder: 'Schreib oder füg hier deinen Text ein …\n\nTipps: **fett**, __unterstrichen__, ==markiert==, # Überschrift, - Liste\nMathe: x^2, a_1, ->, <=, \\alpha, \\pi', oninput: () => { doc.text = ta.value; hSoon(); saveSoon(); renderSoon(); } });
+  ta.spellcheck = spellOn();
+  ta.addEventListener('keydown', (e) => {
+    const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
+    if (mod && k === 'z') { e.preventDefault(); hGo(e.shiftKey ? 1 : -1); return; }
+    if (mod && k === 'y') { e.preventDefault(); hGo(1); return; }
+    if (mod && k === 'b') { e.preventDefault(); wrap('**')(); return; }
+    if (mod && k === 'u') { e.preventDefault(); wrap('__')(); return; }
+    if (mod && k === 'f') { e.preventDefault(); toggleFind(true); return; }
+    // Listen automatisch fortsetzen: Enter hängt „- “ bzw. die nächste Nummer an; Enter auf leerem Punkt beendet die Liste
+    if (e.key === 'Enter' && !mod && !e.shiftKey && !e.isComposing && ta.selectionStart === ta.selectionEnd) {
+      const v = ta.value, p = ta.selectionStart, ls = v.lastIndexOf('\n', p - 1) + 1, line = v.slice(ls, p), m = /^([-*•] |(\d{1,3})([.)]) )(.*)$/.exec(line);
+      if (m) {
+        e.preventDefault(); hPush();
+        if (!m[4].trim()) ta.setRangeText('', ls, p, 'end');   // leerer Listenpunkt: Liste beenden
+        else ta.setRangeText('\n' + (m[2] ? (+m[2] + 1) + m[3] + ' ' : m[1]), p, p, 'end');
+        fire();
+      }
+    }
+  });
   info = h('div', { class: 'stat' }); missEl = h('div', { class: 'miss', hidden: true });
-  const edPane = h('div', { class: 'pane ed on' }, tb, ta, missEl, info);
+  const edPane = h('div', { class: 'pane ed on' }, tb, findBar, ta, missEl, info);
   pagesEl = h('div', { class: 'preview' });
   const pvPane = h('div', { class: 'pane pv' }, pagesEl);
   const split = h('div', { class: 'split' }, edPane, pvPane);
@@ -81,7 +165,8 @@ export function editorView(app) {
   pagesEl.addEventListener('scroll', debounce(drawVisible, 80));
   function updateInfo() {
     const n = L.pages.reduce((a, p) => a + p.filter(e => e.g).length, 0), f = fontObj;
-    info.replaceChildren(h('span', null, `${n} Zeichen · ${L.pages.length} ${L.pages.length === 1 ? 'Seite' : 'Seiten'}`), h('span', { class: 'sp1' }), h('span', null, FORMATS[fmtOf(S())].name));
+    const words = (doc.text.match(/\S+/g) || []).length;
+    info.replaceChildren(h('span', null, `${words} ${words === 1 ? 'Wort' : 'Wörter'} · ${n} Zeichen · ${L.pages.length} ${L.pages.length === 1 ? 'Seite' : 'Seiten'}`), h('span', { class: 'sp1' }), h('span', null, FORMATS[fmtOf(S())].name));
     if (L.missing.length) {
       missEl.hidden = false;
       missEl.replaceChildren(ic('alert'), h('span', null, 'Fehlt in dieser Schrift: ', h('b', null, L.missing.slice(0, 14).join(' ') + (L.missing.length > 14 ? ' …' : ''))), btn('Hinzufügen', { cls: 'sm', onclick: () => addMissing(L.missing) }));
@@ -191,7 +276,7 @@ export function editorView(app) {
 
   return {
     el: root,
-    async load(d) { doc = d; title.value = d.title || ''; ta.value = d.text || ''; wraps.forEach(w => w.remove()); wraps = []; dirty.clear(); L = null; await render(); },
+    async load(d) { doc = d; title.value = d.title || ''; ta.value = d.text || ''; hReset(); toggleFind(false); wraps.forEach(w => w.remove()); wraps = []; dirty.clear(); L = null; await render(); },
     refresh() { return render(); },
     focus() { ta && ta.focus(); },
     get doc() { return doc; },

@@ -245,14 +245,15 @@ export function layout(text, S, font) {
   slope = (rng() - .5) * 0.012 * S.jit;
   const paras = text.replace(/\t/g, '    ').split('\n');
   for (const raw of paras) {
-    let para = raw, scl = 1, bullet = false, head = 0;
+    let para = raw, scl = 1, bullet = false, head = 0, lab = '•';
     if (S.markup) {
       let m;
       if ((m = /^(#{1,3}) +(.*)$/.exec(para))) { head = m[1].length; scl = [0, 1.5, 1.28, 1.12][head]; para = m[2]; }
       else if ((m = /^[-*•] +(.*)$/.exec(para))) { bullet = true; para = m[1]; }
+      else if ((m = /^(\d{1,3}[.)]) +(.*)$/.exec(para))) { bullet = true; lab = m[1]; para = m[2]; }   // nummerierte Liste: Nummer links, Text eingerückt
     }
     if (para.trim() === '' && !bullet) { ind = 0; newLine(); continue; }
-    ind = bullet ? S.size * 1.6 : 0;
+    ind = bullet ? S.size * (lab.length > 1 ? 2.1 : 1.6) : 0;
     let p = '', prevc = ' ';
     for (const c of para) { p += (c === '"') ? (/[\s(\[]/.test(prevc) ? '„' : '“') : c; prevc = c; }
     const chars = parseInline(p, S).map(o => ({ ...o, b: o.b || head > 0 }));
@@ -261,7 +262,7 @@ export function layout(text, S, font) {
     const words = []; let cur = [];
     for (const o of chars) { if (o.c === ' ') { if (cur.length) words.push(cur); cur = []; } else cur.push(o); }
     if (cur.length) words.push(cur);
-    if (bullet) { const { run, w } = makeWord([{ c: '•' }], 1); if (run.length) { x = left + (rng() - .5) * S.size * .3; place(run, x, 1); x = left + ind; } }
+    if (bullet) { const { run, w } = makeWord([...lab].map(c => ({ c })), 1); if (run.length) { x = left + (rng() - .5) * S.size * .3; place(run, x, 1); x = left + ind; } }
     else x = left + ((first && ind) || 0);
     if (bullet) first = true;
     for (const word of words) {
