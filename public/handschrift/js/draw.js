@@ -48,7 +48,7 @@ export function glyphFromStrokes(ch, strokes, pen = PEN) {
 // cells: [{ch, v, pack, grp}], onDone(g) mit g = { zeichen: [Zeichen-Objekte] }
 export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra: nachträglich ergänzte Varianten/Zeichen (kein „Nur 1×“)
   const modal = h('div', { class: 'modal on', role: 'dialog', 'aria-label': 'Zeichen zeichnen' }); document.body.append(modal);
-  const head = h('div', { class: 'bar' }), mb = h('div', { class: 'mb', style: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 12px', gap: '8px', overflow: 'hidden' } }), mf = h('div', { class: 'mf' });
+  const head = h('div', { class: 'bar' }), mb = h('div', { class: 'mb', style: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 12px', gap: '8px', overflow: 'auto' } }), mf = h('div', { class: 'mf' });
   modal.append(head, mb, mf);
   const done = new Map(); let idx = 0, strokes = [], cur = null, once = false, ghost = (() => { try { return localStorage.getItem('hs:ghost') !== '0'; } catch (_) { return true; } })(), sawPen = false, ppu = 4;
   const key = (c) => c.ch + '|' + c.v;
@@ -80,7 +80,9 @@ export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra
     oninput: () => { fsc = fsl.value / 100; fval.textContent = fsl.value + ' %'; try { localStorage.setItem('hs:fieldsc', String(fsc)); } catch (_) { /* egal */ } size(); } });
   const fieldRow = h('label', { class: 'row', style: { gap: '8px', alignItems: 'center', justifyContent: 'center', width: '100%' } }, h('span', { class: 'sm' }, 'Feldgröße'), fsl, fval);
   function size() {
-    const availH = window.innerHeight - 56 - 76 - 120, availW = window.innerWidth - 24;
+    // verfügbare Höhe = Platz im Fenster minus alles andere (Titel, Knöpfe, Regler, Hinweis), damit nichts unter der Leiste verschwindet
+    let rest = 0; for (const el of mb.children) if (el !== cv) rest += el.getBoundingClientRect().height;
+    const availH = mb.clientHeight ? mb.clientHeight - rest - 8 * (mb.children.length - 1) - 20 : window.innerHeight - 56 - 76 - 120, availW = window.innerWidth - 24;
     ppu = Math.max(1.5, Math.min(availH / CH, availW / CW, 6) * fsc);
     const dpr = Math.min(2.5, window.devicePixelRatio || 1);
     cv.style.width = CW * ppu + 'px'; cv.style.height = CH * ppu + 'px'; bar.style.width = CW * ppu + 'px';
