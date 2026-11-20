@@ -265,7 +265,7 @@ function graphBlock(el, ctx) {
   }
   // Maße
   const labelsOf = (a, b, st) => { const out = []; for (let v = Math.ceil(a / st - 1e-9) * st; v <= b + 1e-9; v += st) out.push(Math.round(v / st) * st); return out; };
-  const gl = getP(el, 'gleichskaliert') != null ? bool(getP(el, 'gleichskaliert')) : false;
+  const gl = getP(el, 'gleichskaliert') != null ? bool(getP(el, 'gleichskaliert')) : /geometr|konstruktion/i.test(el.rawName || '');
   const G0 = ctx.gridOk ? ctx.grid : null;
   let gw = size(getP(el, 'breite'), W, (G0 ? 1 : .85) * W); gw = Math.min(gw, W);
   const maxH = (ctx.PH - ctx.MT - ctx.MB) * .88;
@@ -369,6 +369,55 @@ function graphBlock(el, ctx) {
     if (s.arrow) { const L = .8 * u, ang = Math.atan2(B[1] - A[1], B[0] - A[0]), q = (da) => [B[0] - L * Math.cos(ang + da), B[1] - L * Math.sin(ang + da)]; items.push(P([q(.4), B, q(-.4)], s.w, c)); }
     if (s.name) place((s.a[0] + s.b[0]) / 2, (s.a[1] + s.b[1]) / 2, s.name, c);
   }
+
+  // ---- Geometrie: Figuren, Abbildungen (Streckung, Spiegelung, Drehung, Verschiebung), Kreise, Geraden ----
+  const figs = {}, DEG = Math.PI / 180, nn = (s) => { const v = parseFloat(String(s).replace(',', '.')); return isFinite(v) ? v : null; };
+  const pair = (s) => { s = String(s || '').trim().replace(/^\(|\)$/g, ''); const sep = /[|;]/.test(s) ? /[|;]/ : /,/; const t = s.split(sep); return t.length === 2 && nn(t[0]) != null && nn(t[1]) != null ? [nn(t[0]), nn(t[1])] : null; };
+  const polyDraw = (pts, col, closed = true, w = 1.2) => { const q = pts.map(p => [fx(p[0]), fy(p[1])]); if (closed) q.push(q[0]); items.push(P(q, w, col)); };
+  const labelOut = (pts, names, col) => { const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length, cy = pts.reduce((a, p) => a + p[1], 0) / pts.length; pts.forEach((p, i) => { cross(p[0], p[1], col, 'kreuz'); if (names[i]) place(p[0], p[1], names[i], col, p[0] >= cx ? .5 : 0, p[1] >= cy ? -.5 : 1.5, p[0] < cx); }); };
+  for (const p of allP(el, 'figur')) {
+    const toks = p.v.split(/\s*\|\s*(?![^()]*\))/); const verts = []; const re = /([A-Za-zÄÖÜäöü][\w']*)\s*\(\s*([^()]+?)\s*\)/g; let m;
+    while ((m = re.exec(toks[0]))) { const c = pair(m[2]); if (c) verts.push({ n: m[1], x: c[0], y: c[1] }); }
+    if (verts.length < 2) { ctx.err(p.line, 'figur: mindestens zwei Ecken wie A(1,2) B(3,4) angeben'); continue; }
+    let col = null, nm = null, closed = true; for (const q of toks.slice(1)) { if (isColor(q)) col = color(q); else if (/^(offen|linie)$/i.test(q)) closed = false; else nm = q.trim(); }
+    nm = nm || verts.map(v => v.n).join(''); figs[nm] = { verts, col: col || ink, closed, name: nm };
+    for (const v of verts) if (v.x < xmin || v.x > xmax || v.y < ymin || v.y > ymax) ctx.err(p.line, 'Ecke ' + v.n + ' liegt außerhalb des Koordinatensystems', 'warn');
+    polyDraw(verts.map(v => [v.x, v.y]), figs[nm].col, closed); labelOut(verts.map(v => [v.x, v.y]), verts.map(v => v.n), figs[nm].col);
+  }
+  for (const p of allP(el, 'abbildung')) {
+    const t = p.v.split(/\s*\|\s*/), f = figs[(t[0] || '').trim()] || Object.values(figs)[Object.values(figs).length - 1];
+    if (!f) { ctx.err(p.line, 'abbildung: zuerst eine Figur mit „figur:“ definieren'); continue; }
+    const o2 = { type: (t[1] || '').trim().toLowerCase(), col: null, hl: false, name: null }, kv = {};
+    for (const q of t.slice(2)) { const mm = /^(\w+)\s*=\s*(.+)$/.exec(q); if (mm) kv[mm[1].toLowerCase()] = mm[2].trim(); else if (isColor(q)) o2.col = color(q); else if (/^hilfs/i.test(q)) o2.hl = true; else o2.name = q.trim(); }
+    if (kv.name) o2.name = kv.name; const col = o2.col || color('rot'); let fn = null, zc = null;
+    const Z = kv.zentrum ? pair(kv.zentrum) : null;
+    if (/streck|dilat/.test(o2.type)) { const k = nn(kv.faktor ?? kv.k); if (!Z || k == null) { ctx.err(p.line, 'streckung braucht zentrum=x,y und faktor=k'); continue; } fn = (x, y) => [Z[0] + k * (x - Z[0]), Z[1] + k * (y - Z[1])]; zc = Z; }
+    else if (/punktspieg/.test(o2.type)) { if (!Z) { ctx.err(p.line, 'punktspiegelung braucht zentrum=x,y'); continue; } fn = (x, y) => [2 * Z[0] - x, 2 * Z[1] - y]; zc = Z; }
+    else if (/spieg|refl/.test(o2.type)) {
+      const a = String(kv.achse || 'y').toLowerCase().replace(/\s/g, ''); let L = null;
+      if (a === 'x') L = [[0, 0], [1, 0]]; else if (a === 'y') L = [[0, 0], [0, 1]]; else if (/^x=/.test(a)) L = [[nn(a.slice(2)), 0], [nn(a.slice(2)), 1]]; else if (/^y=x$/.test(a)) L = [[0, 0], [1, 1]]; else if (/^y=/.test(a) && nn(a.slice(2)) != null) L = [[0, nn(a.slice(2))], [1, nn(a.slice(2))]];
+      else { const pp = a.split(/\.\.|-(?=\()|\/|~/).map(pair); if (pp.length === 2 && pp[0] && pp[1]) L = pp; }
+      if (!L) { ctx.err(p.line, 'spiegelung: achse=x | y | x=3 | y=2 | y=x | x1,y1..x2,y2'); continue; }
+      const dx = L[1][0] - L[0][0], dy = L[1][1] - L[0][1], d2 = dx * dx + dy * dy;
+      fn = (x, y) => { const tt = ((x - L[0][0]) * dx + (y - L[0][1]) * dy) / d2, fxp = L[0][0] + tt * dx, fyp = L[0][1] + tt * dy; return [2 * fxp - x, 2 * fyp - y]; };
+      const Lc = [[...L[0]], [...L[1]]]; const far = Math.max(xmax - xmin, ymax - ymin) * 2, ln = Math.sqrt(d2); const A = [L[0][0] - dx / ln * far, L[0][1] - dy / ln * far], B = [L[0][0] + dx / ln * far, L[0][1] + dy / ln * far];
+      // Achse auf den Zeichenbereich zuschneiden
+      const clip = (A, B) => { let t0 = 0, t1 = 1; const ddx = B[0] - A[0], ddy = B[1] - A[1]; for (const [pp, qq] of [[-ddx, A[0] - xmin], [ddx, xmax - A[0]], [-ddy, A[1] - ymin], [ddy, ymax - A[1]]]) { if (pp === 0) { if (qq < 0) return null; } else { const r = qq / pp; if (pp < 0) { if (r > t1) return null; if (r > t0) t0 = r; } else { if (r < t0) return null; if (r < t1) t1 = r; } } } return [[A[0] + t0 * ddx, A[1] + t0 * ddy], [A[0] + t1 * ddx, A[1] + t1 * ddy]]; };
+      const cl = clip(A, B); if (cl) for (const dd of dashPoly(cl.map(q => [fx(q[0]), fy(q[1])]), 1.2 * u, .7 * u)) items.push(P(dd, 1, color('gruen')));
+      if (kv.achsenname || kv.name2) place(cl ? cl[1][0] : B[0], cl ? cl[1][1] : B[1], kv.achsenname || kv.name2, color('gruen'), -1.5, -.5);
+    }
+    else if (/dreh|rot/.test(o2.type)) { const w = nn(kv.winkel); if (!Z || w == null) { ctx.err(p.line, 'drehung braucht zentrum=x,y und winkel=Grad'); continue; } const c = Math.cos(w * DEG), s = Math.sin(w * DEG); fn = (x, y) => [Z[0] + c * (x - Z[0]) - s * (y - Z[1]), Z[1] + s * (x - Z[0]) + c * (y - Z[1])]; zc = Z; }
+    else if (/versch|transl/.test(o2.type)) { const v = pair(kv.vektor || kv.v); if (!v) { ctx.err(p.line, 'verschiebung braucht vektor=dx,dy'); continue; } fn = (x, y) => [x + v[0], y + v[1]]; }
+    else { ctx.err(p.line, 'abbildung: Art „' + (t[1] || '') + '“ unbekannt (streckung, spiegelung, punktspiegelung, drehung, verschiebung)'); continue; }
+    const img = f.verts.map(v => { const q = fn(v.x, v.y); return { n: v.n + "'", x: +q[0].toFixed(6), y: +q[1].toFixed(6) }; });
+    for (const v of img) if (v.x < xmin || v.x > xmax || v.y < ymin || v.y > ymax) ctx.err(p.line, 'Bildpunkt ' + v.n + ' liegt außerhalb des Koordinatensystems', 'warn');
+    if (o2.hl) f.verts.forEach((v, i) => { const a = zc ? zc : [v.x, v.y], b = [img[i].x, img[i].y]; const A = [fx(a[0]), fy(a[1])], B = [fx(b[0]), fy(b[1])]; for (const dd of dashPoly([A, B], 1 * u, .7 * u)) items.push(P(dd, .9, color('grau'))); });
+    if (zc) { cross(zc[0], zc[1], ink, 'kreuz'); place(zc[0], zc[1], kv.zname || 'Z', ink, .5, 1.5); }
+    polyDraw(img.map(v => [v.x, v.y]), col, f.closed); labelOut(img.map(v => [v.x, v.y]), img.map(v => v.n), col);
+    figs[o2.name || f.name + "'"] = { verts: img, col, closed: f.closed, name: o2.name || f.name + "'" };
+  }
+  for (const p of allP(el, 'kreis')) { const t = splitBar(p.v), c = pair(t[0]), r = nn(t[1]); if (!c || r == null) { ctx.err(p.line, 'kreis: Mittelpunkt und Radius angeben, z. B. kreis: 0,0 | 3 | blau'); continue; } let col = null, nm = null; for (const q of t.slice(2)) { if (isColor(q)) col = color(q); else nm = q; } const pts = []; for (let k = 0; k <= 72; k++) pts.push([fx(c[0] + r * Math.cos(k / 72 * 6.2832)), fy(c[1] + r * Math.sin(k / 72 * 6.2832))]); items.push(P(pts, 1.2, col || ink)); cross(c[0], c[1], col || ink, 'kreuz'); if (nm) place(c[0], c[1], nm, col || ink); }
+  for (const p of allP(el, 'gerade')) { const t = splitBar(p.v), a = pair(t[0]), b = pair(t[1]); if (!a || !b) { ctx.err(p.line, 'gerade: zwei Punkte angeben, z. B. gerade: 0,0 | 4,2'); continue; } let col = null, nm = null; for (const q of t.slice(2)) { if (isColor(q)) col = color(q); else nm = q; } const dx = b[0] - a[0], dy = b[1] - a[1], far = 4 * Math.max(xmax - xmin, ymax - ymin), ln = Math.hypot(dx, dy) || 1; const A = [a[0] - dx / ln * far, a[1] - dy / ln * far], B = [a[0] + dx / ln * far, a[1] + dy / ln * far]; let t0 = 0, t1 = 1; const ddx = B[0] - A[0], ddy = B[1] - A[1]; let ok = true; for (const [pp, qq] of [[-ddx, A[0] - xmin], [ddx, xmax - A[0]], [-ddy, A[1] - ymin], [ddy, ymax - A[1]]]) { if (pp === 0) { if (qq < 0) ok = false; } else { const r = qq / pp; if (pp < 0) t0 = Math.max(t0, r); else t1 = Math.min(t1, r); } } if (!ok || t0 >= t1) continue; const C = [A[0] + t0 * ddx, A[1] + t0 * ddy], D = [A[0] + t1 * ddx, A[1] + t1 * ddy]; items.push(P([[fx(C[0]), fy(C[1])], [fx(D[0]), fy(D[1])]], 1.2, col || ink)); if (nm) place(D[0], D[1], nm, col || ink, -1.5, -.5); }
   for (const k of el.kids) if (k.name === 'label') { const x = num(getP(k, 'x')), y = num(getP(k, 'y')), t = getP(k, 'text') || text(k).trim() || getP(k, 'name'); if (x == null || y == null || !t) { ctx.err(k.line, 'Beschriftung braucht x, y und text'); continue; } place(x, y, t, color(getP(k, 'farbe')) || ink, 0, 0); }
   // Legende
   if (bool(getP(el, 'legende'), false)) { const named = F.filter(f => f.name); let ly = R.y0 + .9 * u; for (const f of named) { const nb = mathBox(ctx, f.name, { sc: .85, col: ink }).box; items.push(P([[R.x1 - nb.w - 3 * u, ly - .3 * u], [R.x1 - nb.w - 1.2 * u, ly - .3 * u]], 1.5, f.col2)); items.push(...shiftItems(nb.items, R.x1 - nb.w - .9 * u, ly)); ly += nb.asc + nb.desc + .5 * u; } }

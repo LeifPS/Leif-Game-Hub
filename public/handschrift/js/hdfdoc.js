@@ -61,6 +61,14 @@ legende: ja
 [/graph]
 Eigenschaften: xbereich/ybereich (oder xmin xmax ymin ymax), einheit (Kästchen pro Einheit; Standard 2, bei großen Bereichen automatisch 1 oder 0,5), xbeschriftung/ybeschriftung (Standard x, y), zahlen: ja|nein, achsen: ja|nein, raster: ja (eigenes Gitter, auf kariertem Papier nicht nötig), skala (Abstand der Teilstriche), nullstellen/extrema/schnittpunkte: ja (werden berechnet und mit Koordinaten beschriftet), breite, titel.
 Funktion: "funktion: Term | Farbe | Linienart | name=… | bereich=a..b" (Reihenfolge der Zusatzangaben egal; Linienart gestrichelt|gepunktet). Alternativ als Unterelement [funktion] ausdruck: … | farbe: … | name: … | bereich: -2..2 [/funktion]. Der Term enthält nur x, z. B. x^2-4, sin(x), 1/x, sqrt(x). Polstellen und Definitionslücken werden erkannt. Punkte: punkt: x | y | Name | kreuz|punkt|kreis | Farbe. Strecken/Pfeile: strecke: x1,y1 | x2,y2 | pfeil | Farbe | Name. Tipp: Pro Graph höchstens 15 Einheiten je Achse (passt auf eine GoodNotes-Seite).
+### Geometrie (Element [geometrie] = Koordinatensystem mit gleichem Maßstab auf x und y)
+[geometrie titel="Zentrische Streckung"]
+xbereich: -1..9
+ybereich: -1..9
+figur: A(2,2) B(4,2) C(3,4) | blau | ABC
+abbildung: ABC | streckung | zentrum=1,1 | faktor=2 | hilfslinien
+[/geometrie]
+figur: Ecken mit Namen und Koordinaten (A(2,2) oder A(2|2)), dazu Farbe, optional Name der Figur, "offen" für nicht geschlossen. abbildung: Figurname | Art | Angaben. Arten: streckung (zentrum=x,y faktor=k), spiegelung (achse=x | y | x=3 | y=2 | y=x | x1,y1..x2,y2), punktspiegelung (zentrum=x,y), drehung (zentrum=x,y winkel=90, positiv = gegen den Uhrzeigersinn), verschiebung (vektor=dx,dy). Optional: hilfslinien (gestrichelte Verbindungen), Farbe, name=Neuname. Bildpunkte heißen A', B', C'. Weitere Zeilen in jedem Graphen/jeder Geometrie: kreis: mx,my | radius | Farbe | Name; gerade: x1,y1 | x2,y2 | Farbe | Name (unendliche Gerade).
 ### Noch nicht umgesetzt (werden als roter Platzhalter angezeigt)
 Balken-/Kreis-/Liniendiagramme, Geometrie, Mindmap, Flussdiagramm, Baum, Venn, Zeitstrahl, Chemie, Schaltbilder, Karten, Bilder. Nutze dafür vorerst Text, Tabellen und Graphen.
 

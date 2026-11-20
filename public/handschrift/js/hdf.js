@@ -9,7 +9,7 @@ const EL_ALIAS = {
   titel: 'title', ueberschrift: 'heading', absatz: 'paragraph', hinweis: 'note', merke: 'note', beispiel: 'example', aufgabe: 'task', antwort: 'answer', zitat: 'quote',
   fussnote: 'footnote', beschriftung: 'label', abstand: 'spacer', trennlinie: 'divider', seitenumbruch: 'pagebreak', liste: 'list', eintrag: 'item', formel: 'formula',
   gleichung: 'equation', bruch: 'fraction', wurzel: 'root', rechenweg: 'calculation', schritt: 'step', wertetabelle: 'valuetable', tabelle: 'table', zeile: 'row', zelle: 'cell',
-  koordinatensystem: 'graph', graf: 'graph', funktionsgraph: 'graph', funktion: 'function', punkt: 'point', strecke: 'segment', spalten: 'columns', spalte: 'column', gruppe: 'group',
+  koordinatensystem: 'graph', geometrie: 'graph', geometry: 'graph', konstruktion: 'graph', graf: 'graph', funktionsgraph: 'graph', funktion: 'function', punkt: 'point', strecke: 'segment', spalten: 'columns', spalte: 'column', gruppe: 'group',
   metadaten: 'metadata', seite: 'page', bild: 'image', verweis: 'reference', text: 'text',
 };
 // Elemente, die in Stufe 1 gerendert werden (Rest: sichtbarer Platzhalter, siehe KNOWN_LATER)
@@ -24,7 +24,7 @@ const DEFS = {
   valuetable: { text: false, props: ['funktion', 'xvon', 'xbis', 'schritt', 'titel', 'spaltenname', 'nachkommastellen', 'dezimal', 'kopf'] },
   table: { text: false, props: ['titel', 'kopf', 'zeile', 'spaltenbreiten', 'rahmen', 'zellabstand', 'kopfzeile', 'dezimal'], kids: ['row'] },
   row: { text: true, props: ['hoehe'], kids: ['cell'] }, cell: { text: true, props: ['spalten'] },
-  graph: { text: false, props: ['titel', 'xmin', 'xmax', 'ymin', 'ymax', 'xbereich', 'ybereich', 'raster', 'rasterx', 'rastery', 'achsen', 'achsenbeschriftung', 'xbeschriftung', 'ybeschriftung', 'skala', 'skalax', 'skalay', 'marken', 'legende', 'gleichskaliert', 'nullstellen', 'extrema', 'schnittpunkte', 'funktion', 'punkt', 'strecke', 'dezimal', 'zahlen', 'einheit'], kids: ['function', 'point', 'segment', 'label'] },
+  graph: { text: false, props: ['titel', 'xmin', 'xmax', 'ymin', 'ymax', 'xbereich', 'ybereich', 'raster', 'rasterx', 'rastery', 'achsen', 'achsenbeschriftung', 'xbeschriftung', 'ybeschriftung', 'skala', 'skalax', 'skalay', 'marken', 'legende', 'gleichskaliert', 'nullstellen', 'extrema', 'schnittpunkte', 'funktion', 'punkt', 'strecke', 'figur', 'abbildung', 'kreis', 'gerade', 'dezimal', 'zahlen', 'einheit'], kids: ['function', 'point', 'segment', 'label'] },
   function: { text: false, props: ['ausdruck', 'name', 'bereich', 'linienbreite', 'linienart', 'nullstellen', 'extrema'] },
   point: { text: false, props: ['name', 'x', 'y', 'marke', 'beschriftung'] }, segment: { text: false, props: ['von', 'bis', 'pfeil', 'linienbreite', 'linienart', 'name'] },
   label: { text: true, props: ['x', 'y', 'name', 'text'] },
@@ -33,7 +33,7 @@ const DEFS = {
 };
 // bekannte, aber noch nicht umgesetzte Elemente der HDF-Grundbibliothek -> Platzhalter
 const LATER = new Set(['columnchart', 'barchart', 'piechart', 'linechart', 'scatterchart', 'mindmap', 'flowchart', 'tree', 'venn', 'timeline', 'pyramid', 'cycle', 'hierarchy',
-  'chemical', 'reaction', 'physicsdiagram', 'map', 'illustration', 'geometry']);
+  'chemical', 'reaction', 'physicsdiagram', 'map', 'illustration']);
 // Unterelemente, die nur innerhalb bestimmter Elemente Sinn haben (werden bei Platzhaltern mit übersprungen)
 const SUBS = new Set(['entry', 'series', 'branch', 'node', 'connection', 'reactant', 'product', 'component', 'marker', 'label', 'line', 'angle', 'circle', 'polygon']);
 const GENERIC = ['breite', 'hoehe', 'minbreite', 'maxbreite', 'minhoehe', 'maxhoehe', 'ausrichtung', 'abstand', 'innenabstand', 'rand', 'randbreite', 'randfarbe', 'hintergrund', 'position',
