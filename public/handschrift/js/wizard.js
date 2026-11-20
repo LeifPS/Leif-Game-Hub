@@ -1,7 +1,7 @@
 // Assistent: Schrift erstellen oder erweitern (Pakete wählen -> Vorlage -> Bögen hochladen -> prüfen -> speichern)
 import { h, uid, tick, blobOf, saveFile, toast, fmtSize } from './util.js';
 import { ic, btn } from './ui.js';
-import { PACK_BY_ID, buildCells, pageCount, maskOf, idsOf, hashOf, packInfo } from './packs.js';
+import { PACK_BY_ID, buildCells, pageCount, maskOf, idsOf, hashOf, packInfo, REP_DEFAULT, repCode, repOf } from './packs.js';
 import { renderSheet, cellsOnPage } from './sheet.js';
 import { findMarker, readPage, buildGlyphs } from './reader.js';
 import { pagesOf } from './pdfin.js';
@@ -22,13 +22,13 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
   const have = new Set(font ? font.packs || [] : []);
   const S = {
     step: skipTo || 1, sel: new Set(preselect.length ? preselect : font ? [] : ['standard', 'sonder']), custom: { chars: customChars, n: 1 },
-    pages: [], busy: false, result: null, drawn: null, name: font ? font.name : 'Meine Schrift', mode: font ? 'add' : 'new', off: new Set(), fromQr: new Set(), customs: {},
+    reps: { ...REP_DEFAULT }, pages: [], busy: false, result: null, drawn: null, name: font ? font.name : 'Meine Schrift', mode: font ? 'add' : 'new', off: new Set(), fromQr: new Set(), customs: {},
   };
   const modal = h('div', { class: 'modal on', role: 'dialog', 'aria-label': 'Schrift erstellen' }); document.body.append(modal);
   const close = () => { modal.remove(); };
   const head = h('div', { class: 'bar' }), mb = h('div', { class: 'mb' }), mf = h('div', { class: 'mf' });
   modal.append(head, mb, mf);
-  const cells = () => buildCells(maskOf([...S.sel]), S.custom.chars ? { chars: clean(S.custom.chars), n: S.custom.n } : null);
+  const cells = () => buildCells(maskOf([...S.sel]), S.custom.chars ? { chars: clean(S.custom.chars), n: S.custom.n } : null, S.reps);
   const stepsEl = () => h('div', { class: 'steps' }, ...['Auswahl', 'Vorlage', 'Hochladen', 'Prüfen'].flatMap((t, i) => [i ? h('u') : null, h('i', { class: S.step === i + 1 ? 'on' : S.step > i + 1 ? 'done' : '' }, S.step > i + 1 ? '✓' : String(i + 1)), S.step === i + 1 ? h('span', null, t) : null]));
   const go = (n) => { S.step = n; draw(); mb.scrollTop = 0; };
 
@@ -59,20 +59,25 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
       sum.replaceChildren(h('div', { class: 'row wrap2' }, h('span', { class: 'chip ac' }, `${uniq} Zeichen`), h('span', { class: 'chip' }, `${c.length} Kästchen`), h('span', { class: 'chip' }, `${c.length ? pages : 0} ${pages === 1 ? 'Seite' : 'Seiten'}`)));
       mf.replaceChildren(h('div', { class: 'mfstack' }, sum, h('div', { class: 'row' }, btn('Bögen hochladen', { cls: 'sm', title: 'Schon ausgefüllte Bögen hochladen', onclick: () => go(3) }), h('span', { class: 'sp1' }), btn('Weiter', { cls: 'pri', disabled: !c.length, onclick: () => { if (S.custom.chars) kvSet('custom:' + hashOf({ chars: clean(S.custom.chars), n: S.custom.n }), { chars: clean(S.custom.chars), n: S.custom.n }); go(2); } }))));
       list.querySelectorAll('.pack').forEach(b => b.classList.toggle('on', S.sel.has(b.dataset.id)));
+      for (const [id, el] of Object.entries(infoEls)) { const inf = packInfo(PACK_BY_ID[id], S.reps); el.textContent = `${inf.zeichen} Zeichen · ${inf.seiten} ${inf.seiten === 1 ? 'Seite' : 'Seiten'}`; }
     };
-    const list = h('div');
+    const list = h('div'), infoEls = {};
     for (const [gname, ids] of GROUPS) {
       list.append(h('h3', { style: { margin: '16px 0 8px' } }, gname));
       for (const id of ids) {
-        const p = PACK_BY_ID[id], inf = packInfo(p);
+        const p = PACK_BY_ID[id], inf = packInfo(p, S.reps);
         list.append(h('button', { type: 'button', class: 'pack', dataset: { id }, onclick: () => { S.sel.has(id) ? S.sel.delete(id) : S.sel.add(id); redraw(); } },
-          h('div', { class: 'pi' }, p.icon), h('div', { class: 'pt' }, h('b', null, p.name, have.has(id) ? h('span', { class: 'chip ok', style: { marginLeft: '8px' } }, 'vorhanden') : null), h('span', { class: 'sm mut' }, p.text), h('div', { class: 'xs mut', style: { marginTop: '3px' } }, `${inf.zeichen} Zeichen · ${inf.seiten} ${inf.seiten === 1 ? 'Seite' : 'Seiten'}`)),
+          h('div', { class: 'pi' }, p.icon), h('div', { class: 'pt' }, h('b', null, p.name, have.has(id) ? h('span', { class: 'chip ok', style: { marginLeft: '8px' } }, 'vorhanden') : null), h('span', { class: 'sm mut' }, p.text), infoEls[id] = h('div', { class: 'xs mut', style: { marginTop: '3px' } }, `${inf.zeichen} Zeichen · ${inf.seiten} ${inf.seiten === 1 ? 'Seite' : 'Seiten'}`)),
           h('div', { class: 'ck' }, ic('check'))));
       }
     }
     const ta = h('textarea', { class: 'f', rows: 2, placeholder: 'z. B. ŝ ǒ ₂ ✿ …', value: S.custom.chars, oninput: () => { S.custom.chars = ta.value; redraw(); } });
     ta.value = S.custom.chars;
-    w.append(list, h('h3', { style: { margin: '18px 0 6px' } }, 'Eigene Zeichen'), h('p', { class: 'sm mut' }, 'Jedes beliebige Unicode-Zeichen, das du zusätzlich brauchst. Einfach hier einfügen oder tippen.'), ta,
+    const repRow = (label, key) => h('div', { class: 'row', style: { marginTop: '8px' } }, h('span', { class: 'sm sp1' }, label), h('div', { class: 'seg' }, ...[1, 2, 3, 4].map(n => h('button', { type: 'button', class: S.reps[key] === n ? 'on' : '', onclick: (e) => { S.reps[key] = n; [...e.target.parentNode.children].forEach((b, i) => b.classList.toggle('on', i + 1 === n)); redraw(); } }, n + '×'))));
+    const repCard = h('div', { class: 'card', style: { margin: '14px 0 0' } }, h('b', null, 'Wie oft schreibst du jedes Zeichen?'),
+      h('p', { class: 'sm mut', style: { margin: '4px 0 0' } }, 'Mehrere Varianten pro Zeichen lassen den Text natürlicher aussehen, kosten aber mehr Zeit. Normal reichen 2× bei Kleinbuchstaben und 1× bei allem anderen.'),
+      repRow('Kleinbuchstaben (a, b, ä, é …)', 'low'), repRow('Alle anderen Zeichen', 'oth'));
+    w.append(repCard, list, h('h3', { style: { margin: '18px 0 6px' } }, 'Eigene Zeichen'), h('p', { class: 'sm mut' }, 'Jedes beliebige Unicode-Zeichen, das du zusätzlich brauchst. Einfach hier einfügen oder tippen.'), ta,
       h('div', { class: 'row', style: { marginTop: '8px' } }, h('span', { class: 'sm' }, 'Wie oft schreiben?'), h('div', { class: 'seg' }, ...[1, 2, 3].map(n => h('button', { type: 'button', class: S.custom.n === n ? 'on' : '', onclick: (e) => { S.custom.n = n; [...e.target.parentNode.children].forEach((b, i) => b.classList.toggle('on', i + 1 === n)); redraw(); } }, n + '×')))),
       h('div', { class: 'note' }, 'Tipp: Mehr Pakete heißt mehr Seiten zum Ausfüllen. Fang mit „Standard“ an, der Rest geht später immer noch.'));
     redraw();
@@ -88,7 +93,7 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
       try {
         const files = [], jp = [];
         for (let p = 0; p < pages; p++) {
-          const cv = await renderSheet(c, p, pages, { title: S.name === 'Meine Schrift' && !font ? 'Meine Schrift' : S.name, mask, chash }, 3);
+          const cv = await renderSheet(c, p, pages, { title: S.name === 'Meine Schrift' && !font ? 'Meine Schrift' : S.name, mask, chash, rp: repCode(S.reps) }, 3);
           if (kind === 'pdf') { const b = await blobOf(cv, 'image/jpeg', .93); jp.push({ jpeg: new Uint8Array(await b.arrayBuffer()), px: [cv.width, cv.height], pt: [595.2756, 841.8898] }); }
           else { const b = await blobOf(cv, 'image/png'); files.push({ name: `Vorlage-${String(p + 1).padStart(2, '0')}.png`, data: new Uint8Array(await b.arrayBuffer()) }); }
           bar.firstChild.style.width = ((p + 1) / pages * 100) + '%'; await tick();
@@ -141,7 +146,7 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
             if (mark) {
               custom = await customFor(mark.chash);
               if (custom === undefined) { item.status = 'eigene Zeichen fehlen'; item.pg = pg; item.qr = qr; item.need = mark; draw3(listEl); continue; }
-              cellsAll = buildCells(mark.mask, custom);
+              cellsAll = buildCells(mark.mask, custom, mark.rp == null ? null : repOf(mark.rp));
             } else { item.status = 'kein QR-Code'; item.pg = pg; draw3(listEl); continue; }
             await readItem(item, pg.canvas, cellsAll, mark, qr);
           } catch (e) { item.status = 'Fehler: ' + e.message; }

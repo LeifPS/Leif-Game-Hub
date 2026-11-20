@@ -114,9 +114,9 @@ textarea#txt{flex:1;min-height:0;width:100%;border:0;resize:none;padding:16px 16
 .empty{padding:40px 20px;text-align:center;color:var(--mut)}
 
 /* Sheets */
-.scrim{position:fixed;inset:0;background:rgba(10,10,20,.45);z-index:40;opacity:0;pointer-events:none;transition:opacity .18s}
+.scrim{position:fixed;inset:0;background:rgba(10,10,20,.45);z-index:60;opacity:0;pointer-events:none;transition:opacity .18s}
 .scrim.on{opacity:1;pointer-events:auto}
-.sheet{position:fixed;z-index:41;left:0;right:0;bottom:0;max-height:88%;background:var(--surf);border-radius:20px 20px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.25);transform:translateY(105%);transition:transform .22s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;padding-bottom:var(--safe-b)}
+.sheet{position:fixed;z-index:61;left:0;right:0;bottom:0;max-height:88%;background:var(--surf);border-radius:20px 20px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.25);transform:translateY(105%);transition:transform .22s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;padding-bottom:var(--safe-b)}
 .sheet.on{transform:none}
 .sheet .sh{display:flex;align-items:center;gap:10px;padding:14px 16px 8px;flex:none}
 .sheet .sh h2{flex:1}

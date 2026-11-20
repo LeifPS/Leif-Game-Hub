@@ -6,14 +6,14 @@ GEOM.cw = (GEOM.PW - 2 * GEOM.M) / COLS;
 GEOM.ch = (GEOM.PH - 2 * GEOM.M - GEOM.HEAD) / ROWS;
 GEOM.gridTop = GEOM.M + GEOM.HEAD;
 export const cellsOnPage = (cells, p) => cells.slice(p * PER_PAGE, (p + 1) * PER_PAGE);
-export const marker = (mask, chash, page, pages) => `HS1.${mask.toString(36)}.${chash}.${page + 1}.${pages}`;
+export const marker = (mask, chash, page, pages, rp) => `HS1.${mask.toString(36)}.${chash}.${page + 1}.${pages}${rp == null ? '' : '.' + rp.toString(36)}`;
 export function parseMarker(t) {
-  const m = /^HS1\.([0-9a-z]+)\.([0-9a-z]+)\.(\d+)\.(\d+)$/.exec(t || '');
-  return m ? { mask: parseInt(m[1], 36), chash: m[2], page: +m[3] - 1, pages: +m[4] } : null;
+  const m = /^HS1\.([0-9a-z]+)\.([0-9a-z]+)\.(\d+)\.(\d+)(?:\.([0-9a-z]+))?$/.exec(t || '');
+  return m ? { mask: parseInt(m[1], 36), chash: m[2], page: +m[3] - 1, pages: +m[4], rp: m[5] == null ? null : parseInt(m[5], 36) } : null;
 }
 const FONT = '"Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans", "Noto Sans CJK SC", "Microsoft YaHei", "Segoe UI Symbol", sans-serif';
 
-export async function renderSheet(cells, page, pages, { title = 'Meine Schrift', mask = 0, chash = '0' } = {}, S = 3) {
+export async function renderSheet(cells, page, pages, { title = 'Meine Schrift', mask = 0, chash = '0', rp = null } = {}, S = 3) {
   await loadScript('vendor/qrcode.js');
   const { PW, PH, M, cw, ch, gridTop } = GEOM;
   const c = document.createElement('canvas'); c.width = Math.round(PW * S); c.height = Math.round(PH * S);
@@ -25,7 +25,7 @@ export async function renderSheet(cells, page, pages, { title = 'Meine Schrift',
   g.fillText('Schreibe jedes Zeichen in sein Kästchen, so wie du es sonst schreibst. Die kräftig blaue Linie ist die Grundlinie.', M, M + 14);
   g.fillText('Dunkler Stift, normale Größe, nicht den Rand berühren. Danach als PDF oder Bilder exportieren und in der App hochladen.', M, M + 24);
   // QR-Code mit Paket-Auswahl und Seitennummer
-  const qr = qrcode(0, 'M'); qr.addData(marker(mask, chash, page, pages)); qr.make();
+  const qr = qrcode(0, 'M'); qr.addData(marker(mask, chash, page, pages, rp)); qr.make();
   const n = qr.getModuleCount(), qs = 36 / (n + 4);
   g.fillStyle = '#fff'; g.fillRect(PW - M - 36 - 2, 18, 40, 40);
   g.fillStyle = '#000';

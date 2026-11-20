@@ -50,13 +50,20 @@ export const COLS = 8, ROWS = 13, PER_PAGE = COLS * ROWS;
 
 // Alle Kästchen für eine Auswahl: Pakete in fester Reihenfolge, doppelte Zeichen nur einmal.
 // custom = { chars:'…', n:1..3 } (eigene Zeichen, immer zuletzt)
-export function buildCells(mask, custom) {
+// reps = { low, oth } (1..4): Wiederholungen für Kleinbuchstaben bzw. alle anderen Zeichen; ohne reps gelten die festen Werte der Pakete (alte Bögen).
+export const REP_DEFAULT = { low: 2, oth: 1 };
+const rc = (n) => Math.min(4, Math.max(1, n | 0 || 1));
+export const repCode = (r) => (rc(r.low) - 1) * 4 + (rc(r.oth) - 1);
+export const repOf = (code) => ({ low: ((code >> 2) & 3) + 1, oth: (code & 3) + 1 });
+const isLow = (ch) => ch !== ch.toUpperCase() && ch === ch.toLowerCase();
+export function buildCells(mask, custom, reps) {
   const seen = new Set(), cells = [];
   for (const p of PACKS) {
     if (!((mask >> p.bit) & 1)) continue;
     for (const g of p.groups) for (const ch of [...g.c]) {
       if (seen.has(ch)) continue; seen.add(ch);
-      for (let v = 0; v < g.n; v++) cells.push({ ch, v, pack: p.id, grp: g.name });
+      const n = reps ? (isLow(ch) ? rc(reps.low) : rc(reps.oth)) : g.n;
+      for (let v = 0; v < n; v++) cells.push({ ch, v, pack: p.id, grp: g.name });
     }
   }
   if (custom && custom.chars) {
@@ -78,4 +85,4 @@ export function hashOf(custom) {   // kurze Kennung der eigenen Zeichen (FNV-1a)
   return h.toString(36);
 }
 // Anzahl Zeichen und Seiten eines Pakets (allein betrachtet)
-export const packInfo = (p) => { const c = buildCells(1 << p.bit); return { zeichen: new Set(c.map(x => x.ch)).size, kaesten: c.length, seiten: pageCount(c) }; };
+export const packInfo = (p, reps) => { const c = buildCells(1 << p.bit, null, reps); return { zeichen: new Set(c.map(x => x.ch)).size, kaesten: c.length, seiten: pageCount(c) }; };
