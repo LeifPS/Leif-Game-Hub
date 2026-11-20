@@ -308,12 +308,12 @@ function parens(o, c, ib, U, ctx, text, path, sc) {
   }
   // große Klammern: perfekte Kurve
   const top = -(ib.asc + .12 * U), bot = ib.desc + .12 * U, h = bot - top, bulge = Math.min(.55 * U, h * .12), w = bulge + .5 * U, N = 16, left = [], right = [];
-  const arc = (dir) => { const pts = []; for (let i = 0; i <= N; i++) { const t = i / N, yy = top + h * t, off = Math.sin(Math.PI * t) * bulge; pts.push([dir > 0 ? w - .2 * U - off : .2 * U + off, yy]); } return pts; };
+  const arc = (dir) => { const pts = []; for (let i = 0; i <= N; i++) { const t = i / N, yy = top + h * t, off = Math.sin(Math.PI * t) * bulge; pts.push([dir > 0 ? w - .2 * U - bulge + off : .2 * U + bulge - off, yy]); } return pts; };
   const sq = o === '[' || c === ']';
   let items;
   if (sq) items = [path([[.45 * U, top], [.2 * U, top], [.2 * U, bot], [.45 * U, bot]])]; else items = [path(arc(-1))];
   const x0 = w, inner = shift(ib, x0 + .05 * U, 0);
   const rx = x0 + ib.w + .1 * U;
-  const r = sq ? path([[rx + .05 * U, top], [rx + .3 * U, top], [rx + .3 * U, bot], [rx + .05 * U, bot]]) : path(arc(1).map(([x, y]) => [x + rx - (w - .2 * U) + .2 * U, y]));
-  return mk(rx + w, -top, bot, [...items, ...inner, r]);
+  const r = sq ? path([[rx + .05 * U, top], [rx + .3 * U, top], [rx + .3 * U, bot], [rx + .05 * U, bot]]) : path(arc(1).map(([x, y]) => [x - (w - .2 * U - bulge) + rx + .1 * U, y]));
+  return mk(rx + .1 * U + bulge + .2 * U, -top, bot, [...items, ...inner, r]);
 }
