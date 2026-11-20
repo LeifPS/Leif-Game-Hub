@@ -44,7 +44,7 @@ export const PENS = {
 };
 export const DEF = {
   fmt: 'gn', paper: 'gnlin', paperColor: 'weiss', scan: false, pen: 'kugel_schwarz', ink: '#16161c', weight: .3, inkAlpha: 1,
-  size: 18, lh: 2.9, sp: .9, wsp: 1, jit: .6, slant: 0, capsc: 1, seed: 7,
+  size: 18, lh: 2.9, sp: .9, wsp: 1, jit: .6, jw: 1, jl: 1, jb: 1, jg: 1, ja: 1, slant: 0, capsc: 1, seed: 7,
   mt: 90, mb: 80, ml: 70, mr: 60, kz: true, markup: true, sz: false, margin: true,
   header: '', pageNum: false, pageNumFmt: '{n}',
 };
@@ -194,14 +194,16 @@ export function layout(text, S, font) {
   const FM = FORMATS[fmtOf(S)], PW = FM.w, PH = FM.h, XH = font.XH;
   const MT = S.mt, MB = S.mb, rul = gnRuler(S, MT), VJ = rul ? .25 : 1;
   const rng = mulberry32(S.seed), k = S.size / XH, lineH = rul ? rul.step : S.size * S.lh, left = rul ? rul.snapX(S.ml) : S.ml, right = PW - S.mr;
+  // Variationen: Gesamtregler (jit) × jeweiliger Einzelregler (fehlt er, gilt 100 %); 0 = aus
+  const jv = (k) => (S.jit || 0) * (S[k] == null ? 1 : S[k]), jW = jv('jw'), jL = jv('jl'), jB = jv('jb'), jG = jv('jg'), jA = jv('ja');
   const firstY = () => rul ? rul.snapY(MT + lineH) : MT + lineH;
   const pages = [[]], missing = new Set();
   let y = firstY(), x = left, slope = 0, lastVar = {}, ind = 0;
   let nY = makeNoise(rng), nR = makeNoise(rng), nS = makeNoise(rng);
   let lastHl = null, lastUl = null;
   const newLine = () => {
-    y += lineH; x = left + ind + (rng() - .5) * S.jit * S.size * .5;
-    slope = (rng() - .5) * 0.012 * S.jit; nY = makeNoise(rng); nR = makeNoise(rng); nS = makeNoise(rng);
+    y += lineH; x = left + ind + (rng() - .5) * jL * S.size;
+    slope = (rng() - .5) * 0.012 * jB; nY = makeNoise(rng); nR = makeNoise(rng); nS = makeNoise(rng);
     if (y > PH - MB) { pages.push([]); y = firstY(); }
     lastHl = lastUl = null;
   };
@@ -214,16 +216,16 @@ export function layout(text, S, font) {
         let idx = Math.floor(rng() * r.pool.length);
         if (r.pool.length > 1 && lastVar[ch] === idx) idx = (idx + 1 + Math.floor(rng() * (r.pool.length - 1))) % r.pool.length;
         lastVar[ch] = idx;
-        const v = r.pool[idx], sc = r.s * scl * (S.capsc !== 1 && ch !== ch.toLowerCase() && ch === ch.toUpperCase() && /\p{L}/u.test(ch) ? S.capsc : 1) * (st.b ? 1.03 : 1) * (1 + (rng() - .5) * .06 * S.jit);
-        const adv = (v.seg * k * sc * r.sx * S.sp) + S.size * .03 * scl + (rng() - .5) * S.jit * S.size * .08;
-        run.push({ ch, v, sc, sx: r.sx, up: r.up || 0, adv, st, dy: (rng() - .5) * S.jit * S.size * .06, rot: (rng() - .5) * S.jit * .04, a: .86 + .14 * rng() }); w += adv;
+        const v = r.pool[idx], sc = r.s * scl * (S.capsc !== 1 && ch !== ch.toLowerCase() && ch === ch.toUpperCase() && /\p{L}/u.test(ch) ? S.capsc : 1) * (st.b ? 1.03 : 1) * (1 + (rng() - .5) * .06 * jG);
+        const adv = (v.seg * k * sc * r.sx * S.sp) + S.size * .03 * scl + (rng() - .5) * jA * S.size * .08;
+        run.push({ ch, v, sc, sx: r.sx, up: r.up || 0, adv, st, dy: (rng() - .5) * jB * S.size * .06, rot: (rng() - .5) * jG * .04, a: .86 + .14 * rng() }); w += adv;
       }
     };
     for (const o of chars) { if (o.c === 'ß' && (S.sz || !font.g['ß'])) { add('s', o); add('s', o); } else add(o.c, o); }
     return { run, w };
   };
   const place = (run, cx0, sc) => {
-    const wordDy = (rng() - .5) * S.size * .14 * S.jit; let cx = cx0, startX = cx0, startE = null, endE = null;
+    const wordDy = (rng() - .5) * S.size * .14 * jB; let cx = cx0, startX = cx0, startE = null, endE = null;
     const flush = () => {
       if (!startE) return;
       const pg = pages[pages.length - 1], st = startE.g.st, ex = endE.x + endE.g.adv * .8 + S.size * .12, sx = startX - S.size * .1, yb = endE.y;
@@ -234,15 +236,15 @@ export function layout(text, S, font) {
     };
     for (const g of run) {
       if (cx + g.adv > right && cx > left + ind + S.size) { flush(); newLine(); cx = x; startX = cx; }
-      const m = 1 + nS(cx) * .035 * S.jit;
-      const e = { g, m, x: cx, y: y + (slope * (cx - left) + wordDy + nY(cx) * S.size * .09 * S.jit + g.dy) * VJ + g.up * k, rot: nR(cx) * .045 * S.jit + g.rot };
+      const m = 1 + nS(cx) * .035 * jG;
+      const e = { g, m, x: cx, y: y + (slope * (cx - left) + wordDy + nY(cx) * S.size * .09 * jB + g.dy) * VJ + g.up * k, rot: nR(cx) * .045 * jG + g.rot };
       const pg = pages[pages.length - 1];
       pg.push(e); cx += g.adv;
       if (!startE) startE = e; endE = e;
     }
     flush(); return cx;
   };
-  slope = (rng() - .5) * 0.012 * S.jit;
+  slope = (rng() - .5) * 0.012 * jB;
   const paras = text.replace(/\t/g, '    ').split('\n');
   for (const raw of paras) {
     let para = raw, scl = 1, bullet = false, head = 0, lab = '•';
@@ -263,12 +265,12 @@ export function layout(text, S, font) {
     for (const o of chars) { if (o.c === ' ') { if (cur.length) words.push(cur); cur = []; } else cur.push(o); }
     if (cur.length) words.push(cur);
     if (bullet) { const { run, w } = makeWord([...lab].map(c => ({ c })), 1); if (run.length) { x = left + (rng() - .5) * S.size * .3; place(run, x, 1); x = left + ind; } }
-    else x = left + ((first && ind) || 0);
+    else x = left + ((first && ind) || 0) + (rng() - .5) * jL * S.size;
     if (bullet) first = true;
     for (const word of words) {
       const { run, w } = makeWord(word, scl);
       if (!run.length) continue;
-      const sp = first ? 0 : S.size * 1.1 * S.wsp * (1 + (rng() - .5) * .3 * S.jit);
+      const sp = first ? 0 : S.size * 1.1 * S.wsp * (1 + (rng() - .5) * .5 * jW);
       if (!first && x + sp + w > right && w <= right - left - ind) { newLine(); first = true; }
       const start = (first && x <= left + ind + S.size) ? x : x + (first ? 0 : sp);
       x = place(run, start, scl); first = false;
