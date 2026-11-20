@@ -48,7 +48,9 @@ export function glyphFromStrokes(ch, strokes, pen = PEN) {
 // cells: [{ch, v, pack, grp}], onDone(g) mit g = { zeichen: [Zeichen-Objekte] }
 // Mehrere Wiederholungen desselben Zeichens stehen nebeneinander (Feld je Variante); automatisch weiter geht es erst, wenn alle Felder gefüllt sind.
 export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra: nachträglich ergänzte Varianten/Zeichen (kein „Nur 1×“)
-  const modal = h('div', { class: 'modal on', role: 'dialog', 'aria-label': 'Zeichen zeichnen' }); document.body.append(modal);
+  const modal = h('div', { class: 'modal on nosel', role: 'dialog', 'aria-label': 'Zeichen zeichnen' }); document.body.append(modal);
+  // Mit Stift/Finger nichts markieren (iPad wählte sonst beim Schreiben Kasten und Text aus)
+  for (const ev of ['selectstart', 'dragstart']) modal.addEventListener(ev, (e) => e.preventDefault());
   const head = h('div', { class: 'bar' }), mb = h('div', { class: 'mb', style: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 12px', gap: '8px', overflow: 'auto' } }), mf = h('div', { class: 'mf' });
   modal.append(head, mb, mf);
   const flag = (k, dflt) => { try { const v = localStorage.getItem(k); return v == null ? dflt : v !== '0'; } catch (_) { return dflt; } };

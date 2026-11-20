@@ -195,3 +195,6 @@ kbd{font-family:ui-monospace,Menlo,monospace;background:var(--surf2);border-radi
 .dcard .dtitle .btn{flex:none;padding:2px;min-width:30px;min-height:30px}
 .dcard.drag{opacity:.85;z-index:5}.dcard.drag .dprev{transform:scale(1.04);box-shadow:0 10px 26px rgba(0,0,0,.28)}
 @media(min-width:700px){.dgrid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:20px 18px}}
+
+.nosel,.nosel *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+.nosel canvas{-webkit-user-drag:none}
