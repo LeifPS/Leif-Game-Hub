@@ -206,6 +206,7 @@ export function compile(ast, vars = ['x']) {
 // ---------- Layout: Syntaxbaum -> Box ----------
 // ctx: { u (x-Höhe in Layout-Einheiten), run(str, sc) -> { run:[g...], w }, has(ch), komma (bool), mal: 'auto'|'punkt'|'kreuz'|'weg', col }
 // Box: { w, asc, desc, items }  (items relativ zur Grundlinie: y > 0 = nach unten)
+const circle = (cx, cy, rx, ry, n = 28) => Array.from({ length: n + 1 }, (_, i) => [cx + rx * Math.cos(i / n * 6.2832), cy + ry * Math.sin(i / n * 6.2832)]);
 const mk = (w, asc, desc, items = []) => ({ w, asc, desc, items });
 const shift = (b, dx, dy) => b.items.map(it => it.path ? { path: { ...it.path, pts: it.path.pts.map(([x, y]) => [x + dx, y + dy]) } } : { ...it, x: it.x + dx, y: it.y + dy });
 const ASC_RE = /[A-Z0-9bdfhijklt!?()\[\]\/|ßÄÖÜ%&@#$°]/, DESC_RE = /[gjpqyQ(),;\[\]\/|{}ç]/;
@@ -262,6 +263,8 @@ export function layoutMath(ast, ctx, sc = 1, depth = 0) {
     case 'paren': return parens(ast.o, ast.c, sub(ast.e), U, ctx, text, path, sc);
     case 'abs': {
       const ib = sub(ast.e), top = -(ib.asc + .1 * U), bot = ib.desc + .1 * U, g = .3 * U, W = g * 2 + ib.w;
+      const gl = gstretch(ctx, '|', top, bot, .5 * U);
+      if (gl) { const W2 = gl.w * 2 + ib.w + .24 * U; return mk(W2, -top, bot, [...gl.items, ...shift(ib, gl.w + .12 * U, 0), ...shift(gl, gl.w + ib.w + .24 * U, 0)]); }
       return mk(W, -top, bot, [path([[.1 * U, top], [.1 * U, bot]]), ...shift(ib, g, 0), path([[W - .1 * U, top], [W - .1 * U, bot]])]);
     }
     case 'call': {
@@ -288,10 +291,13 @@ export function layoutMath(ast, ctx, sc = 1, depth = 0) {
       const ib = sub(ast.x), idx = ast.idx ? sub(ast.idx, sc * .55, depth + 1) : null;
       const top = -(ib.asc + .28 * U), bot = Math.max(ib.desc, .15 * U) + .12 * U, h = bot - top, rw = .95 * U;
       const ix = idx ? Math.max(0, idx.w - .45 * U) : 0;
-      const x0 = ix, pts = hand([[x0, -.40 * U], [x0 + .17 * U, -.56 * U], [x0 + .52 * U, bot], [x0 + rw, top], [x0 + rw + ib.w + .3 * U, top - .05 * U]], U, { smooth: 1, amp: .03, seed: ib.w * .37 + 1 });
-      const items = [path(pts), ...shift(ib, x0 + rw + .12 * U, 0)];
+      const x0 = ix, G = gstretch(ctx, '√', top, bot, 1.5 * U);
+      let pts, rw2 = rw;
+      if (G) { rw2 = G.w; pts = [[x0 + G.w - .25 * U, top + .06 * U], [x0 + G.w + ib.w + .3 * U, top + .06 * U]]; }
+      else pts = [[x0, -.40 * U], [x0 + .17 * U, -.56 * U], [x0 + .52 * U, bot], [x0 + rw, top], [x0 + rw + ib.w + .3 * U, top]];
+      const items = [path(pts), ...(G ? shift(G, x0, 0) : []), ...shift(ib, x0 + rw2 + .12 * U, 0)];
       if (idx) items.push(...shift(idx, 0, -.62 * U));
-      return mk(x0 + rw + ib.w + .3 * U, Math.max(-top, idx ? .62 * U + idx.asc : 0), bot, items);
+      return mk(x0 + rw2 + ib.w + .3 * U, Math.max(-top, idx ? .62 * U + idx.asc : 0), bot, items);
     }
     case 'bigop': return bigBox(ast, null, null);
     case 'diff': return hcat([gapOf(.18), text('d'), gapOf(.03), text(ast.v)]);
@@ -307,6 +313,7 @@ export function layoutMath(ast, ctx, sc = 1, depth = 0) {
       const H = y, dy = axisY - H / 2; for (const it of items) { if (it.path) it.path.pts = it.path.pts.map(([px, py]) => [px, py + dy]); else it.y += dy; }
       const body = mk(W, H / 2 - axisY, H / 2 + axisY, items);
       if (ast.kind === 'cases') {
+        const gb = gstretch(ctx, '{', -(body.asc + .1 * U), body.desc + .1 * U, .9 * U); if (gb) return mk(gb.w + .25 * U + body.w, body.asc + .1 * U, body.desc + .1 * U, [...gb.items, ...shift(body, gb.w + .25 * U, 0)]);
         const top = -(body.asc + .1 * U), bot = body.desc + .1 * U, h = bot - top, mid = (top + bot) / 2, w = .55 * U, bw = .2 * U;
         const br = hand([[w, top], [w - bw, top + .15 * h * .5], [w - bw, mid - .12 * h], [0, mid], [w - bw, mid + .12 * h], [w - bw, bot - .15 * h * .5], [w, bot]], U, { smooth: 2, amp: .015, seed: 3 });
         return mk(w + .25 * U + body.w, -top, bot, [path(br), ...shift(body, w + .25 * U, 0)]);
@@ -320,7 +327,7 @@ export function layoutMath(ast, ctx, sc = 1, depth = 0) {
     return mk(W, b.asc, d + l.desc, [...shift(b, (W - b.w) / 2, 0), ...shift(l, (W - l.w) / 2, d)]);
   }
   function bigBox(op, lo, hi) {
-    const sym = bigSym(op.v, U, path), s2 = sc * .55, l = lo ? sub(lo, s2, depth + 1) : null, h = hi ? sub(hi, s2, depth + 1) : null;
+    const sym = bigSym(op.v, U, path, ctx), s2 = sc * .55, l = lo ? sub(lo, s2, depth + 1) : null, h = hi ? sub(hi, s2, depth + 1) : null;
     const integral = op.v.endsWith('int');
     if (integral) {
       const items = [...sym.items]; let W = sym.w;
@@ -360,6 +367,14 @@ function opBox(op, ctx, U, text, path, cross) {
   }
   return text(sh);
 }
+
+// Eigenes Zeichen (aus der Handschrift des Nutzers) so strecken, dass die Tinte von T (oben, negativ) bis B (unten) reicht
+function gstretch(ctx, ch, T, B, maxW = 1e9) {
+  if (!ctx.has || !ctx.has(ch)) return null;
+  const r = ctx.run(ch, 1), g = r && r.run && r.run[0]; if (!g || !g.v || !g.v.ih) return null;
+  const v = g.v, s0 = ctx.k * g.sc, m = (B - T) / (v.ih * s0), s = s0 * m, wf = Math.min(1, maxW / (v.iw * s * g.sx));
+  return { w: v.iw * s * g.sx * wf, items: [{ g: { ...g, sx: g.sx * wf }, m, x: -v.ox * s * g.sx * wf, y: T - v.oy * s, rot: 0 }] };
+}
 function parens(o, c, ib, U, ctx, text, path, sc) {
   const tall = ib.asc + ib.desc > 2.9 * U || ib.asc > 2.1 * U;
   if (!tall) {
@@ -367,7 +382,11 @@ function parens(o, c, ib, U, ctx, text, path, sc) {
     const items = [...shift(L, 0, 0), ...shift(ib, L.w + g, 0), ...shift(R, L.w + g + ib.w + g, 0)];
     return mk(L.w + R.w + ib.w + 2 * g, Math.max(ib.asc, L.asc), Math.max(ib.desc, R.desc), items);
   }
-  // große Klammern: perfekte Kurve
+  { // große Klammern aus der eigenen Handschrift, gestreckt
+    const top0 = -(ib.asc + .12 * U), bot0 = ib.desc + .12 * U, Lg = gstretch(ctx, o, top0, bot0, .9 * U), Rg = gstretch(ctx, c, top0, bot0, .9 * U);
+    if (Lg && Rg) { const gp = .08 * U, items = [...Lg.items, ...shift(ib, Lg.w + gp, 0), ...shift(Rg, Lg.w + gp + ib.w + gp, 0)]; return mk(Lg.w + ib.w + Rg.w + 2 * gp, -top0, bot0, items); }
+  }
+  // Ersatz, falls das Zeichen in der Schrift fehlt: saubere Kurve
   const top = -(ib.asc + .12 * U), bot = ib.desc + .12 * U, h = bot - top, bulge = Math.min(.55 * U, h * .12), w = bulge + .5 * U, N = 16, left = [], right = [];
   const arc = (dir) => { const pts = []; for (let i = 0; i <= N; i++) { const t = i / N, yy = top + h * t, off = Math.sin(Math.PI * t) * bulge; pts.push([dir > 0 ? w - .2 * U - bulge + off : .2 * U + bulge - off, yy]); } return pts; };
   const sq = o === '[' || c === ']';
@@ -392,20 +411,22 @@ function hand(pts, U, o = {}) {
   return p.map((q, i) => (i === 0 || i === p.length - 1) ? q : [q[0] + Math.sin(i * .9 + seed) * amp * U, q[1] + Math.cos(i * 1.3 + seed * 1.7) * amp * U]);
 }
 // Große Operatoren als Striche: Integral, Summe, Produkt
-function bigSym(kind, U, path) {
+function bigSym(kind, U, path, ctx) {
   if (kind.endsWith('int')) {
-    const n = kind === 'iiint' ? 3 : kind === 'iint' ? 2 : 1, asc = 2.2 * U, desc = 1.0 * U, h = asc + desc, w = .8 * U, top = -asc, off = .42 * U;
+    const n = kind === 'iiint' ? 3 : kind === 'iint' ? 2 : 1, asc = 2.2 * U, desc = 1.0 * U, h = asc + desc, w = .8 * U, top = -asc, off = .42 * U, items = [];
+    const G = gstretch(ctx, '∫', top, desc, 1.1 * U);
+    if (G) { for (let k = 0; k < n; k++) items.push(...shift(G, k * off, 0)); const gw = G.w; if (kind === 'oint') { const og = gstretch(ctx, '∮', top, desc, 1.3 * U); if (og) return { w: og.w + .1 * U, asc, desc, items: og.items }; items.push(path(circle(gw * .5, top + h * .5, .45 * U, .38 * U, 28), .8)); } return { w: gw + (n - 1) * off + .15 * U, asc, desc, items }; }
     const N = [[0, .93], [.1, 1.0], [.26, .97], [.38, .82], [.44, .52], [.5, .2], [.6, .05], [.76, 0], [.92, .06], [1, .2]];
-    const items = [];
-    for (let k = 0; k < n; k++) items.push(path(hand(N.map(([a, b]) => [a * w + k * off, top + b * h]), U, { smooth: 2, amp: .015, seed: 2 + k }), 1.1));
-    if (kind === 'oint') { const cx = w * .45, cy = top + h * .5, r = .42 * U; items.push(path(hand(Array.from({ length: 14 }, (_, i) => [cx + Math.cos(i / 13 * 6.5) * r, cy + Math.sin(i / 13 * 6.5) * r * .8]), U, { smooth: 1, amp: .01, seed: 5 }), .8)); }
+    for (let k = 0; k < n; k++) items.push(path(hand(N.map(([a, b]) => [a * w + k * off, top + b * h]), U, { smooth: 2, amp: 0, seed: 2 + k }), 1.1));
+    if (kind === 'oint') items.push(path(circle(w * .45, top + h * .5, .42 * U, .34 * U, 28), .8));
     return { w: w + (n - 1) * off + .15 * U, asc, desc, items };
   }
   const asc = 1.75 * U, desc = .55 * U, h = asc + desc, w = 1.25 * U, top = -asc;
+  { const G = gstretch(ctx, kind === 'sum' ? '∑' : '∏', top, desc, 1.6 * U); if (G) return { w: G.w, asc, desc, items: G.items }; }
   if (kind === 'sum') {
     const P = [[w * .95, top + h * .04], [w * .98, top], [0, top], [w * .55, top + h * .5], [0, top + h], [w, top + h], [w * 1.0, top + h * .93]];
-    return { w, asc, desc, items: [path(hand(P, U, { smooth: 1, amp: .03, seed: 4 }), 1.1)] };
+    return { w, asc, desc, items: [path(hand(P, U, { smooth: 0, amp: 0, seed: 4 }), 1.1)] };
   }
-  const L = (x) => path(hand([[x, top + .02 * h], [x + .02 * U, top + h]], U, { smooth: 0, amp: .03, seed: x }), 1.1);
-  return { w, asc, desc, items: [path(hand([[0, top], [w, top + .03 * h]], U, { smooth: 0, amp: .03, seed: 7 }), 1.1), L(w * .18), L(w * .82)] };
+  const L = (x) => path(hand([[x, top + .02 * h], [x + .02 * U, top + h]], U, { smooth: 0, amp: 0, seed: x }), 1.1);
+  return { w, asc, desc, items: [path(hand([[0, top], [w, top + .03 * h]], U, { smooth: 0, amp: 0, seed: 7 }), 1.1), L(w * .18), L(w * .82)] };
 }

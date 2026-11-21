@@ -66,7 +66,7 @@ function formulaBlock(el, ctx) {
     }
     return [m.box];
   });
-  if (boxes.length > 1) { return { multi: boxes.map(bx => { const v = vstack([{ ...bx, asc: bx.asc + .8 * ctx.u * o.sc, desc: bx.desc + .6 * ctx.u * o.sc }], 0, 'mitte'); v.align = o.align || 'mitte'; return v; }) }; }
+  if (boxes.length > 1) { return { multi: boxes.map(bx => { const v = vstack([{ ...bx, asc: bx.asc + 1.3 * ctx.u * o.sc, desc: bx.desc + 1.2 * ctx.u * o.sc }], 0, 'mitte'); v.align = o.align || 'mitte'; return v; }) }; }
   const v = vstack(boxes, .7 * ctx.u * o.sc, 'mitte'); v.align = o.align || 'mitte'; return v;
 }
 // ---------- Reaktionsgleichungen: H2O -> H_2 O, Hinweise rechts hinter | ----------
