@@ -11,10 +11,9 @@ export const PACKS = [
       { name:'Satzzeichen', c:'.,:;!?\'"„“()-–/', n:2 } ] },
   { id:'sonder', bit:1, name:'Standard erweitert', icon:'#@', empf:true, text:'Klammern, Schrägstriche, @ # & § $ € % und weitere Zeichen für den Alltag',
     groups:[ { name:'Sonderzeichen', c:'[]{}\\|_…&@#*§$€%~^+=<>°£¥©®™•', n:2 } ] },
-  { id:'mathe', bit:2, name:'Mathe', icon:'∑', text:'Rechenzeichen, Pfeile, Wurzel, Pi, Unendlich, Hoch- und Tiefzahlen, wichtige griechische Buchstaben',
+  { id:'mathe', bit:2, name:'Mathe', icon:'∑', text:'Rechenzeichen, Pfeile, Wurzel, Pi, Unendlich, wichtige griechische Buchstaben',
     groups:[
-      { name:'Mathe', c:'+−×·÷=≠≈<>≤≥±√π∞°∠⊥∥→⇒⇔∈ΔΣαβγδθλμφω%‰²³ⁿ', n:2 },
-      { name:'Hoch- und tiefgestellt', c:'⁰¹⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎', n:1 } ] },
+      { name:'Mathe', c:'+−×·÷=≠≈<>≤≥±√π∞°∠⊥∥→⇒⇔∈ΔΣαβγδθλμφω%‰', n:2 } ] },
   { id:'mathe2', bit:3, name:'Mathe Plus', icon:'∀', text:'Mengen, Logik, Integral, Summe, Brüche, Zahlenmengen (ℕ ℤ ℚ ℝ ℂ)',
     groups:[ { name:'Mathe Plus', c:'∉⊂⊆∪∩∅∑∏∫∂∇∀∃¬∧∨∝≡≅∼∘←↔↑↓⇌ℕℤℚℝℂ′″½¼¾∴∵⌀∣⟨⟩⌈⌉⌊⌋', n:1 } ] },
   { id:'griechisch', bit:4, name:'Griechisch', icon:'Ωα', text:'Das ganze griechische Alphabet (klein und groß)',

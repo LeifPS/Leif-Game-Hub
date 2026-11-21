@@ -59,7 +59,7 @@ const FB = {
   '«': { c: '<', s: .9 }, '»': { c: '>', s: .9 }, '×': { c: 'x', s: .8 }, '÷': { c: ':' }, '⁄': { c: '/' }, '∕': { c: '/' },
 };
 const SUPSUB = {}; '⁰¹²³⁴⁵⁶⁷⁸⁹'.split('').forEach((c, i) => SUPSUB[c] = { c: String(i), up: -14 }); '₀₁₂₃₄₅₆₇₈₉'.split('').forEach((c, i) => SUPSUB[c] = { c: String(i), up: 6 });
-Object.assign(SUPSUB, { 'ⁿ': { c: 'n', up: -14 }, '⁺': { c: '+', up: -14 }, '⁻': { c: '-', up: -14 }, '₊': { c: '+', up: 6 }, '₋': { c: '-', up: 6 } });
+Object.assign(SUPSUB, { 'ⁿ': { c: 'n', up: -14 }, '⁺': { c: '+', up: -14 }, '⁻': { c: '-', up: -14 }, '₊': { c: '+', up: 6 }, '₋': { c: '-', up: 6 }, '⁼': { c: '=', up: -14 }, '₌': { c: '=', up: 6 }, '⁽': { c: '(', up: -14 }, '⁾': { c: ')', up: -14 }, '₍': { c: '(', up: 6 }, '₎': { c: ')', up: 6 } });
 const SUP = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹', n: 'ⁿ', '+': '⁺', '-': '⁻' };
 const SUBD = '₀₁₂₃₄₅₆₇₈₉';
 const TEX = { alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', epsilon: 'ε', theta: 'θ', lambda: 'λ', mu: 'μ', pi: 'π', rho: 'ρ', sigma: 'σ', tau: 'τ', phi: 'φ', omega: 'ω', omicron: 'ο',
