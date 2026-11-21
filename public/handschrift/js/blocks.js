@@ -26,7 +26,7 @@ export function textBox(ctx, str, sc = 1, col) {
   return { w: x, asc: asc * ctx.u * sc, desc: desc * ctx.u * sc, items };
 }
 const plainBox = (ctx, str, sc = 1, col) => textBox(ctx, ctx.prep(str), sc, col);
-function mathCtx(ctx, o) { return { u: ctx.u, k: ctx.k, line: o.line || ctx.lineMul, run: (s, sc) => ctx.run(s, sc, o.col), has: ctx.has, komma: o.dezimal !== 'punkt', mal: o.mal || 'auto', col: o.col }; }
+function mathCtx(ctx, o) { return { u: ctx.u, k: ctx.k, line: o.line || ctx.lineMul, run: (s, sc) => ctx.run(s, sc, o.col), has: ctx.has, komma: o.dezimal !== 'punkt', inl: !!o.inl, mal: o.mal || 'auto', col: o.col }; }
 const LEAD = /^\s*(<=>|=>|<->|->|=|⇔|⇒|↔|→|<=|>=|<|>)\s*(.*)$/;
 export function mathBox(ctx, src, o = {}, line) {
   try {

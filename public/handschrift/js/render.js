@@ -1,7 +1,7 @@
 // Text -> Seitenlayout -> Zeichnen (Handschrift-Motor)
 import { components, bboxOf } from './imgops.js';
-import { parseHdf } from './hdf.js';
-import { renderBlock } from './blocks.js';
+import { parseHdf, getP } from './hdf.js';
+import { renderBlock, mathBox, shiftItems } from './blocks.js';
 
 import { vectorize } from './vec.js';
 export const SC = 3;
@@ -182,6 +182,7 @@ function parseInline(para, S, mk) {
   const cs = [...para];
   for (let i = 0; i < cs.length; i++) {
     const c = cs[i], n = cs[i + 1];
+    if (c === '\uE000' && n) { out.push({ c, math: n.charCodeAt(0) - 0xE100, b, u, s, h, col }); i++; continue; }
     if (c === '*' && n === '*') { b = !b; i++; continue; }
     if (c === '_' && n === '_') { u = !u; i++; continue; }
     if (c === '~' && n === '~') { s = !s; i++; continue; }
@@ -213,6 +214,7 @@ export function layout(text, S, font) {
     if (!inSub && y > PH - MB) { pages.push([]); y = firstY(); }
     lastHl = lastUl = null;
   };
+  const maths = [];
   const makeWord = (chars, scl = 1) => {
     const run = []; let w = 0;
     const add = (ch, st) => {
@@ -227,7 +229,7 @@ export function layout(text, S, font) {
         run.push({ ch, v, sc, sx: r.sx, up: r.up || 0, adv, st, dy: (rng() - .5) * jB * S.size * .06, rot: (rng() - .5) * jG * .04, a: .86 + .14 * rng() }); w += adv;
       }
     };
-    for (const o of chars) { if (o.c === 'ß' && (S.sz || !font.g['ß'])) { add('s', o); add('s', o); } else add(o.c, o); }
+    for (const o of chars) { if (o.math != null) { const mb = bctx.mathInline(maths[o.math], scl, o.col); run.push({ ch: '$', math: mb, adv: mb.w + S.size * .06 * scl, st: o, sc: 1, up: 0, dy: 0, rot: 0 }); w += mb.w + S.size * .06 * scl; continue; } if (o.c === 'ß' && (S.sz || !font.g['ß'])) { add('s', o); add('s', o); } else add(o.c, o); }
     return { run, w };
   };
   const place = (run, cx0, sc) => {
@@ -242,6 +244,12 @@ export function layout(text, S, font) {
     };
     for (const g of run) {
       if (cx + g.adv > right && cx > left + ind + S.size) { flush(); newLine(); cx = x; startX = cx; }
+      if (g.math) {
+        const yb = y + (slope * (cx - left) + wordDy) * VJ, pg0 = pages[pages.length - 1];
+        for (const it of shiftItems(g.math.items, cx, yb)) pg0.push(it);
+        const e = { g: { adv: g.adv, st: g.st }, x: cx, y: yb };
+        cx += g.adv; if (!startE) startE = e; endE = e; continue;
+      }
       const m = 1 + nS(cx) * .035 * jG;
       const e = { g, m, x: cx, y: y + (slope * (cx - left) + wordDy + nY(cx) * S.size * .09 * jB + g.dy) * VJ + g.up * k, rot: nR(cx) * .045 * jG + g.rot };
       const pg = pages[pages.length - 1];
@@ -252,6 +260,8 @@ export function layout(text, S, font) {
   };
   slope = (rng() - .5) * 0.012 * jB;
   const flowText = (txt, mk) => {
+  maths.length = 0;
+  if (mk) txt = txt.replace(/(?<![\\$])\$(?=[^\s$])([^$\n]*?[^\s$\\])\$(?!\d)/g, (m0, e) => { maths.push(e); return '\uE000' + String.fromCharCode(0xE100 + maths.length - 1); }).replace(/\\\$/g, '$');
   const paras = prep(txt, S).replace(/\t/g, '    ').split('\n');
   for (const raw of paras) {
     let para = raw, scl = 1, bullet = false, head = 0, lab = '•';
@@ -292,6 +302,7 @@ export function layout(text, S, font) {
     grid, get gridOk() { return !!grid && !inSub; },
     u: S.size, k, lineH, lineMul: 1, PH, MT, MB, space: S.size * 1.1 * S.wsp,
     get W() { return right - left; },
+    mathInline: (src, scl, col) => { const r = mathBox(bctx, src, { sc: scl, col, inl: true }); return r.box; },
     has: (c) => !!font.resolve(c), prep: (t) => prep(t, S),
     run: (str, scl = 1, col) => makeWord([...str].map(c => ({ c, col: col || null })), scl),
     err: (line, msg, level = 'error') => errors.push({ line, level, msg }),
@@ -335,8 +346,12 @@ export function layout(text, S, font) {
       const kd = kids[ki];
       if (kd.text != null) { buf.push(kd.text); continue; }
       flush();
-      const nxt = kids.slice(ki + 1).find(q => q.text == null || q.text.trim()), big = nxt && nxt.text == null && /^(graph|chart|flow|tree|mindmap|venn|timeline|pyramid|cycle|table|valuetable|calculation|equation|note|example|task)$/.test(nxt.name);
-      if ((kd.name === 'heading' || kd.name === 'title') && !inSub && y + (big ? 20 : 6) * lineH > PH - MB && pages[pages.length - 1].length) { pages.push([]); y = firstY(); x = left; }
+      const nxt = kids.slice(ki + 1).find(q => q.text == null || q.text.trim()), big = nxt && nxt.text == null && (/^(graph|chart|flow|tree|mindmap|venn|timeline|pyramid|cycle)$/.test(nxt.name) ? 8 : /^(table|valuetable|calculation|equation|note|example|task|group)$/.test(nxt.name) ? (/^(task|group)$/.test(nxt.name) ? 6 : 4) : 0);
+      if ((kd.name === 'heading' || kd.name === 'title') && !inSub && y + (big || 2.5) * lineH > PH - MB && pages[pages.length - 1].length) { pages.push([]); y = firstY(); x = left; }
+      if (kd.name === 'task' && !inSub && nxt && nxt.text == null) {   // Aufgabe und ihr Antwortfeld zusammenhalten
+        const hv = String(nxt.name === 'answer' ? (getP(nxt, 'hoehe') || '40mm') : '60mm'), mm = /([\d.,]+)\s*(mm|cm)?/.exec(hv), px = mm ? parseFloat(mm[1].replace(',', '.')) * (mm[2] === 'cm' ? 10 : 1) * 150 / 25.4 : 240;
+        if (y + 2 * lineH + px > PH - MB && pages[pages.length - 1].length) { pages.push([]); y = firstY(); x = left; }
+      }
       if (kd.name === 'pagebreak') { if (!inSub) { pages.push([]); y = firstY(); x = left; } continue; }
       let r = null; try { r = renderBlock(kd, bctx); } catch (e) { errors.push({ line: kd.line, level: 'error', msg: 'Fehler in [' + kd.rawName + ']: ' + e.message }); }
       if (!r) continue;

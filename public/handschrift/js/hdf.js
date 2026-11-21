@@ -21,7 +21,7 @@ const DEFS = {
   formula: { text: true, props: ['ausdruck', 'groesse', 'malzeichen', 'dezimal'] }, equation: { text: true, props: ['zeile', 'ausdruck', 'dezimal', 'malzeichen'] },
   fraction: { text: false, props: ['zaehler', 'nenner'] }, root: { text: false, props: ['ausdruck', 'grad'] },
   calculation: { text: true, props: ['titel', 'schritt', 'zeile', 'dezimal', 'malzeichen'], kids: ['step'] }, step: { text: true, props: ['ausdruck', 'hinweis', 'begruendung', 'beschriftung'] },
-  valuetable: { text: false, props: ['funktion', 'xvon', 'xbis', 'schritt', 'titel', 'spaltenname', 'nachkommastellen', 'dezimal', 'kopf'] },
+  valuetable: { text: false, props: ['funktion', 'xvon', 'xbis', 'schritt', 'titel', 'spaltenname', 'nachkommastellen', 'dezimal', 'kopf', 'richtung'] },
   table: { text: false, props: ['titel', 'kopf', 'zeile', 'spaltenbreiten', 'rahmen', 'zellabstand', 'kopfzeile', 'dezimal'], kids: ['row'] },
   row: { text: true, props: ['hoehe'], kids: ['cell'] }, cell: { text: true, props: ['spalten'] },
   graph: { text: false, props: ['titel', 'xmin', 'xmax', 'ymin', 'ymax', 'xbereich', 'ybereich', 'raster', 'rasterx', 'rastery', 'achsen', 'achsenbeschriftung', 'xbeschriftung', 'ybeschriftung', 'skala', 'skalax', 'skalay', 'marken', 'legende', 'gleichskaliert', 'nullstellen', 'extrema', 'schnittpunkte', 'funktion', 'punkt', 'strecke', 'figur', 'abbildung', 'kreis', 'gerade', 'dezimal', 'zahlen', 'einheit'], kids: ['function', 'point', 'segment', 'label'] },
@@ -151,7 +151,7 @@ export const textLines = (el) => el.kids.filter(k => k.text != null).map(k => k.
 export const elems = (el, ...names) => el.kids.filter(k => k.name && (!names.length || names.includes(k.name)));
 export const bool = (v, d = false) => v == null ? d : /^(ja|yes|true|an|on|1|wahr)$/i.test(String(v).trim()) ? true : /^(nein|no|false|aus|off|0|falsch)$/i.test(String(v).trim()) ? false : d;
 export const num = (v, d) => { if (v == null) return d; const n = parseFloat(String(v).replace(',', '.')); return isFinite(n) ? n : d; };
-export const splitBar = (s) => s.split(/\s+\|\s+/).map(t => t.trim());   // Kurzform-Trenner: " | " mit Leerzeichen
+export const splitBar = (s) => s.replace(/(^|\s)\|(?=\s|$)/g, '$1\u0001').split('\u0001').map(t => t.trim());   // Kurzform-Trenner: " | " mit Leerzeichen
 // Bereich "-4..4", "-4, 4", "-4 bis 4" -> [a, b]
 export function range(v) { if (v == null) return null; const m = String(v).trim().match(/^\[?\s*(-?[\d.,]+)\s*(?:\.\.|,|;|bis|to|-->)\s*(-?[\d.,]+)\s*\]?$/i); return m ? [parseFloat(m[1].replace(',', '.')), parseFloat(m[2].replace(',', '.'))] : null; }
 

@@ -4,6 +4,7 @@ import { btn, sheet, confirmBox, promptBox, chips } from './ui.js';
 import { dbDel, dbPut, kvGet, kvSet } from './store.js';
 import { fileBase } from './exporter.js';
 import { layout, drawPage, ensureImages } from './render.js';
+import { openTemplates } from './vorlagen.js';
 
 const SORTS = [['recent', 'Zuletzt benutzt'], ['created', 'Zuletzt erstellt'], ['name', 'Name A–Z'], ['custom', 'Eigene Reihenfolge']];
 const used = (d) => Math.max(d.opened || 0, d.updated || 0, d.created || 0);
@@ -48,7 +49,7 @@ export function docsView(app) {
     wrap.replaceChildren();
     const imp = h('input', { type: 'file', accept: '.txt,.md,.markdown,.hdf,text/plain', multiple: true, class: 'sr', onchange: async () => { let last; for (const f of imp.files) last = await app.newDoc({ title: f.name.replace(/\.[^.]+$/, ''), text: await f.text() }); imp.value = ''; if (last) { toast('Hochgeladen'); draw(); } } });
     wrap.append(h('div', { class: 'row', style: { marginBottom: '12px' } }, h('div', { class: 'sp1' }, h('h1', { style: { margin: 0 } }, 'Dokumente'), h('p', { class: 'mut sm', style: { margin: '2px 0 0' } }, `${app.docs.length} ${app.docs.length === 1 ? 'Dokument' : 'Dokumente'} · alles wird auf diesem Gerät gespeichert`)),
-      btn('Textdatei hochladen', { icon: 'upload', cls: 'icon', onclick: () => imp.click(), title: 'Textdateien (.txt, .md) hochladen' }), btn('Neues Dokument', { icon: 'plus', cls: 'pri icon', onclick: async () => { const d = await app.newDoc(); app.openDoc(d.id); }, title: 'Neues Dokument' }), imp));
+      btn('Textdatei hochladen', { icon: 'upload', cls: 'icon', onclick: () => imp.click(), title: 'Textdateien (.txt, .md) hochladen' }), btn('Vorlagen', { icon: 'grid', cls: 'icon', onclick: () => openTemplates(app), title: 'Vorlagen' }), btn('Neues Dokument', { icon: 'plus', cls: 'pri icon', onclick: async () => { const d = await app.newDoc(); app.openDoc(d.id); }, title: 'Neues Dokument' }), imp));
     const s = h('input', { type: 'search', placeholder: 'Dokumente durchsuchen …', value: q, 'aria-label': 'Dokumente durchsuchen', oninput: () => { q = s.value; grid(); } });
     wrap.append(s, h('div', { style: { margin: '10px 0 4px', overflowX: 'auto' } }, chips(SORTS, () => sort, (v) => { sort = v; kvSet('docSort', v); grid(); hint(); })));
     const hintEl = h('p', { class: 'xs mut', style: { margin: '2px 2px 8px' } }); wrap.append(hintEl);

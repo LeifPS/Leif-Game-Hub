@@ -280,7 +280,7 @@ export function layoutMath(ast, ctx, sc = 1, depth = 0) {
       return mk(x0 + Math.max(s1.w, ex.w), Math.max(base.asc, rise + ex.asc), Math.max(base.desc, d + s1.desc), [...shift(base, 0, 0), ...shift(s1, x0, d), ...shift(ex, x0, -rise)]);
     }
     case 'frac': {
-      const s2 = depth > 0 ? sc * .86 : sc;
+      const s2 = ctx.inl && depth === 0 ? sc * .66 : depth > 0 ? sc * .86 : sc;
       const unw = (n) => n.t === 'paren' && n.o === '(' ? n.e : n;
       const nb = layoutMath(unw(ast.n), ctx, s2, depth + 1), db = layoutMath(unw(ast.d), ctx, s2, depth + 1), pad = .3 * U, W = Math.max(nb.w, db.w) + 2 * pad, gap = .3 * U, barY = axisY;
       const nBase = barY - gap - nb.desc, dBase = barY + gap + db.asc;
