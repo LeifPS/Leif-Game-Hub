@@ -27,10 +27,10 @@ export function openTopUp(app, font, { chars = '' } = {}) {
   const groups = [];
   for (const p of PACKS) for (const g of p.groups) { const cs = [...new Set([...g.c])].filter(c => count(c) && inf.get(c).grp === g.name); if (cs.length) groups.push({ name: g.name, chars: cs }); }
   const REPK = 'hs:xrep'; let rep = 1; try { rep = Math.max(1, Math.min(3, +localStorage.getItem(REPK) || 1)); } catch {}
-  const S = { extra: chars ? rep : 1, sel: new Set(), txt: chars };
+  const S = { extra: chars ? rep : 1, sel: new Set(), txt: chars, replace: false };
   const missing = missingOf(font);
 
-  function start(cells, label) {
+  function start(cells, label, replaceMode = false) {
     if (!cells.length) { toast('Es ist nichts ausgewählt.', 2600, 'err'); return; }
     api.close();
     openDraw({
@@ -39,10 +39,10 @@ export function openTopUp(app, font, { chars = '' } = {}) {
       onDone: async (out) => {
         const g = { ...font.g }, add = {};
         for (const { ch, d } of out) (add[ch] ||= []).push(d);
-        for (const ch of Object.keys(add)) g[ch] = [...(g[ch] || []), ...add[ch]];
+        for (const ch of Object.keys(add)) g[ch] = replaceMode ? add[ch] : [...(g[ch] || []), ...add[ch]];
         const rec = { ...font, g, updated: Date.now() }; delete rec.builtin;
         for (const k of Object.keys(rec.g)) for (const v of rec.g[k]) delete v.img;
-        try { await dbPut('fonts', rec); toast(`${out.length} neue ${out.length === 1 ? 'Zeichen-Bild' : 'Zeichen-Bilder'} in „${rec.name}“ gespeichert`, 3400); await app.fontSaved(rec); }
+        try { await dbPut('fonts', rec); toast(replaceMode ? `${Object.keys(add).length} ${Object.keys(add).length === 1 ? 'Zeichen' : 'Zeichen'} in „${rec.name}“ ersetzt` : `${out.length} neue ${out.length === 1 ? 'Zeichen-Bild' : 'Zeichen-Bilder'} in „${rec.name}“ gespeichert`, 3400); await app.fontSaved(rec); }
         catch (e) { toast('Speichern fehlgeschlagen: ' + e.message, 5000, 'err'); }
       },
     });
@@ -67,17 +67,18 @@ export function openTopUp(app, font, { chars = '' } = {}) {
       const typed = clean(S.txt), chosen = [];
       for (const g of groups) if (S.sel.has(g.name)) for (const c of g.chars) if (!chosen.includes(c)) chosen.push(c);
       for (const c of typed) if (!chosen.includes(c)) chosen.push(c);
-      const cells = []; for (const ch of chosen) for (let r = 0; r < S.extra; r++) cells.push(cellOf(ch, count(ch) + r));
+      const cells = []; for (const ch of chosen) for (let r = 0; r < S.extra; r++) cells.push(cellOf(ch, S.replace ? r : count(ch) + r));
       const ta = h('textarea', { class: 'f', rows: 2, placeholder: 'z. B. a e n  oder ein neues Zeichen wie ✿', value: S.txt, oninput: () => { S.txt = ta.value; refreshBtn(); } }); ta.value = S.txt;
-      const startBtn = btn('', { cls: 'pri', onclick: () => start(cells) });
+      const startBtn = btn('', { cls: 'pri', onclick: () => start(cells, null, S.replace) });
       const refreshBtn = () => {   // nur die Zahl am Knopf aktualisieren, damit das Textfeld beim Tippen nicht neu gebaut wird
         const t = clean(S.txt), ch2 = []; for (const g of groups) if (S.sel.has(g.name)) for (const c of g.chars) if (!ch2.includes(c)) ch2.push(c); for (const c of t) if (!ch2.includes(c)) ch2.push(c);
-        cells.length = 0; for (const ch of ch2) for (let r = 0; r < S.extra; r++) cells.push(cellOf(ch, count(ch) + r));
-        startBtn.textContent = cells.length ? `${cells.length} ${cells.length === 1 ? 'Zeichen' : 'Zeichen'} zeichnen` : 'Zeichen auswählen'; startBtn.disabled = !cells.length;
+        cells.length = 0; for (const ch of ch2) for (let r = 0; r < S.extra; r++) cells.push(cellOf(ch, S.replace ? r : count(ch) + r));
+        startBtn.textContent = cells.length ? (S.replace ? `${ch2.length} ${ch2.length === 1 ? 'Zeichen' : 'Zeichen'} neu zeichnen und ersetzen` : `${cells.length} Zeichen zeichnen`) : 'Zeichen auswählen'; startBtn.disabled = !cells.length;
       };
-      body.append(h('h3', { style: { margin: '20px 0 6px' } }, 'Weitere Varianten zeichnen'),
-        h('p', { class: 'sm mut', style: { margin: '0 0 8px' } }, 'Mehr Varianten pro Zeichen lassen die Schrift natürlicher wirken, weil sich gleiche Buchstaben nicht so oft wiederholen. Die neuen Varianten kommen zu den vorhandenen dazu.'),
-        h('div', { class: 'row', style: { marginBottom: '10px' } }, h('span', { class: 'sm' }, 'Neue Varianten pro Zeichen:'),
+      body.append(h('h3', { style: { margin: '20px 0 6px' } }, S.replace ? 'Zeichen ersetzen' : 'Weitere Varianten zeichnen'),
+        h('div', { class: 'row', style: { marginBottom: '8px' } }, h('div', { class: 'seg' }, h('button', { type: 'button', class: S.replace ? '' : 'on', onclick: () => { S.replace = false; draw(); } }, 'Varianten hinzufügen'), h('button', { type: 'button', class: S.replace ? 'on' : '', onclick: () => { S.replace = true; draw(); } }, 'Zeichen ersetzen'))),
+        h('p', { class: 'sm mut', style: { margin: '0 0 8px' } }, S.replace ? 'Die gewählten Zeichen werden neu gezeichnet. Die alten Versionen dieser Zeichen werden dabei gelöscht, alle anderen Zeichen bleiben unverändert.' : 'Mehr Varianten pro Zeichen lassen die Schrift natürlicher wirken, weil sich gleiche Buchstaben nicht so oft wiederholen. Die neuen Varianten kommen zu den vorhandenen dazu.'),
+        h('div', { class: 'row', style: { marginBottom: '10px' } }, h('span', { class: 'sm' }, S.replace ? 'Neue Zeichnungen pro Zeichen:' : 'Neue Varianten pro Zeichen:'),
           h('div', { class: 'seg' }, ...[1, 2, 3, 4].map(n => h('button', { type: 'button', class: S.extra === n ? 'on' : '', onclick: () => { S.extra = n; draw(); } }, String(n))))),
         h('div', { class: 'chips', style: { marginBottom: '10px' } }, ...groups.map(g => {
           const mn = Math.min(...g.chars.map(count)), mx = Math.max(...g.chars.map(count));
