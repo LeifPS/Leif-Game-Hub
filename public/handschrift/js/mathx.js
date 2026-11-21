@@ -292,12 +292,12 @@ export function layoutMath(ast, ctx, sc = 1, depth = 0) {
       const top = -(ib.asc + .28 * U), bot = Math.max(ib.desc, .15 * U) + .12 * U, h = bot - top, rw = .95 * U;
       const ix = idx ? Math.max(0, idx.w - .45 * U) : 0;
       const x0 = ix, G = gstretch(ctx, '√', top, bot, 1.5 * U);
-      let pts, rw2 = rw;
-      if (G) { rw2 = G.w; pts = [[x0 + G.w - .25 * U, top + .06 * U], [x0 + G.w + ib.w + .3 * U, top + .06 * U]]; }
+      let pts, rw2 = rw, barW = 1;
+      if (G) { rw2 = G.w; const ey = top + (bot - top) * G.end.y; pts = [[x0 + G.w * G.end.x - .04 * U, ey], [x0 + G.w + ib.w + .3 * U, ey]]; barW = G.m; }
       else pts = [[x0, -.40 * U], [x0 + .17 * U, -.56 * U], [x0 + .52 * U, bot], [x0 + rw, top], [x0 + rw + ib.w + .3 * U, top]];
-      const items = [path(pts), ...(G ? shift(G, x0, 0) : []), ...shift(ib, x0 + rw2 + .12 * U, 0)];
-      if (idx) items.push(...shift(idx, 0, -.62 * U));
-      return mk(x0 + rw2 + ib.w + .3 * U, Math.max(-top, idx ? .62 * U + idx.asc : 0), bot, items);
+      const items = [path(pts, (ctx.line || 1) * barW), ...(G ? shift(G, x0, 0) : []), ...shift(ib, x0 + rw2 + .12 * U, 0)];
+      if (idx) items.push(...shift(idx, 0, -.9 * U));
+      return mk(x0 + rw2 + ib.w + .3 * U, Math.max(-top, idx ? .9 * U + idx.asc : 0), bot, items);
     }
     case 'bigop': return bigBox(ast, null, null);
     case 'diff': return hcat([gapOf(.18), text('d'), gapOf(.03), text(ast.v)]);
@@ -368,12 +368,28 @@ function opBox(op, ctx, U, text, path, cross) {
   return text(sh);
 }
 
+
+// Wo endet die Tinte des Zeichens oben rechts (Anteil von Breite/Höhe)? Damit der Wurzelstrich genau anschließt.
+function inkEnd(v) {
+  if (v._end) return v._end;
+  let r = { x: .97, y: .07 };
+  try {
+    const im = v.img, W = im.naturalWidth || im.width, H = im.naturalHeight || im.height;
+    if (W && H) {
+      const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(im, 0, 0);
+      const rows = Math.ceil(H * .5), d = x.getImageData(0, 0, W, rows).data; let mx = -1;
+      for (let X = W - 1; X >= 0 && mx < 0; X--) for (let Y = 0; Y < rows; Y++) if (d[(Y * W + X) * 4 + 3] > 60) { mx = X; break; }
+      if (mx >= 0) { let sum = 0, n = 0; for (let X = Math.max(0, mx - 3); X <= mx; X++) for (let Y = 0; Y < rows; Y++) if (d[(Y * W + X) * 4 + 3] > 60) { sum += Y; n++; } if (n) r = { x: (mx + 1) / W, y: (sum / n + .5) / H }; }
+    }
+  } catch (e) { /* ohne Bildanalyse: Schätzwert */ }
+  v._end = r; return r;
+}
 // Eigenes Zeichen (aus der Handschrift des Nutzers) so strecken, dass die Tinte von T (oben, negativ) bis B (unten) reicht
 function gstretch(ctx, ch, T, B, maxW = 1e9) {
   if (!ctx.has || !ctx.has(ch)) return null;
   const r = ctx.run(ch, 1), g = r && r.run && r.run[0]; if (!g || !g.v || !g.v.ih) return null;
   const v = g.v, s0 = ctx.k * g.sc, m = (B - T) / (v.ih * s0), s = s0 * m, wf = Math.min(1, maxW / (v.iw * s * g.sx));
-  return { w: v.iw * s * g.sx * wf, items: [{ g: { ...g, sx: g.sx * wf }, m, x: -v.ox * s * g.sx * wf, y: T - v.oy * s, rot: 0 }] };
+  return { w: v.iw * s * g.sx * wf, m, end: inkEnd(v), T, B, items: [{ g: { ...g, sx: g.sx * wf }, m, x: -v.ox * s * g.sx * wf, y: T - v.oy * s, rot: 0 }] };
 }
 function parens(o, c, ib, U, ctx, text, path, sc) {
   const tall = ib.asc + ib.desc > 2.9 * U || ib.asc > 2.1 * U;

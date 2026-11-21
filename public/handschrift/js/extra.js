@@ -26,7 +26,8 @@ export function openTopUp(app, font, { chars = '' } = {}) {
   // Gruppen, aus denen es schon Zeichen gibt
   const groups = [];
   for (const p of PACKS) for (const g of p.groups) { const cs = [...new Set([...g.c])].filter(c => count(c) && inf.get(c).grp === g.name); if (cs.length) groups.push({ name: g.name, chars: cs }); }
-  const S = { extra: chars ? 3 : 1, sel: new Set(), txt: chars };
+  const REPK = 'hs:xrep'; let rep = 1; try { rep = Math.max(1, Math.min(3, +localStorage.getItem(REPK) || 1)); } catch {}
+  const S = { extra: chars ? rep : 1, sel: new Set(), txt: chars };
   const missing = missingOf(font);
 
   function start(cells, label) {
@@ -54,9 +55,10 @@ export function openTopUp(app, font, { chars = '' } = {}) {
       // 1. Fehlende Zeichen
       if (missing.length) {
         const cells = [];
-        for (const ch of missing) for (let v = 0, n = Math.min(3, (inf.get(ch) || { n: 1 }).n); v < n; v++) cells.push(cellOf(ch, v));   // Wiederholungen eines Zeichens direkt hintereinander, damit sie nebeneinander gezeichnet werden können
+        for (const ch of missing) for (let v = 0; v < rep; v++) cells.push(cellOf(ch, v));   // Wiederholungen eines Zeichens direkt hintereinander, damit sie nebeneinander gezeichnet werden können
         body.append(h('h3', { style: { margin: '4px 0 6px' } }, 'Fehlende Zeichen'),
           h('p', { class: 'sm mut', style: { margin: '0 0 8px' } }, 'Diese Zeichen gehören zu deinen Paketen, sind aber noch nicht gezeichnet:'),
+          h('div', { class: 'row', style: { margin: '0 0 8px' } }, h('span', { class: 'sm sp1' }, 'Zeichnen pro Zeichen'), h('div', { class: 'seg' }, ...[1, 2, 3].map(n => h('button', { type: 'button', class: n === rep ? 'on' : '', onclick: () => { rep = n; S.extra = n; try { localStorage.setItem(REPK, String(n)); } catch {} draw(); } }, n + '×')))),
           h('div', { class: 'pal' }, ...missing.slice(0, 120).map(c => h('button', { type: 'button', style: { cursor: 'default' } }, c))),
           missing.length > 120 ? h('p', { class: 'xs mut' }, `… und ${missing.length - 120} weitere`) : null,
           btn(`Fehlende zeichnen (${missing.length} Zeichen)`, { cls: 'pri', onclick: () => start(cells) }));
