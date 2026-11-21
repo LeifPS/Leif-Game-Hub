@@ -454,7 +454,7 @@ export function renderBlock(el, ctx) {
     case 'graph': return graphBlock(el, ctx);
     case 'chart': case 'flow': case 'tree': case 'mindmap': case 'venn': case 'timeline': case 'pyramid': case 'cycle': return visualBlock(el, { ...ctx, textBox: (s, sc, col) => textBox(ctx, s, sc, col) }, el.name);
     case 'chem': return chemBlock(el, ctx);
-    case 'note': return noteBlock(el, ctx, 'Merke');
+    case 'note': { const t = getP(el, 'titel'); return { md: (t ? '**' + t + ':** ' : '') + text(el) }; }
     case 'example': return noteBlock(el, ctx, 'Beispiel');
     case 'task': return taskBlock(el, ctx);
     case 'answer': return answerBlock(el, ctx);

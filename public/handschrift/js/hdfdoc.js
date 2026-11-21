@@ -21,7 +21,7 @@ Wörter in Formeln (z. B. "und", "oder", Einheiten) in Anführungszeichen setzen
 ## Elemente
 ### Text und Struktur
 [titel]Text[/titel]   [ueberschrift]Text[/ueberschrift]   [text]Absatz[/text]
-[hinweis]  Kasten. Eigenschaft titel (Standard "Merke"); Inhalt: Text/Markdown.   [beispiel] genauso (Standard "Beispiel").
+[beispiel]  Kasten. Eigenschaft titel (Standard "Beispiel"); Inhalt: Text/Markdown.
 [aufgabe]  nummer: 1  | punkte: 3 | Inhalt: Aufgabentext, darf Formeln/Graphen/Tabellen enthalten.
 [antwort]  Leeres Antwortfeld. hoehe: 40mm | linien: 4 (Schreiblinien) | kaestchen: ja (Karomuster)
 [zitat] quelle: … | Inhalt   [liste] typ: nummeriert, darin [eintrag]Text[/eintrag]
@@ -109,11 +109,6 @@ Markdown geht: **fett**, __unterstrichen__, ==markiert==, ~~durchgestrichen~~.
 
 1. nummerierte Liste
 2. zweiter Punkt
-
-[hinweis]
-titel: Merke
-Nullstellen sind die x-Werte, bei denen f(x) = 0 ist.
-[/hinweis]
 
 [beispiel]
 Für f(x) = x^2 - 4 ist x = 2 eine Nullstelle.
