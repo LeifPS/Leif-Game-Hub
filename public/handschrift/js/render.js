@@ -3,6 +3,7 @@ import { components, bboxOf } from './imgops.js';
 import { parseHdf } from './hdf.js';
 import { renderBlock } from './blocks.js';
 
+import { vectorize } from './vec.js';
 export const SC = 3;
 export const FORMATS = {
   a4:   { name: 'A4 hochkant', w: 1240, h: 1754 },
@@ -411,6 +412,7 @@ export async function ensureImages(pagesEntries) {
   for (const e of pagesEntries) { const v = e.g && e.g.v; if (v && v.img && !v.img.complete && v.img.decode) jobs.push(v.img.decode().catch(() => {})); }
   await Promise.all(jobs);
 }
+export function vecOf(v, im) { try { return v.st ? { w: im.naturalWidth || im.width, h: im.naturalHeight || im.height, strokes: v.st.map(q => ({ pts: q.p.map(([x, y]) => [x * SC, y * SC]), w: q.w * SC })) } : vectorize(im); } catch (e) { return null; } }
 export function drawPage(canvas, entries, L, S, scale, transparent) {
   const PW = L.PW, PH = L.PH, k = L.k, lineH = L.lineH, W = Math.round(PW * scale), H = Math.round(PH * scale);
   if (canvas.width !== W) canvas.width = W; if (canvas.height !== H) canvas.height = H;
@@ -425,7 +427,7 @@ export function drawPage(canvas, entries, L, S, scale, transparent) {
     ic.setTransform(scale, 0, 0, scale, 0, 0); ic.imageSmoothingEnabled = true; ic.imageSmoothingQuality = 'high'; ic.lineCap = 'round'; ic.lineJoin = 'round';
     for (const e of list) {
       if (e.path) {
-        const p = e.path, pts = p.pts; if (pts.length < 2) continue; ic.save(); ic.globalAlpha = .92 * (p.a == null ? 1 : p.a); ic.strokeStyle = '#000'; ic.lineWidth = (k * 2.1 + wgt) * (p.w || 1);
+        const p = e.path, pts = p.pts; if (pts.length < 2) continue; ic.save(); ic.globalAlpha = .92 * (p.a == null ? 1 : p.a); ic.strokeStyle = '#000'; ic.lineWidth = k * 2.1 + wgt;
         ic.beginPath(); ic.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) ic.lineTo(pts[i][0], pts[i][1]); ic.stroke(); ic.restore(); continue;
       }
       if (e.line) {
@@ -435,6 +437,14 @@ export function drawPage(canvas, entries, L, S, scale, transparent) {
       const { g } = e, v = g.v, im = v.img; if (!im || (im.complete === false)) continue;
       ic.save(); ic.translate(e.x, e.y); ic.rotate(e.rot); ic.transform(1, 0, -tan, 1, 0, 0); ic.globalAlpha = g.a;
       const s = k * g.sc * e.m, bw = wgt + (g.st.b ? .9 : 0);
+      if (Math.abs(g.sc * e.m - 1) > .12) {   // vergrößert/verkleinert/gestreckt: als Strich mit der Dicke der normalen Schrift zeichnen
+        const vec = vecOf(v, im);
+        if (vec && vec.strokes.length) {
+          const kx = v.iw * s * g.sx / vec.w, ky = v.ih * s / vec.h, nom = (v.iw * k / vec.w + v.ih * k / vec.h) / 2; ic.lineCap = 'round'; ic.lineJoin = 'round'; ic.strokeStyle = '#000';
+          for (const st of vec.strokes) { ic.lineWidth = st.w * nom + bw; ic.beginPath(); st.pts.forEach(([px, py], i) => { const X = v.ox * s * g.sx + px * kx, Y = v.oy * s + py * ky; i ? ic.lineTo(X, Y) : ic.moveTo(X, Y); }); if (st.pts.length === 1) ic.lineTo(v.ox * s * g.sx + st.pts[0][0] * kx + .01, v.oy * s + st.pts[0][1] * ky); ic.stroke(); }
+          ic.restore(); continue;
+        }
+      }
       ic.drawImage(im, v.ox * s * g.sx, v.oy * s, v.iw * s * g.sx, v.ih * s);
       if (bw > .02) { ic.drawImage(im, v.ox * s * g.sx + bw, v.oy * s, v.iw * s * g.sx, v.ih * s); ic.drawImage(im, v.ox * s * g.sx, v.oy * s + bw * .6, v.iw * s * g.sx, v.ih * s); }
       ic.restore();
