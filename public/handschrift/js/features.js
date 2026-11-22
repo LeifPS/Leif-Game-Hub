@@ -5,7 +5,7 @@ import { sheet, chips, btn, ic } from './ui.js';
 import { layout, drawPage, ensureImages, DEF, gnApply } from './render.js';
 
 const SATZ = 'Das ist meine Handschrift.\nSie sieht aus wie echt geschrieben!';
-export const FCATS = [['alle', 'Alle'], ['schreiben', 'Schreiben'], ['mathe', 'Mathe'], ['visuals', 'Schaubilder'], ['mehr', 'Noten & Sprachen'], ['app', 'App']];
+export const FCATS = [['alle', 'Alle'], ['schreiben', 'Schreiben'], ['mathe', 'Mathe'], ['visuals', 'Schaubilder'], ['mehr', 'Fächer'], ['app', 'App']];
 
 // demo: Regler [Schlüssel, Name, min, max, Schritt, Anzeige] – verändern die Vorschau sofort
 export const FEATURES = [
@@ -39,6 +39,8 @@ export const FEATURES = [
     tips: ['Arten: streckung, spiegelung, punktspiegelung, drehung, verschiebung.', 'Bildpunkte heißen automatisch A\', B\', C\'.'] },
   { id: 'tabelle', cat: 'mathe', paper: 'gnkar', title: 'Tabellen', short: 'Tabellen mit Rahmen, Zahlen und Formeln in den Zellen.',
     text: '[tabelle]\nkopf: x | f(x)\nzeile: -2 | 0\nzeile: 0 | -4\nzeile: 2 | 0\n[/tabelle]', tips: ['[wertetabelle] rechnet die Werte einer Funktion sogar selbst aus.'] },
+  { id: 'streu', cat: 'mathe', paper: 'gnkar', title: 'Streudiagramm', short: 'Messwerte als Punkte – auf Wunsch mit Ausgleichsgerade.',
+    text: '[streudiagramm]\npunkt: 150 | 42\npunkt: 160 | 50\npunkt: 170 | 61\npunkt: 180 | 70\nxbeschriftung: cm\nybeschriftung: kg\ntrend: ja\n[/streudiagramm]', tips: ['trend: ja zeichnet die Ausgleichsgerade und schreibt ihre Gleichung dazu.'] },
   // ---------- Schaubilder ----------
   { id: 'balken', cat: 'visuals', title: 'Diagramme', short: 'Balken-, Kreis- und Liniendiagramme.',
     text: '[diagramm]\ntyp: balken\nwert: Mathe | 12 | blau\nwert: Deutsch | 8 | rot\nwert: Sport | 15 | gruen\n[/diagramm]', tips: ['typ: kreis oder typ: linie für die anderen Arten.'] },
@@ -56,6 +58,11 @@ export const FEATURES = [
     tips: ['c d e f g a h, r = Pause, \' höher, , tiefer, # Kreuz, b Be', 'Dauer 1 2 4 8 16, . punktiert, | Taktstrich', 'In deiner Handschrift: Paket „Noten“ zeichnen (Schriften → Plus → Pakete).'] },
   { id: 'vokabeln', cat: 'mehr', title: 'Vokabeln', short: 'Zwei saubere Spalten – eine Vokabel pro Zeile.',
     text: '[vokabeln]\nkopf: Französisch | Deutsch\nle chat = die Katze\navoir faim = Hunger haben\nla maison = das Haus\n[/vokabeln]' },
+  { id: 'schaltung', cat: 'mehr', title: 'Schaltplan', short: 'Stromkreise mit Batterie, Lampen, Widerständen und Messgeräten.',
+    text: '[schaltung]\nbauteil: batterie | 9 V\nbauteil: schalter | S\nbauteil: widerstand | R1\nparallel: lampe L1 ; lampe L2\nbauteil: amperemeter\n[/schaltung]',
+    tips: ['Bauteile: batterie, quelle, widerstand, lampe, schalter, schalter zu, motor, generator, diode, led, kondensator, spule, sicherung, amperemeter, voltmeter', 'parallel: A ; B setzt Bauteile nebeneinander.'] },
+  { id: 'struktur', cat: 'mehr', title: 'Strukturformeln', short: 'Moleküle mit Bindungsstrichen – einfach als Zeichnung tippen.',
+    text: '[strukturformel]\n    H   H\n    |   |\nH - C - C - O - H\n    |   |\n    H   H\n[/strukturformel]', tips: ['Bindungen: - = ≡ waagerecht, | senkrecht, / \\ schräg', 'CH3, OH usw.: Zahlen werden tiefgestellt.'] },
   { id: 'chemie', cat: 'mehr', title: 'Chemie', short: 'Reaktionsgleichungen mit tiefgestellten Zahlen.', text: '[reaktion]\ngleichung: 2 H2 + O2 -> 2 H2O\ngleichung: CH4 + 2 O2 -> CO2 + 2 H2O\n[/reaktion]' },
   // ---------- App ----------
   { id: 'schrift', cat: 'app', title: 'Eigene Schrift', short: 'Zeichen auf einem Bogen oder direkt in der App schreiben.', icon: 'type',

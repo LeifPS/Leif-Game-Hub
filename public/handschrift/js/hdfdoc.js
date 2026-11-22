@@ -32,7 +32,7 @@ $= 1/3$
 ## Alle Elemente (es gibt genau diese, andere Namen kennt die App nicht)
 titel, ueberschrift, text, beispiel, aufgabe, antwort, zitat, liste (mit eintrag), spalten (mit spalte), gruppe, abstand, trennlinie, seitenumbruch,
 formel, gleichung, rechenweg (mit schritt), bruch, wurzel, tabelle, wertetabelle, vokabeln, noten,
-graph (mit funktion, punkt, strecke), geometrie, diagramm (balkendiagramm, kreisdiagramm, liniendiagramm), ablauf, baum, mindmap, mengen, zeitstrahl, pyramide, kreislauf, reaktion.
+graph (mit funktion, punkt, strecke), geometrie, diagramm (balkendiagramm, kreisdiagramm, liniendiagramm), streudiagramm, ablauf, baum, mindmap, mengen, zeitstrahl, pyramide, kreislauf, schaltung, reaktion, strukturformel.
 Ein unbekannter Name (z. B. [box], [calculation-step], [loesung]) erscheint als roter Platzhalter.
 
 ## Häufige Verwechslungen (gibt es nicht – so geht es stattdessen)
@@ -138,10 +138,35 @@ Mehrere Reihen (gruppierte Balken oder mehrere Linien): kategorien: Mo, Di, Mi  
 [mengen] (Venn, 2 oder 3 Mengen): menge: Name | Farbe | Element1; Element2, dazu schnitt: A,B | Elemente (A, B, C = Reihenfolge der Mengen).
 [zeitstrahl]: ereignis: 1914 | Text | Farbe (bei Jahreszahlen im richtigen Abstand; massstab: nein = gleichmäßig).
 [pyramide]: stufe: Text | Farbe (von oben nach unten).   [kreislauf]: stufe: Text | Farbe (im Kreis mit Pfeilen).
-### Chemie
+### Streudiagramm
+[streudiagramm titel="Größe und Gewicht"]
+punkt: 150 | 42
+punkt: 165 | 55
+punkt: 180 | 70
+xbeschriftung: cm
+ybeschriftung: kg
+trend: ja
+[/streudiagramm]   (ein Punkt pro Zeile; optional xbereich/ybereich: a..b; trend: ja zeichnet die Ausgleichsgerade mit Gleichung.)
+### Physik: Schaltplan
+[schaltung titel="Stromkreis"]
+bauteil: batterie | 9 V
+bauteil: schalter | S
+bauteil: widerstand | R1
+parallel: lampe L1 ; lampe L2
+bauteil: amperemeter
+[/schaltung]   (ein geschlossener Stromkreis; jede Zeile bauteil: Art | Beschriftung ist ein Bauteil in Reihe, parallel: A ; B setzt mehrere Bauteile nebeneinander zwischen dieselben Punkte. Arten: batterie, quelle, widerstand, lampe, schalter (offen), schalter zu, motor, generator, diode, led, kondensator, spule, sicherung, amperemeter, voltmeter. Die Batterie kommt nach unten, der Rest oben/rechts.)
+### Chemie: Strukturformel
+[strukturformel titel="Ethanol"]
+    H   H
+    |   |
+H - C - C - O - H
+    |   |
+    H   H
+[/strukturformel]   (als Zeichnung aus Zeichen in Zeilen wie mit fester Schriftbreite: Atome/Gruppen als Buchstaben (CH3, OH – Zahlen werden tiefgestellt), Bindungen - = ≡ waagerecht, | ‖ senkrecht, / \ schräg; Leerzeichen zum Ausrichten.)
+### Chemie: Reaktionsgleichung
 [reaktion]  gleichung: 2 H2 + O2 -> 2 H2O | Hinweis. Indexzahlen werden automatisch tiefgestellt, <-> wird ⇌. Ladungen mit ^: Na^+ , SO4^2- .
 ### Gibt es (noch) nicht
-Streudiagramm, Physik-Schaltbilder, Karten, Bilder, Strukturformeln. Unbekannte Elemente erscheinen als roter Platzhalter.
+Karten und Bilder. Unbekannte Elemente erscheinen als roter Platzhalter.
 
 ## Gut zu wissen
 - Nur die oben genannten Elemente gibt es.

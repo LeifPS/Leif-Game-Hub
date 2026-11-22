@@ -9,7 +9,7 @@ const EL_ALIAS = {
   titel: 'title', ueberschrift: 'heading', absatz: 'paragraph', hinweis: 'note', merke: 'note', beispiel: 'example', aufgabe: 'task', antwort: 'answer', zitat: 'quote',
   fussnote: 'footnote', beschriftung: 'label', abstand: 'spacer', trennlinie: 'divider', seitenumbruch: 'pagebreak', liste: 'list', eintrag: 'item', formel: 'formula',
   gleichung: 'equation', bruch: 'fraction', wurzel: 'root', rechenweg: 'calculation', schritt: 'step', wertetabelle: 'valuetable', tabelle: 'table', noten: 'music', musik: 'music', vokabeln: 'vocab', vokabel: 'vocab', vokabelliste: 'vocab', zeile: 'row', zelle: 'cell',
-  koordinatensystem: 'graph', diagramm: 'chart', balkendiagramm: 'chart', saeulendiagramm: 'chart', kreisdiagramm: 'chart', liniendiagramm: 'chart', ablauf: 'flow', flussdiagramm: 'flow', flowchart: 'flow', baum: 'tree', baumdiagramm: 'tree', hierarchie: 'tree', hierarchy: 'tree', mengen: 'venn', zeitstrahl: 'timeline', pyramide: 'pyramid', kreislauf: 'cycle', zyklus: 'cycle', reaktion: 'chem', chemie: 'chem', reaktionsgleichung: 'chem', geometrie: 'graph', geometry: 'graph', konstruktion: 'graph', graf: 'graph', funktionsgraph: 'graph', funktion: 'function', punkt: 'point', strecke: 'segment', spalten: 'columns', spalte: 'column', gruppe: 'group',
+  koordinatensystem: 'graph', diagramm: 'chart', balkendiagramm: 'chart', saeulendiagramm: 'chart', kreisdiagramm: 'chart', liniendiagramm: 'chart', ablauf: 'flow', flussdiagramm: 'flow', flowchart: 'flow', baum: 'tree', baumdiagramm: 'tree', hierarchie: 'tree', hierarchy: 'tree', mengen: 'venn', zeitstrahl: 'timeline', pyramide: 'pyramid', kreislauf: 'cycle', zyklus: 'cycle', reaktion: 'chem', chemie: 'chem', reaktionsgleichung: 'chem', geometrie: 'graph', geometry: 'graph', konstruktion: 'graph', graf: 'graph', funktionsgraph: 'graph', funktion: 'function', punkt: 'point', strecke: 'segment', spalten: 'columns', spalte: 'column', gruppe: 'group', streudiagramm: 'scatter', punktdiagramm: 'scatter', punktwolke: 'scatter', scatterchart: 'scatter', schaltung: 'circuit', schaltplan: 'circuit', schaltbild: 'circuit', stromkreis: 'circuit', physicsdiagram: 'circuit', strukturformel: 'structure', struktur: 'structure', valenzstrichformel: 'structure', lewisformel: 'structure',
   metadaten: 'metadata', seite: 'page', bild: 'image', verweis: 'reference', text: 'text',
 };
 // Elemente, die in Stufe 1 gerendert werden (Rest: sichtbarer Platzhalter, siehe KNOWN_LATER)
@@ -31,6 +31,8 @@ const DEFS = {
   chart: { text: false, props: ['titel', 'typ', 'wert', 'reihe', 'kategorien', 'ymax', 'einheit', 'werte', 'prozent', 'legende', 'breite'] },
   flow: { text: false, props: ['titel', 'knoten', 'pfeil', 'richtung', 'breite'] }, tree: { text: false, props: ['titel', 'knoten', 'kante', 'pfeil', 'richtung', 'breite'] },
   mindmap: { text: false, props: ['titel', 'zentrum', 'zweig', 'breite'] }, venn: { text: false, props: ['titel', 'menge', 'schnitt', 'breite'] }, timeline: { text: false, props: ['titel', 'ereignis', 'massstab', 'breite'] },
+  scatter: { text: false, props: ['titel', 'punkt', 'punkte', 'xbereich', 'ybereich', 'xbeschriftung', 'ybeschriftung', 'trend', 'trendlinie', 'regression', 'breite'] },
+  circuit: { text: false, props: ['titel', 'bauteil', 'reihe', 'parallel', 'breite'] }, structure: { text: true, props: ['titel'] },
   pyramid: { text: false, props: ['titel', 'stufe', 'breite'] }, cycle: { text: false, props: ['titel', 'stufe', 'breite'] }, chem: { text: true, props: ['gleichung', 'zeile', 'ausdruck'] },
   point: { text: false, props: ['name', 'x', 'y', 'marke', 'beschriftung'] }, segment: { text: false, props: ['von', 'bis', 'pfeil', 'linienbreite', 'linienart', 'name'] },
   label: { text: true, props: ['x', 'y', 'name', 'text'] },
@@ -38,8 +40,7 @@ const DEFS = {
   metadata: { text: false }, page: { text: true, props: ['format', 'papier'] }, image: { text: false, props: ['quelle'] }, reference: { text: false, props: ['ziel'] },
 };
 // bekannte, aber noch nicht umgesetzte Elemente der HDF-Grundbibliothek -> Platzhalter
-const LATER = new Set(['scatterchart',
-  'physicsdiagram', 'map', 'illustration']);
+const LATER = new Set(['map', 'illustration']);
 // Unterelemente, die nur innerhalb bestimmter Elemente Sinn haben (werden bei Platzhaltern mit übersprungen)
 const SUBS = new Set(['entry', 'series', 'branch', 'node', 'connection', 'reactant', 'product', 'component', 'marker', 'label', 'line', 'angle', 'circle', 'polygon']);
 const GENERIC = ['breite', 'hoehe', 'minbreite', 'maxbreite', 'minhoehe', 'maxhoehe', 'ausrichtung', 'abstand', 'innenabstand', 'rand', 'randbreite', 'randfarbe', 'hintergrund', 'position',

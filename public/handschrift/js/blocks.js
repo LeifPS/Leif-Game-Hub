@@ -487,7 +487,8 @@ export function renderBlock(el, ctx) {
     case 'music': return musicBlock(el, { ...ctx, textBox: (str, sc, col) => textBox(ctx, str, sc, col) });
     case 'valuetable': return valueTableBlock(el, ctx);
     case 'graph': return graphBlock(el, ctx);
-    case 'chart': case 'flow': case 'tree': case 'mindmap': case 'venn': case 'timeline': case 'pyramid': case 'cycle': return visualBlock(el, { ...ctx, textBox: (s, sc, col) => textBox(ctx, s, sc, col) }, el.name);
+    case 'chart': case 'flow': case 'tree': case 'mindmap': case 'venn': case 'timeline': case 'pyramid': case 'cycle': case 'scatter': case 'circuit': case 'structure':
+      return visualBlock(el, { ...ctx, textBox: (s, sc, col) => textBox(ctx, s, sc, col), mathBox: (s, sc) => mathBox(ctx, s, { sc }, el.line).box }, el.name);
     case 'chem': return chemBlock(el, ctx);
     case 'note': { const t = getP(el, 'titel'); return { md: (t ? '**' + t + ':** ' : '') + text(el) }; }
     case 'example': return noteBlock(el, ctx, 'Beispiel');

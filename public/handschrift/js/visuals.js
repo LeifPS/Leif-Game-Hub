@@ -1,6 +1,7 @@
-// Diagramme und Schaubilder: Balken-/Kreis-/Liniendiagramm, Ablauf, Baum, Mindmap, Venn, Zeitstrahl, Pyramide, Kreislauf.
+// Diagramme und Schaubilder: Balken-/Kreis-/Liniendiagramm, Streudiagramm, Ablauf, Baum, Mindmap, Venn, Zeitstrahl, Pyramide, Kreislauf,
+// Schaltpläne (Physik) und Strukturformeln (Chemie).
 // Alles aus Handschrift-Text und perfekten Strichen. Box: { w, h, base, flat, items, align }.
-import { getP, allP, num, bool, splitBar, color, isColor } from './hdf.js';
+import { getP, allP, num, bool, splitBar, color, isColor, textLines } from './hdf.js';
 
 const PAL = ['blau', 'rot', 'gruen', 'orange', 'lila', 'tuerkis', 'braun', 'rosa'];
 const pal = (i) => color(PAL[i % PAL.length]);
@@ -164,6 +165,122 @@ export function visualBlock(el, ctx, kind) {
     boxes.forEach((b, i) => { const a = -Math.PI / 2 + i * 2 * Math.PI / n, x = cx + (R + 2 * u) * Math.cos(a) * 1.1, y = cy + R * Math.sin(a); b.x = x; b.y = y; b.a = a; items.push(P(roundRect(x - b.w / 2, y - b.h / 2, b.w, b.h, .8 * u), 1.3, b.col)); putWrap(b.wr, x, y, .95); });
     boxes.forEach((b, i) => { const c2 = boxes[(i + 1) % n], A = [b.x, b.y], B = [c2.x, c2.y], dx = B[0] - A[0], dy = B[1] - A[1], ta = Math.min(Math.abs(dx) > 1e-9 ? (b.w / 2 + .5 * u) / Math.abs(dx) : 9, Math.abs(dy) > 1e-9 ? (b.h / 2 + .5 * u) / Math.abs(dy) : 9), tb2 = Math.min(Math.abs(dx) > 1e-9 ? (c2.w / 2 + .6 * u) / Math.abs(dx) : 9, Math.abs(dy) > 1e-9 ? (c2.h / 2 + .6 * u) / Math.abs(dy) : 9); if (ta + tb2 >= 1) return; const p0 = [A[0] + dx * ta, A[1] + dy * ta], p1 = [B[0] - dx * tb2, B[1] - dy * tb2], mid = [(p0[0] + p1[0]) / 2 + (cx - (p0[0] + p1[0]) / 2) * .0, (p0[1] + p1[1]) / 2], bulge = [mid[0] + (mid[0] - cx) * .12, mid[1] + (mid[1] - cy) * .12]; const pts = []; for (let k = 0; k <= 8; k++) { const t = k / 8; pts.push([(1 - t) * (1 - t) * p0[0] + 2 * t * (1 - t) * bulge[0] + t * t * p1[0], (1 - t) * (1 - t) * p0[1] + 2 * t * (1 - t) * bulge[1] + t * t * p1[1]]); } items.push(P(pts, 1.2, ink), arrowHead(pts[6], pts[8], .8 * u, ink, 1.2)); });
     return done(Hc);
+  }
+  // ---------------- Streudiagramm ----------------
+  if (kind === 'scatter') {
+    const pts = [], col = color(getP(el, 'farbe')) || pal(0);
+    const addPair = (a, b, line) => { const x = nn(a), y = nn(b); if (x == null || y == null) { ctx.err(line, 'punkt: x | y erwartet (z. B. punkt: 2 | 3,5)'); return; } pts.push([x, y]); };
+    for (const p of allP(el, 'punkt')) { const t = splitBar(p.v); if (t.length >= 2) addPair(t[0], t[1], p.line); else { const m = /^\(?\s*(-?[\d.,]+)\s*[|;]\s*(-?[\d.,]+)\s*\)?$/.exec(p.v.trim()) || /^(-?[\d.]+)\s*,\s*(-?[\d.]+)$/.exec(p.v.trim()); if (m) addPair(m[1], m[2], p.line); else ctx.err(p.line, 'punkt: x | y erwartet'); } }
+    for (const p of allP(el, 'punkte')) for (const q of p.v.split(/\s*;\s*|\)\s*\(/)) { const m = /(-?[\d.,]+)\s*[|,]\s*(-?[\d.,]+)/.exec(q.replace(/[()]/g, '').replace(/(\d),(\d+)\s*\|/g, '$1.$2|')); if (m) addPair(m[1], m[2], p.line); }
+    if (!pts.length) { ctx.err(el.line, 'Streudiagramm ohne Punkte: punkt: x | y'); return null; }
+    const rng = (key, i) => { const r = /(-?[\d.,]+)\s*\.\.\s*(-?[\d.,]+)/.exec(getP(el, key) || ''); if (r) return [nn(r[1]), nn(r[2])]; const vs = pts.map(q => q[i]), lo = Math.min(...vs), hi = Math.max(...vs), pad = (hi - lo) * .12 || 1, a = lo - pad, b = hi + pad; return [a > 0 && a < (hi - lo) * .6 ? 0 : a, b]; };
+    const [x0, x1] = rng('xbereich', 0), [y0, y1] = rng('ybereich', 1);
+    const niceStep = (span) => { const r = span / 6, e = Math.pow(10, Math.floor(Math.log10(r))), m = r / e; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * e; };
+    const Wc = Math.min(Wd, 44 * u), Hc = 24 * u, mL = 4.4 * u, mB = 3.6 * u, pw = Wc - mL - 2 * u, ph = Hc - mB - 1.6 * u, left = (Wd - Wc) / 2;
+    const X = (v) => mL + (v - x0) / (x1 - x0) * pw, Y = (v) => 1.6 * u + ph - (v - y0) / (y1 - y0) * ph;
+    items.push(P([[mL, 1.6 * u + ph], [mL + pw + u, 1.6 * u + ph]], 1.1, ink), arrowHead([mL + pw, 1.6 * u + ph], [mL + pw + u, 1.6 * u + ph], .7 * u, ink, 1.1), P([[mL, 1.6 * u + ph], [mL, .4 * u]], 1.1, ink), arrowHead([mL, 1.6 * u], [mL, .4 * u], .7 * u, ink, 1.1));
+    const sx = niceStep(x1 - x0), sy = niceStep(y1 - y0);
+    for (let v = Math.ceil(x0 / sx) * sx; v <= x1 + 1e-9; v += sx) { const x = X(v); items.push(P([[x, 1.6 * u + ph - .35 * u], [x, 1.6 * u + ph + .35 * u]], 1, ink)); put(T(fmt(v, komma), .8), x, 1.6 * u + ph + 1.3 * u); }
+    for (let v = Math.ceil(y0 / sy) * sy; v <= y1 + 1e-9; v += sy) { const y = Y(v); items.push(P([[mL - .35 * u, y], [mL + .35 * u, y]], 1, ink)); put(T(fmt(v, komma), .8), mL - .7 * u, y, 'rechts'); }
+    const xl = getP(el, 'xbeschriftung'), yl = getP(el, 'ybeschriftung'); if (xl) put(T(xl, .85), mL + pw + u, 1.6 * u + ph - 1.1 * u, 'rechts'); if (yl) put(T(yl, .85), mL + .8 * u, .6 * u, 'links');
+    for (const [px, py] of pts) { if (px < x0 || px > x1 || py < y0 || py > y1) continue; const x = X(px), y = Y(py), q = .35 * u; items.push(P([[x - q, y - q], [x + q, y + q]], 1.2, col), P([[x - q, y + q], [x + q, y - q]], 1.2, col)); }
+    if (bool(getP(el, 'trend') || getP(el, 'trendlinie') || getP(el, 'regression'), false) && pts.length >= 2) {
+      const n = pts.length, mx = pts.reduce((a, q) => a + q[0], 0) / n, my = pts.reduce((a, q) => a + q[1], 0) / n, sxx = pts.reduce((a, q) => a + (q[0] - mx) ** 2, 0), m = sxx ? pts.reduce((a, q) => a + (q[0] - mx) * (q[1] - my), 0) / sxx : 0, b = my - m * mx;
+      const seg = []; for (const xv of [x0, x1]) seg.push([xv, m * xv + b]); const clip = seg.map(([xv, yv]) => { const yc = Math.max(y0, Math.min(y1, yv)); return [m ? (yc - b) / m : xv, yc]; });
+      { const [A, B] = clip.map(([xv, yv]) => [X(xv), Y(yv)]), l = Math.hypot(B[0] - A[0], B[1] - A[1]), n = Math.max(1, Math.floor(l / (1.2 * u))); for (let i = 0; i < n; i += 2) { const t0 = i / n, t1 = Math.min(1, (i + 1) / n); items.push(P([[A[0] + (B[0] - A[0]) * t0, A[1] + (B[1] - A[1]) * t0], [A[0] + (B[0] - A[0]) * t1, A[1] + (B[1] - A[1]) * t1]], 1.1, color('rot'))); } }
+      const r2 = (v) => fmt(Math.round(v * 100) / 100, komma), lab = 'y = ' + r2(m) + 'x ' + (b < 0 ? '− ' + r2(-b) : '+ ' + r2(b)); put(T(lab, .85, color('rot')), mL + pw, 2 * u, 'rechts');
+    }
+    return done(Hc, left);
+  }
+
+  // ---------------- Schaltplan (Physik) ----------------
+  if (kind === 'circuit') {
+    const KIND = [[/batt|akku|zelle/, 'batterie'], [/quelle|spannung|netz/, 'quelle'], [/widerst|resist/, 'widerstand'], [/lampe|gl[uü]h|birne|lamp/, 'lampe'], [/schalter.*(zu|geschl)|taster.*zu/, 'schalterzu'], [/schalter|taster|switch/, 'schalter'],
+      [/motor/, 'motor'], [/generator/, 'generator'], [/led|leucht/, 'led'], [/diode/, 'diode'], [/kondens|capac/, 'kondensator'], [/amper|strommess/, 'amperemeter'], [/volt|spannungsmess/, 'voltmeter'], [/spule|coil/, 'spule'], [/sicherung|fuse/, 'sicherung']];
+    const part = (txt, line) => { const t = splitBar(String(txt).trim()); let head = t[0], lab = t[1] || ''; const low = head.toLowerCase(); const k = KIND.find(([re]) => re.test(low)); if (!k) { ctx.err(line, `Bauteil „${head}“ kenne ich nicht (z. B. batterie, widerstand, lampe, schalter, motor, diode, led, kondensator, amperemeter, voltmeter)`); return null; }
+      if (!lab) { const m = /^\S+\s+(.+)$/.exec(head); if (m) lab = m[1].replace(/^(zu|geschlossen|offen|auf)\b\s*/i, ''); } return { k: k[1], lab }; };
+    const slots = [];
+    for (const p of el.props) {
+      if (p.k === 'bauteil' || p.k === 'reihe') for (const q of (p.k === 'reihe' ? p.v.split(/\s*;\s*|\s+->\s+|\s*,\s+(?=[A-Za-zÄÖÜäöü])/) : [p.v])) { const c = part(q, p.line); if (c) slots.push([c]); }
+      else if (p.k === 'parallel') { const g = p.v.split(/\s*;\s*|\s+\|\|\s+/).map((q) => part(q, p.line)).filter(Boolean); if (g.length) slots.push(g); }
+    }
+    if (!slots.length) { ctx.err(el.line, 'Schaltung ohne Bauteile: bauteil: batterie | 9 V'); return null; }
+    const L = 4.4 * u, gap = 4.6 * u, srcIdx = slots.findIndex((g) => g.length === 1 && /batterie|quelle|generator/.test(g[0].k)), src = srcIdx >= 0 ? slots[srcIdx] : null, rest = slots.filter((_, i) => i !== srcIdx);
+    const slotW = (g) => g.length > 1 ? L + 3 * u : L, maxPar = Math.max(1, ...slots.map((g) => g.length));
+    let top = rest, right = []; if (rest.length > 4) { top = rest.slice(0, Math.ceil(rest.length / 2)); right = rest.slice(top.length); }
+    const needW = top.reduce((a, g) => a + slotW(g) + 3 * u, 3 * u), needH = Math.max(14 * u, (maxPar - 1) * gap + 9 * u, right.reduce((a, g) => a + slotW(g) + 3 * u, 3 * u));
+    const RW = Math.min(Wd - 8 * u, Math.max(26 * u, needW)), RH = needH, ox = (Wd - RW) / 2, oy = 2.6 * u;
+    // Bauteil in lokalen Koordinaten (entlang der Leitung = a, quer = b) zeichnen; tr wandelt in echte Koordinaten um
+    const sym = (c, tr, labSide) => {
+      const Q = (pts, w = 1.2) => items.push(P(pts.map(([a, b]) => tr(a, b)), w, ink)), h2 = L / 2, ring = (r) => Q(circle(0, 0, r, r, 36).map(([a, b]) => [a, b]));
+      const lead = (a0) => { Q([[-h2, 0], [-a0, 0]]); Q([[a0, 0], [h2, 0]]); };
+      const letter = (ch) => { const [x, y] = tr(0, 0); put(T(ch, .9), x, y); };
+      switch (c.k) {
+        case 'widerstand': lead(1.3 * u); Q([[-1.3 * u, -.55 * u], [1.3 * u, -.55 * u], [1.3 * u, .55 * u], [-1.3 * u, .55 * u], [-1.3 * u, -.55 * u]]); break;
+        case 'sicherung': lead(1.3 * u); Q([[-1.3 * u, -.5 * u], [1.3 * u, -.5 * u], [1.3 * u, .5 * u], [-1.3 * u, .5 * u], [-1.3 * u, -.5 * u]]); Q([[-1.3 * u, 0], [1.3 * u, 0]], 1); break;
+        case 'spule': lead(1.3 * u); Q([[-1.3 * u, -.55 * u], [1.3 * u, -.55 * u], [1.3 * u, .55 * u], [-1.3 * u, .55 * u], [-1.3 * u, -.55 * u]]); for (let a = -1.1; a < 1.2; a += .35) Q([[a * u, -.55 * u], [(a + .2) * u, .55 * u]], .8); break;
+        case 'lampe': { const r = .95 * u, d = r * .707; lead(r); ring(r); Q([[-d, -d], [d, d]]); Q([[-d, d], [d, -d]]); break; }
+        case 'motor': case 'generator': case 'amperemeter': case 'voltmeter': { const r = .95 * u; lead(r); ring(r); letter({ motor: 'M', generator: 'G', amperemeter: 'A', voltmeter: 'V' }[c.k]); break; }
+        case 'batterie': lead(.3 * u); Q([[-.3 * u, -1.2 * u], [-.3 * u, 1.2 * u]]); Q([[.3 * u, -.65 * u], [.3 * u, .65 * u]], 2.4); break;
+        case 'quelle': { const r = .95 * u; lead(r); ring(r); Q([[-.5 * u, 0], [.5 * u, 0]], 1); break; }
+        case 'kondensator': lead(.3 * u); Q([[-.3 * u, -1 * u], [-.3 * u, 1 * u]], 1.5); Q([[.3 * u, -1 * u], [.3 * u, 1 * u]], 1.5); break;
+        case 'diode': case 'led': lead(.6 * u); Q([[-.6 * u, -.7 * u], [.6 * u, 0], [-.6 * u, .7 * u], [-.6 * u, -.7 * u]]); Q([[.6 * u, -.7 * u], [.6 * u, .7 * u]]);
+          if (c.k === 'led') for (const dx of [-.1, .5]) { Q([[dx * u, -.9 * u], [(dx + .6) * u, -1.6 * u]], 1); Q([[(dx + .3) * u, -1.6 * u], [(dx + .6) * u, -1.6 * u], [(dx + .6) * u, -1.3 * u]], 1); } break;
+        case 'schalter': case 'schalterzu': { Q([[-h2, 0], [-1 * u, 0]]); Q([[1 * u, 0], [h2, 0]]); Q(circle(-1 * u, 0, .18 * u, .18 * u, 10), 1); Q(circle(1 * u, 0, .18 * u, .18 * u, 10), 1); Q(c.k === 'schalter' ? [[-1 * u, 0], [.9 * u, -1 * u]] : [[-1 * u, 0], [1 * u, 0]]); break; }
+      }
+      if (c.lab) { const [x, y] = tr(0, labSide * 2.1 * u); put(T(c.lab, .85), x, y); }
+    };
+    const dot = (x, y) => items.push(P(circle(x, y, .22 * u, .22 * u, 10), 2.2, ink));
+    // Leitung entlang einer Kante zeichnen, Lücken für Bauteile; dir: Einheitsvektor der Kante, inw: nach innen
+    const edge = (A, B, groups, inw, outSide) => {
+      const len = Math.hypot(B[0] - A[0], B[1] - A[1]), d = [(B[0] - A[0]) / len, (B[1] - A[1]) / len], tot = groups.reduce((a, g) => a + slotW(g), 0), sp = (len - tot) / (groups.length + 1);
+      let t = 0, cur = sp; const segs = [];
+      for (const g of groups) {
+        const w = slotW(g), c0 = cur, c1 = cur + w; segs.push([t, c0]); t = c1; cur = c1 + sp;
+        const at = (s, off = 0) => [A[0] + d[0] * s + inw[0] * off, A[1] + d[1] * s + inw[1] * off];
+        g.forEach((c, i) => {
+          const off = i * gap, mid = (c0 + c1) / 2, tr = (a, b) => { const p0 = at(mid + a, off); return [p0[0] + inw[0] * b * outSide * -1 + 0, p0[1] + inw[1] * b * outSide * -1]; };
+          if (g.length > 1) { items.push(P([at(c0, off), at(mid - L / 2, off)], 1.2, ink), P([at(mid + L / 2, off), at(c1, off)], 1.2, ink)); }
+          sym(c, (a, b) => { const p0 = at(mid + a, off); return [p0[0] - inw[0] * b, p0[1] - inw[1] * b]; }, i === 0 ? 1 : -1);
+        });
+        if (g.length > 1) { items.push(P([at(c0), at(c0, (g.length - 1) * gap)], 1.2, ink), P([at(c1), at(c1, (g.length - 1) * gap)], 1.2, ink)); dot(...at(c0)); dot(...at(c1)); }
+      }
+      segs.push([t, len]); for (const [a, b] of segs) if (b - a > .01) items.push(P([[A[0] + d[0] * a, A[1] + d[1] * a], [A[0] + d[0] * b, A[1] + d[1] * b]], 1.2, ink));
+    };
+    const TL = [ox, oy], TR = [ox + RW, oy], BR = [ox + RW, oy + RH], BL = [ox, oy + RH];
+    edge(TL, TR, top, [0, 1], 1); edge(TR, BR, right, [-1, 0], 1); edge(BR, BL, src ? [src] : [], [0, -1], 1); edge(BL, TL, [], [1, 0], 1);
+    return done(RH + 6 * u);
+  }
+
+  // ---------------- Strukturformel (Chemie) ----------------
+  if (kind === 'structure') {
+    let rows = textLines(el).map((l) => l.replace(/\t/g, '    ').replace(/\s+$/, ''));
+    while (rows.length && !rows[0].trim()) rows.shift(); while (rows.length && !rows[rows.length - 1].trim()) rows.pop();
+    if (!rows.length) { ctx.err(el.line, 'Strukturformel ohne Inhalt: Atome und Bindungen (- = | / \\) als Zeichnung in Zeilen'); return null; }
+    const ind = Math.min(...rows.filter((r) => r.trim()).map((r) => r.match(/^ */)[0].length)); rows = rows.map((r) => r.slice(ind));
+    const cw = 1.55 * u, rh = 2.9 * u, BOND = /[-=#≡|‖/\\]/, atoms = [], at = new Map();
+    const chem = (s) => s.replace(/([A-Za-z\)])(\d+)/g, '$1_$2').replace(/\^?([+-])$/, '^$1');
+    rows.forEach((row, r) => { const re = /[^\s\-=#≡|‖/\\]+/g; let m; while ((m = re.exec(row))) {
+      const tok = m[0], c0 = m.index, box = ctx.mathBox ? ctx.mathBox(chem(tok), 1) : T(tok), cx = (c0 + tok.length / 2) * cw, cy = (r + .5) * rh;
+      const a = { r, c0, c1: c0 + tok.length - 1, cx, cy, x0: cx - box.w / 2, x1: cx + box.w / 2, box }; atoms.push(a); for (let c = a.c0; c <= a.c1; c++) at.set(r + ',' + c, a);
+      put(box, cx, cy);
+    } });
+    const cen = (r, c) => { const a = at.get(r + ',' + c); return a ? [a.cx, a.cy, a] : null; };
+    const multi = (A, B, n, w = 1.1) => { const dx = B[0] - A[0], dy = B[1] - A[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l * .28 * u, ny = dx / l * .28 * u; for (let i = 0; i < n; i++) { const o = (i - (n - 1) / 2); items.push(P([[A[0] + nx * o, A[1] + ny * o], [B[0] + nx * o, B[1] + ny * o]], w, ink)); } };
+    const shorten = (A, B, ga, gb) => { const dx = B[0] - A[0], dy = B[1] - A[1], l = Math.hypot(dx, dy) || 1; return [[A[0] + dx / l * ga, A[1] + dy / l * ga], [B[0] - dx / l * gb, B[1] - dy / l * gb]]; };
+    rows.forEach((row, r) => {
+      for (let c = 0; c < row.length; c++) {
+        const ch = row[c]; if (!BOND.test(ch)) continue; const cy = (r + .5) * rh;
+        if ('-=#≡'.includes(ch)) { let e = c; while (e + 1 < row.length && row[e + 1] === ch) e++; let lc = c - 1; while (lc >= 0 && row[lc] === ' ') lc--; let rc = e + 1; while (rc < row.length && row[rc] === ' ') rc++; const L0 = at.get(r + ',' + lc), R0 = at.get(r + ',' + rc); const x0 = L0 ? L0.x1 + .55 * u : c * cw, x1 = R0 ? R0.x0 - .55 * u : (e + 1) * cw; if (x1 > x0) multi([x0, cy], [x1, cy], ch === '-' ? 1 : ch === '=' ? 2 : 3); c = e; continue; }
+        if ('|‖'.includes(ch)) { const x = (c + .5) * cw, up = (() => { for (let rr = r - 1; rr >= 0; rr--) { const a = at.get(rr + ',' + c); if (a) return a.cy + 1 * u; if (!/[|‖]/.test(rows[rr][c] || '')) break; } return r * rh; })(), dn = (() => { for (let rr = r + 1; rr < rows.length; rr++) { const a = at.get(rr + ',' + c); if (a) return a.cy - 1 * u; if (!/[|‖]/.test(rows[rr][c] || '')) break; } return (r + 1) * rh; })();
+          if (r > 0 && /[|‖]/.test(rows[r - 1][c] || '')) continue; multi([x, up], [x, dn], ch === '|' ? 1 : 2); continue; }
+        const sgn = ch === '/' ? 1 : -1, A = cen(r + 1, c - sgn) || cen(r + 1, c - 2 * sgn), B = cen(r - 1, c + sgn) || cen(r - 1, c + 2 * sgn);
+        const pA = A ? [A[0], A[1]] : [(c + (sgn > 0 ? 0 : 1)) * cw, (r + 1) * rh], pB = B ? [B[0], B[1]] : [(c + (sgn > 0 ? 1 : 0)) * cw, r * rh];
+        const [s0, s1] = shorten(pA, pB, A ? 1.1 * u : 0, B ? 1.1 * u : 0); multi(s0, s1, 1);
+      }
+    });
+    const w = Math.max(...rows.map((r) => r.length)) * cw, left = Math.max(0, (Wd - w) / 2);
+    return done(rows.length * rh, left);
   }
   return null;
 }
