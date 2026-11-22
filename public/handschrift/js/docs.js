@@ -4,7 +4,7 @@ import { h, saveFile, toast, fmtTime } from './util.js';
 import { btn, sheet, confirmBox, promptBox, chips, ic } from './ui.js';
 import { dbDel, dbPut, kvGet, kvSet, merkeLoeschung } from './store.js';
 import { fileBase } from './exporter.js';
-import { layout, drawPage, ensureImages, PAPERS, PAPER_COLORS, PENS, GNPAPER, DEF, gnApply, FORMATS, fmtOf } from './render.js';
+import { layout, drawPage, ensureImages, PAPERS, PAPER_COLORS, PENS, GNPAPER, DEF, gnApply, FORMATS, fmtOf, INKS } from './render.js';
 import { gnPicker } from './papier.js';
 import { uid } from './util.js';
 import { openTemplates } from './vorlagen.js';
@@ -146,7 +146,7 @@ export function docsView(app) {
         h('h3', { style: { margin: '22px 0 2px' } }, 'Für neue Dokumente in diesem Ordner'),
         h('p', { class: 'mut xs', style: { margin: '0 0 6px' } }, 'Alles, was du hier nicht festlegst, ist wie bei deinen anderen Dokumenten (Einstellungen → „Als Standard merken“).'),
         h('label', { class: 'f' }, 'Papier'), papBox,
-        h('label', { class: 'f' }, 'Stift'), chips([['', 'Wie immer'], ...Object.entries(PENS).map(([k, p]) => [k, p.name])], () => fs.pen || '', (k) => { if (!k) { for (const x of ['pen', 'ink', 'weight', 'inkAlpha']) delete fs[x]; } else { const p = PENS[k]; Object.assign(fs, { pen: k, ink: p.ink, weight: p.weight, inkAlpha: p.alpha }); } save(); }),
+        h('label', { class: 'f' }, 'Stiftfarbe'), chips([['', 'Wie immer'], ...INKS], () => fs.ink || '', (c) => { if (!c) { for (const x of ['pen', 'ink', 'weight', 'inkAlpha']) delete fs[x]; } else fs.ink = c; save(); }),
         h('div', { style: { display: 'grid', gap: '8px', marginTop: '22px' } },
           btn('Auf vorhandene Dokumente im Ordner anwenden', { icon: 'refresh', onclick: async () => { const ds = app.docs.filter((d) => d.folder === f.id); for (const d of ds) { d.s = { ...d.s, ...fs }; d.updated = Date.now(); await dbPut('docs', d); app.docSaved(d); } toast(`${ds.length} ${ds.length === 1 ? 'Dokument' : 'Dokumente'} angepasst`); draw(); } }),
           btn('Ordner löschen', { icon: 'trash', cls: 'danger', onclick: async () => { api.close(); if (await confirmBox(`Ordner „${f.name}“ löschen? Die Dokumente darin bleiben erhalten und landen wieder in „Dokumente“.`, 'Ordner löschen')) { for (const d of app.docs.filter((x) => x.folder === f.id)) { d.folder = null; d.updated = Date.now(); await dbPut('docs', d); } app.folders = app.folders.filter((x) => x.id !== f.id); merkeLoeschung('folders', f.id); if (app.folder === f.id) app.folder = null; await app.saveFolders(); draw(); } } })));

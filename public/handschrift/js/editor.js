@@ -2,7 +2,7 @@
 import { h, debounce, toast, saveFile, fmtSize, autoName } from './util.js';
 import { ic, btn, sheet, range, toggle, seg, chips, confirmBox } from './ui.js';
 import { exportVideo, videoSupported } from './video.js';
-import { layout, drawPage, ensureImages, FORMATS, PAPERS, PAPER_COLORS, PENS, DEF, GNPAPER, fmtOf, gnOf, gnApply } from './render.js';
+import { layout, drawPage, ensureImages, FORMATS, PAPERS, PAPER_COLORS, PENS, DEF, GNPAPER, fmtOf, gnOf, gnApply, INKS } from './render.js';
 import { gnPicker } from './papier.js';
 import { exportPdf, exportGoodNotes, exportGoodNotesInk, exportPngs, zipOf, fileBase } from './exporter.js';
 import { PACKS } from './packs.js';
@@ -288,9 +288,9 @@ export function editorView(app) {
         h('p', { class: 'xs mut' }, 'Die Schrift sitzt genau auf den Linien der eingebauten GoodNotes-Vorlage' + (gnOf(s) && gnOf(s).vp ? ' (auf jeder zweiten Reihe)' : '') + '. Im GoodNotes-Export mit echten Strichen wird diese Vorlage als Hintergrund verwendet.'),
         ...(s.paper === 'gncornell' || s.paper === 'gnnoten' ? [] : [h('label', { class: 'f' }, 'Ränder'), chips([['schmal', 'Schmal'], ['normal', 'Normal'], ['breit', 'Breit']], () => Object.entries(MARGINS).find(([, v]) => v[0] === s.ml && v[1] === s.mr)?.[0] || '', (v) => { const m = MARGINS[v]; [s.ml, s.mr, s.mt, s.mb] = m; ch(); })]),
         toggle('Scan-Effekt', 'Leichte Körnung und Schatten wie bei einem Scan (nur PDF und Bilder)', () => s.scan, setK('scan')));
-      b.append(sec('Stift'), chips(Object.entries(PENS).map(([k, p]) => [k, p.name]), () => s.pen, (k) => { const p = PENS[k]; Object.assign(s, { pen: k, ink: p.ink, weight: p.weight, inkAlpha: p.alpha }); ch(); }),
-        h('div', { class: 'row', style: { margin: '12px 0' } }, h('b', { class: 'sm sp1' }, 'Eigene Farbe'), h('input', { type: 'color', value: s.ink, 'aria-label': 'Tintenfarbe', style: { width: '46px', height: '34px', border: '1px solid var(--bd)', borderRadius: '8px', background: 'none' }, oninput: (e) => { s.ink = e.target.value; s.pen = ''; ch(); } })),
-        range('Strichstärke', () => s.weight, setK('weight'), 0, 1.4, .05, v => v.toFixed(2)), range('Deckkraft', () => s.inkAlpha, setK('inkAlpha'), .4, 1, .02, v => Math.round(v * 100) + ' %'));
+      b.append(sec('Stiftfarbe'), (() => { const w = h('div', { class: 'chips inks' }), col = h('input', { type: 'color', value: s.ink, 'aria-label': 'Eigene Farbe', oninput: (e) => { s.ink = e.target.value; ch(); d(); } });
+        const d = () => w.replaceChildren(...INKS.map(([c, n]) => h('button', { type: 'button', class: 'sw' + (s.ink === c ? ' on' : ''), style: { background: c }, title: n, 'aria-label': n, onclick: () => { s.ink = c; ch(); d(); } })), h('label', { class: 'sw swc' + (INKS.some(([c]) => c === s.ink) ? '' : ' on'), title: 'Eigene Farbe' }, col)); d(); return w; })(),
+        h('p', { class: 'xs mut', style: { margin: '6px 0 0' } }, 'Geschrieben wird immer mit Kugelschreiber.'));
       b.append(sec('Schrift'), range('Größe', () => s.size, setK('size'), 13, 42, .5, v => v + ' pt'), range('Zeilenabstand', () => s.lh, setK('lh'), 2, 4.6, .05, v => v.toFixed(2) + '×'),
         range('Buchstabenabstand', () => s.sp, setK('sp'), .6, 1.4, .02, v => Math.round(v * 100) + ' %'), range('Wortabstand', () => s.wsp, setK('wsp'), .5, 2, .05, v => Math.round(v * 100) + ' %'),
         range('Neigung', () => s.slant, setK('slant'), -10, 18, .5, v => v + '°'), range('Größe der Großbuchstaben', () => s.capsc, setK('capsc'), .7, 1.7, .05, v => Math.round(v * 100) + ' %'));

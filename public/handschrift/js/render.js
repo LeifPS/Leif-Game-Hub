@@ -26,6 +26,7 @@ const ALT_PAPIER = { lined: 'gnlin', legal: 'gnlin', college: 'gnlin2', grid: 'g
 /** Einstellungen eines (alten) Dokuments auf GoodNotes-Papier umstellen. Gibt true zurück, wenn sich etwas geändert hat. */
 export function migrateS(s) {
   if (!s) return false;
+  if (s.pen !== 'kugel' || s.weight !== KUGEL.weight || s.inkAlpha !== KUGEL.alpha) { const ch = 'pen' in s || 'weight' in s; Object.assign(s, { pen: 'kugel', weight: KUGEL.weight, inkAlpha: KUGEL.alpha }); if (ch) { migrateS(s); return true; } }
   if (PAPERS[s.paper] && !gnOf(s)) { s.fmt = 'gn'; const gp = GNPAPER[s.paper]; Object.assign(s, { size: gp.size, ml: gp.ml, mr: gp.mr, mt: gp.mt, mb: gp.mb }); return true; }   // Kombination gibt es nicht
   if (gnOf(s)) { if (s.paperColor && s.paperColor !== 'weiss') { s.paperColor = 'weiss'; return true; } return false; }   // Papierfarben gibt es nicht mehr
   const gp = GNPAPER[ALT_PAPIER[s.paper] || 'gnlin'];
@@ -78,8 +79,11 @@ export const PENS = {
   rot:         { name: 'Rot', ink: '#c62828', weight: .35, alpha: 1 },
   gruen:       { name: 'Grün', ink: '#1b7a3a', weight: .35, alpha: 1 },
 };
+// Immer Kugelschreiber, nur die Farbe ist wählbar
+export const KUGEL = { weight: .35, alpha: 1 };
+export const INKS = [['#16161c', 'Schwarz'], ['#1d3a9a', 'Blau'], ['#c62828', 'Rot'], ['#1b7a3a', 'Grün']];
 export const DEF = {
-  fmt: 'gn', paper: 'gnlin', paperColor: 'weiss', scan: false, tired: .3, pen: 'kugel_schwarz', ink: '#16161c', weight: .3, inkAlpha: 1,
+  fmt: 'gn', paper: 'gnlin', paperColor: 'weiss', scan: false, tired: .3, pen: 'kugel', ink: '#16161c', weight: .35, inkAlpha: 1,
   size: 18, lh: 2.9, sp: .9, wsp: 1, jit: .6, jw: 1, jl: 1, jb: 1, jg: 1, ja: 1, slant: 0, capsc: 1, seed: 7,
   mt: 90, mb: 80, ml: 70, mr: 60, kz: true, markup: true, sz: false, margin: true,
   header: '', pageNum: false, pageNumFmt: '{n}',

@@ -379,3 +379,7 @@ label.f{margin:16px 0 7px}
 .fb-s{text-decoration:line-through;text-decoration-thickness:2px}
 .fb-h{font-size:15px!important;padding:1px 4px 2px;border-radius:4px;background:linear-gradient(transparent 38%,#ffe14d 38%,#ffe14d 88%,transparent 88%)}
 :root[data-theme=dark] .fb-h{background:linear-gradient(transparent 38%,#b39a1f 38%,#b39a1f 88%,transparent 88%)}
+.inks{gap:10px;margin-top:6px}
+.inks .sw{width:38px;height:38px}
+.swc{display:inline-grid;place-items:center;background:conic-gradient(#f44,#fc4,#4c4,#4cf,#44f,#f4f,#f44);cursor:pointer;overflow:hidden}
+.swc input{opacity:0;width:100%;height:100%;cursor:pointer;border:0;padding:0}
