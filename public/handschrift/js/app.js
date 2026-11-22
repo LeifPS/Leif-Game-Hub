@@ -3,7 +3,7 @@ import { startSession } from './session.js';
 import { h, uid } from './util.js';
 import { ic, mark } from './ui.js';
 import { Font, DEF } from './render.js';
-import { dbAll, dbPut, kvGet, kvSet } from './store.js';
+import { dbAll, dbPut, kvGet, kvSet, persist } from './store.js';
 import { editorView } from './editor.js';
 import { fontsView } from './fonts.js';
 import { docsView } from './docs.js';
@@ -24,7 +24,7 @@ const app = {
     const mine = (await dbAll('fonts')).sort((a, b) => (b.updated || 0) - (a.updated || 0));
     this.fonts = [...mine, builtin];
   },
-  async fontSaved(rec) { this.fontCache.delete(rec.id); await this.loadFonts(); this.fontId = rec.id; kvSet('fontId', rec.id); if (this.doc) { this.doc.fontId = rec.id; dbPut('docs', this.doc); } this.views.fonts.refresh(); await this.views.write.refresh(); this.show(this.doc ? 'write' : 'docs'); },
+  async fontSaved(rec) { persist(); this.fontCache.delete(rec.id); await this.loadFonts(); this.fontId = rec.id; kvSet('fontId', rec.id); if (this.doc) { this.doc.fontId = rec.id; dbPut('docs', this.doc); } this.views.fonts.refresh(); await this.views.write.refresh(); this.show(this.doc ? 'write' : 'docs'); },
   async fontsChanged() { await this.loadFonts(); if (!this.fonts.find(f => f.id === this.fontId)) this.fontId = this.fonts[0].id; this.fontCache.clear(); this.views.write.refresh(); },
   async loadDocs() { this.docs = (await dbAll('docs')).sort((a, b) => (b.updated || 0) - (a.updated || 0)); },
   docSaved(d) { const i = this.docs.findIndex(x => x.id === d.id); if (i < 0) this.docs.unshift(d); else this.docs[i] = d; this.docs.sort((a, b) => (b.updated || 0) - (a.updated || 0)); },
@@ -84,6 +84,7 @@ async function boot() {
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); app.installPrompt = e; if (app.view === 'more') app.views.more.refresh(); });
   window.addEventListener('online', () => app.view === 'more' && app.views.more.refresh()); window.addEventListener('offline', () => app.view === 'more' && app.views.more.refresh());
   registerSw(); startSession();
+  if (app.fonts.some((f) => !f.builtin)) persist();   // Browser bitten, die Daten nicht von selbst zu löschen (still, ohne Nachfrage)
   for (const ev of ["gesturestart", "gesturechange"]) document.addEventListener(ev, e => e.preventDefault(), { passive: false });   // iOS: kein Pinch-Zoom
   window.__app = app;
 }

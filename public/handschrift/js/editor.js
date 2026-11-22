@@ -167,15 +167,33 @@ export function editorView(app) {
     await font.prepare(doc.text + ' ' + (S().header || '') + ' •');
     if (my !== version) return;
     L = layout(doc.text, S(), font);
+    pruneRerolls();
     const n = L.pages.length;
     while (wraps.length < n) {
       const i = wraps.length, cv = h('canvas'), box = h('div', { class: 'cv', style: { aspectRatio: `${L.PW} / ${L.PH}` } }, cv);
       const w = h('div', { class: 'pg' }, h('div', { class: 'cap' }, h('span'), btn('Als PNG', { cls: 'sm ghost', onclick: () => pagePng(i) })), box);
-      box.addEventListener('click', () => w.classList.toggle('zoom')); w._cv = cv; w._i = i; w._box = box; pagesEl.append(w); wraps.push(w); io && io.observe(w);
+      box.addEventListener('click', (ev) => { if (!rerollAt(w._i, ev, box)) w.classList.toggle('zoom'); }); w._cv = cv; w._i = i; w._box = box; pagesEl.append(w); wraps.push(w); io && io.observe(w);
     }
     while (wraps.length > n) { const w = wraps.pop(); io && io.unobserve(w); w.remove(); }
     wraps.forEach((w, i) => { w._box.style.aspectRatio = `${L.PW} / ${L.PH}`; w.firstChild.firstChild.textContent = `Seite ${i + 1} von ${n}`; dirty.add(i); });
     drawVisible(); updateInfo();
+  }
+  // Wort in der Vorschau antippen -> nur dieses Wort bekommt andere Varianten
+  function rerollAt(pi, ev, box) {
+    if (!L || !L.pages[pi]) return false;
+    const r = box.getBoundingClientRect(), px = (ev.clientX - r.left) * L.PW / r.width, py = (ev.clientY - r.top) * L.PH / r.height, u = S().size;
+    let hit = null;
+    for (const e of L.pages[pi]) if (e.wk && e.g && px >= e.x - u * .1 && px <= e.x + e.g.adv + u * .1 && py >= e.y - u * 1.5 && py <= e.y + u * .5) { hit = e.wk; break; }
+    if (!hit) return false;
+    const s = S(); s.rr = { ...(s.rr || {}) }; s.rr[hit] = (s.rr[hit] || 0) + 1;
+    saveSoon(); render();
+    toast(`„${hit.slice(hit.indexOf(':') + 1)}“ neu geschrieben – nochmal tippen für eine andere Variante`, 2200);
+    return true;
+  }
+  function pruneRerolls() {   // Einträge zu Wörtern, die es nicht mehr gibt, entfernen
+    const s = S(); if (!s.rr || !L) return;
+    const da = new Set(); for (const pg of L.pages) for (const e of pg) if (e.wk) da.add(e.wk);
+    for (const k of Object.keys(s.rr)) if (!da.has(k)) delete s.rr[k];
   }
   function drawVisible() {
     if (!L) return;
@@ -269,6 +287,10 @@ export function editorView(app) {
       b.append(sec('Natürlich wirken'), h('p', { class: 'mut xs', style: { margin: '0 0 6px' } }, 'Kleine Zufälle, damit es nicht zu perfekt aussieht. Bei „Aus“ ist es exakt gleichmäßig.'),
         range('Unregelmäßigkeit insgesamt', () => s.jit, setK('jit'), 0, 1.6, .05, v => v ? Math.round(v * 100) + ' %' : 'Aus'),
         ...[['jw', 'Wortabstände'], ['jl', 'Zeilenanfang links'], ['jb', 'Grundlinie (auf und ab, schief)'], ['jg', 'Größe und Drehung der Buchstaben'], ['ja', 'Buchstabenabstände']].map(([k, t]) => range(t, () => s[k] == null ? 1 : s[k], setK(k), 0, 2, .05, v => v ? Math.round(v * 100) + ' %' : 'Aus')),
+        toggle('Buchstabenpaare unterschneiden', 'T, V, W, F, P und Satzzeichen rücken näher heran, wie beim echten Schreiben', () => s.kern !== false, (v) => { s.kern = v; ch(); }),
+        toggle('Am Zeilenende enger', 'Die letzten Buchstaben einer Zeile stehen etwas dichter', () => s.endTight !== false, (v) => { s.endTight = v; ch(); }),
+        h('p', { class: 'mut xs', style: { margin: '6px 0' } }, 'Tipp: Gefällt dir ein Wort in der Vorschau nicht, tippe es an. Dann wird nur dieses Wort neu geschrieben.'),
+        ...(s.rr && Object.keys(s.rr).length ? [btn(`Neu geschriebene Wörter zurücksetzen (${Object.keys(s.rr).length})`, { cls: 'sm', onclick: () => { s.rr = {}; ch(); api.close(); openSettings(); } })] : []),
         btn('Alle Variationen aus', { cls: 'sm', onclick: () => { s.jit = 0; ch(); api.close(); openSettings(); } }));
       b.append(sec('Text'), toggle('Mathe-Kürzel', 'x^2 → x², a_1 → a₁, -> → →, \\alpha → α', () => s.kz, setK('kz')), toggle('Formatierung', '**fett**, __unterstrichen__, ==markiert==, # Überschrift', () => s.markup, setK('markup')), toggle('ß als ss schreiben', null, () => s.sz, setK('sz')));
       const hi = h('input', { type: 'text', value: s.header || '', placeholder: 'z. B. Leif · Biologie · {datum}', maxlength: 80, oninput: () => { s.header = hi.value; ch(); } });
@@ -286,13 +308,15 @@ export function editorView(app) {
       const canShare = !!(navigator.canShare && navigator.canShare({ files: [new File([''], 'a.pdf', { type: 'application/pdf' })] }));
       const pdf = (share) => run(async () => { const blob = await exportPdf(L, S(), doc.title, dpi, prog); const r = await saveFile(blob, fileBase(doc.title) + '.pdf', { share }); msg.textContent = r === 'abgebrochen' ? '' : `PDF ${share ? 'geteilt' : 'gespeichert'} (${fmtSize(blob.size)}, ${L.pages.length} ${L.pages.length === 1 ? 'Seite' : 'Seiten'}).`; });
       const gnote = () => run(async () => { const blob = await exportGoodNotes(L, S(), doc.title, dpi, prog); const r = await saveFile(blob, fileBase(doc.title) + '.goodnotes'); msg.textContent = r === 'abgebrochen' ? '' : `GoodNotes-Datei gespeichert (${fmtSize(blob.size)}, ${L.pages.length} ${L.pages.length === 1 ? 'Seite' : 'Seiten'}).` + (S().fmt === 'gn' ? '' : ' Tipp: Format „GoodNotes Standard“ passt genau auf leere Standardseiten.'); });
-      const gink = () => run(async () => { const blob = await exportGoodNotesInk(L, S(), doc.title, prog); const r = await saveFile(blob, fileBase(doc.title) + '.goodnotes'); msg.textContent = r === 'abgebrochen' ? '' : `GoodNotes-Datei mit echten Strichen gespeichert (${fmtSize(blob.size)}, ${L.pages.length} ${L.pages.length === 1 ? 'Seite' : 'Seiten'}).`; });
+      const canShareGn = !!(navigator.canShare && navigator.canShare({ files: [new File([''], 'a.goodnotes', { type: 'application/octet-stream' })] }));
+      const gink = (share) => run(async () => { const blob = await exportGoodNotesInk(L, S(), doc.title, prog); const r = await saveFile(blob, fileBase(doc.title) + '.goodnotes', { share }); msg.textContent = r === 'abgebrochen' ? '' : `GoodNotes-Datei mit echten Strichen ${r === 'geteilt' ? 'geteilt' : 'gespeichert'} (${fmtSize(blob.size)}, ${L.pages.length} ${L.pages.length === 1 ? 'Seite' : 'Seiten'}).`; });
       const png = (transparent) => run(async () => { const files = await exportPngs(L, S(), doc.title, dpi, transparent, prog); if (files.length === 1) { await saveFile(files[0].blob, files[0].name); } else await saveFile(zipOf(files), fileBase(doc.title) + (transparent ? '-transparent' : '') + '-PNG.zip'); msg.textContent = 'Bilder gespeichert.'; });
       const gnPaper = GNPAPER[S().paper];
       b.append(h('label', { class: 'f' }, 'Qualität'), chips([[150, 'Standard'], [200, 'Hoch (empfohlen)'], [300, 'Sehr hoch']], () => dpi, v => { dpi = v; }),
         h('div', { class: 'xgroup' }, 'Für GoodNotes'),
         h('div', { style: { display: 'grid', gap: '10px' } },
-          btn('Echte Striche (.goodnotes)', { icon: 'download', cls: 'pri', onclick: gink() }),
+          canShareGn ? btn('Echte Striche: in GoodNotes öffnen', { icon: 'share', cls: 'pri', onclick: gink(true) }) : null,
+          btn('Echte Striche (.goodnotes) speichern', { icon: 'download', cls: canShareGn ? '' : 'pri', onclick: gink(false) }),
           h('p', { class: 'xhint' }, gnPaper ? 'Radier- und bearbeitbar, auf der eingebauten GoodNotes-Vorlage. Die Schrift sitzt genau auf den Linien.' : 'Radier- und bearbeitbar, auf leerer Standardseite. Für Linien oder Kästchen in den Einstellungen das Papier „GoodNotes liniert“ oder „GoodNotes kariert“ wählen.'),
           canShare ? btn('PDF in GoodNotes öffnen', { icon: 'share', onclick: pdf(true) }) : null,
           btn('Seiten als Bild (.goodnotes)', { icon: 'download', onclick: gnote() })),

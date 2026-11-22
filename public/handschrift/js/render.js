@@ -215,18 +215,38 @@ export function layout(text, S, font) {
     lastHl = lastUl = null;
   };
   const maths = [];
-  const makeWord = (chars, scl = 1) => {
+  // Unterschneidung: Buchstabenpaare, die in echter Handschrift enger stehen (T über dem e, Punkt nah am Wort …)
+  const KERN = (a, b) => {
+    if (!a || !b || S.kern === false) return 0;
+    const lowB = /[a-zäöüßàâçéèêëîïôûùœæ.,;:]/.test(b);
+    if ('TFPVWY'.includes(a) && lowB) return a === 'P' || a === 'F' ? .09 : .14;
+    if ('frvwy7'.includes(a) && /[a-zäöüé.,]/.test(b)) return .05;
+    if (a === 'L' && /[TVWY'’]/.test(b)) return .12;
+    if (a === 'A' && 'TVWY'.includes(b) || 'TVWY'.includes(a) && b === 'A') return .1;
+    if (/[.,]/.test(b) && /\p{L}|\d/u.test(a)) return .04;
+    return 0;
+  };
+  // „Neu würfeln“: Ein Wort kann einzeln andere Varianten bekommen (S.rr = { 'Nr:Wort': n }), ohne den Rest der Seite zu verändern
+  const hashStr = (t) => { let x = 2166136261; for (const c of t) x = Math.imul(x ^ c.charCodeAt(0), 16777619); return x >>> 0; };
+  let wordNo = 0;
+  const makeWord = (chars, scl = 1, wkey = null) => {
     const run = []; let w = 0;
+    const rr = (wkey && S.rr && S.rr[wkey]) || 0, wr = rr ? mulberry32(hashStr(wkey) + rr * 7919) : null;
     const add = (ch, st) => {
       const r = font.resolve(ch);
       if (!r) { if (!/\s/.test(ch)) missing.add(ch); return; }
       for (let rep = 0; rep < (r.rep || 1); rep++) {
         let idx = Math.floor(rng() * r.pool.length);
         if (r.pool.length > 1 && lastVar[ch] === idx) idx = (idx + 1 + Math.floor(rng() * (r.pool.length - 1))) % r.pool.length;
-        lastVar[ch] = idx;
+        lastVar[ch] = idx;   // auch beim Neu-Würfeln zählt die ursprüngliche Variante, damit der Rest der Seite gleich bleibt
+        if (rr && r.pool.length > 1) { const prevSame = run.length && run[run.length - 1].ch === ch ? run[run.length - 1].vi : -1; idx = (idx + 1 + ((rr - 1 + Math.floor(wr() * 97)) % (r.pool.length - 1))) % r.pool.length; if (idx === prevSame) idx = (idx + 1) % r.pool.length; }
         const v = r.pool[idx], sc = r.s * scl * (S.capsc !== 1 && ch !== ch.toLowerCase() && ch === ch.toUpperCase() && /\p{L}/u.test(ch) ? S.capsc : 1) * (st.b ? 1.03 : 1) * (1 + (rng() - .5) * .06 * jG);
         const adv = (v.seg * k * sc * r.sx * S.sp) + S.size * .03 * scl + (rng() - .5) * jA * S.size * .08;
-        run.push({ ch, v, sc, sx: r.sx, up: r.up || 0, adv, st, dy: (rng() - .5) * jB * S.size * .06, rot: (rng() - .5) * jG * .04, a: .86 + .14 * rng() }); w += adv;
+        const prev = run[run.length - 1];
+        if (prev && !prev.math) { const kk = KERN(prev.ch, ch) * S.size * scl; prev.adv -= kk; w -= kk; }
+        let dy = (rng() - .5) * jB * S.size * .06, rot = (rng() - .5) * jG * .04;
+        if (wr) { dy += (wr() - .5) * S.size * .08 * Math.max(.4, jB); rot += (wr() - .5) * .05 * Math.max(.4, jG); }
+        run.push({ ch, v, sc, sx: r.sx, up: r.up || 0, adv, st, dy, rot, a: .86 + .14 * rng(), wk: wkey, vi: idx }); w += adv;
       }
     };
     for (const o of chars) { if (o.math != null) { const mb = bctx.mathInline(maths[o.math], scl, o.col); run.push({ ch: '$', math: mb, adv: mb.w + S.size * .06 * scl, st: o, sc: 1, up: 0, dy: 0, rot: 0 }); w += mb.w + S.size * .06 * scl; continue; } if (o.c === 'ß' && (S.sz || !font.g['ß'])) { add('s', o); add('s', o); } else add(o.c, o); }
@@ -251,9 +271,11 @@ export function layout(text, S, font) {
         cx += g.adv; if (!startE) startE = e; endE = e; continue;
       }
       const m = 1 + nS(cx) * .035 * jG;
+      const tEnd = (cx - left) / Math.max(1, right - left), adv = tEnd > .82 && S.endTight !== false ? g.adv * (1 - .2 * (tEnd - .82)) : g.adv;   // am Zeilenende wird man etwas enger
       const e = { g, m, x: cx, y: y + (slope * (cx - left) + wordDy + nY(cx) * S.size * .09 * jB + g.dy) * VJ + g.up * k, rot: nR(cx) * .045 * jG + g.rot };
       const pg = pages[pages.length - 1];
-      pg.push(e); cx += g.adv;
+      if (g.wk) e.wk = g.wk;
+      pg.push(e); cx += adv;
       if (!startE) startE = e; endE = e;
     }
     flush(); return cx;
@@ -285,7 +307,7 @@ export function layout(text, S, font) {
     else x = left + ((first && ind) || 0) + (rng() - .5) * jL * S.size;
     if (bullet) first = true;
     for (const word of words) {
-      const { run, w } = makeWord(word, scl);
+      const { run, w } = makeWord(word, scl, (wordNo++) + ':' + word.map((o) => o.c).join(''));
       if (!run.length) continue;
       const sp = first ? 0 : S.size * 1.1 * S.wsp * (1 + (rng() - .5) * .5 * jW);
       if (!first && x + sp + w > right && w <= right - left - ind) { newLine(); first = true; }
