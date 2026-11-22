@@ -15,7 +15,7 @@ export function fontsView(app) {
     wrap.replaceChildren();
     const imp = h('input', { type: 'file', accept: '.hsfont,application/json', class: 'sr', onchange: async () => { try { const rec = await fontFromFile(imp.files[0]); await dbPut('fonts', rec); await app.fontSaved(rec); toast(`„${rec.name}“ importiert`); } catch (e) { toast(e.message, 5000, 'err'); } imp.value = ''; } });
     wrap.append(h('div', { class: 'row phead' }, h('div', { class: 'sp1' }, h('h1', null, 'Schriften'), h('p', { class: 'mut sm' }, `${app.fonts.length} ${app.fonts.length === 1 ? 'Schrift' : 'Schriften'}`)),
-      btn('Schrift importieren', { icon: 'upload', cls: 'icon', title: 'Schrift importieren (.hsfont)', onclick: () => imp.click() }),
+      btn('Schrift importieren', { icon: 'fileadd', cls: 'icon', title: 'Schrift importieren (.hsfont)', onclick: () => imp.click() }),
       btn('Neue Schrift', { icon: 'plus', cls: 'pri icon', title: 'Neue Schrift erstellen', onclick: () => openWizard(app) }), imp));
     const grid = h('div', { class: 'fgrid' }); wrap.append(grid);
     const ib = (label, icon, onclick, cls = '') => btn(label, { icon, cls: 'icon sm ' + cls, title: label, onclick: (e) => { e.stopPropagation(); onclick(); } });

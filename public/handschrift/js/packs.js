@@ -38,6 +38,8 @@ export const PACKS = [
     groups:[ { name:'Chinesisch 2', c:'__Z2__', n:1 } ] },
   { id:'zh3', bit:13, name:'Chinesisch 3 (Rang 501 bis 1000)', icon:'汉', text:'Weitere 500 häufige Zeichen, damit lassen sich die meisten Texte schreiben',
     groups:[ { name:'Chinesisch 3', c:'__Z3__', n:1 } ] },
+  { id:'noten', bit:15, name:'Noten', icon:'♪', text:'Notenköpfe, Notenschlüssel, Pausen und Vorzeichen – damit setzt [noten] Lieder in deiner Handschrift',
+    groups:[ { name:'Noten', c:'𝅘𝅗𝅝𝄞𝄢♯♭♮', n:1 }, { name:'Pausen', c:'𝄻𝄼𝄽𝄾𝄿', n:1 } ] },
   { id:'symbole', bit:14, name:'Symbole', icon:'★', text:'Haken, Kreuze, Sterne, Herzen, Noten, Wetter und andere Zeichen für Notizen',
     groups:[ { name:'Symbole', c:'✓✔✗✘★☆♥♡☺☹♪♫☀☁☂❄✎✉☎⚠✂☑☐', n:1 } ] },
 ];

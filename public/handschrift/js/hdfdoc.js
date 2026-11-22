@@ -50,6 +50,11 @@ kopf: Französisch | Deutsch
 le chat = die Katze
 avoir faim = Hunger haben
 [/vokabeln]   (Vokabelliste: eine Vokabel pro Zeile, getrennt mit =, – oder |; zwei Spalten über die ganze Breite, ohne Rahmen; optional titel, linie: ja|nein, aufteilung: 40 (Prozent für die linke Spalte).)
+[noten]
+takt: 4/4
+text: Al-le mei-ne Ent-chen
+c d e f | g2 g2 ||
+[/noten]   (Noten in deiner Handschrift, am besten auf dem Papier „Notenlinien“. Tonnamen c d e f g a h (b = B), r = Pause, ' höher, , tiefer, # Kreuz, b Be, = Auflöser, Dauer 1 2 4 8 16 (gilt weiter), . punktiert, | Taktstrich, || Schluss; optional schluessel: bass, takt, text (Silben mit - trennen).)
 [wertetabelle]  Berechnet Werte selbst: funktion: x^2-4 | xvon: -3 | xbis: 3 | schritt: 1 | nachkommastellen: 2 | kopf: x | f(x) | richtung: waagerecht|senkrecht
 ### Koordinatensystem mit Funktionen
 [graph titel="Parabel"]

@@ -26,7 +26,7 @@ const SYM = {
   '½': 'Bruch ein Halb', '¼': 'Bruch ein Viertel', '¾': 'Bruch drei Viertel', '∴': 'Also (drei Punkte als Dreieck)', '∵': 'Weil (drei Punkte als Dreieck, umgekehrt)', '⌀': 'Durchmesserzeichen', '∣': 'Teilt (senkrechter Strich)', '⟨': 'Spitze Klammer auf', '⟩': 'Spitze Klammer zu',
   '⌈': 'Aufrunden-Klammer links', '⌉': 'Aufrunden-Klammer rechts', '⌊': 'Abrunden-Klammer links', '⌋': 'Abrunden-Klammer rechts',
   '。': 'Japanischer Punkt', '、': 'Japanisches Komma', '「': 'Japanische Klammer auf', '」': 'Japanische Klammer zu', '・': 'Japanischer Mittelpunkt', 'ー': 'Dehnungsstrich (Katakana)',
-  '✓': 'Haken', '✔': 'Haken (fett)', '✗': 'Kreuz (Ablehnung)', '✘': 'Kreuz (fett)', '★': 'Stern (ausgefüllt)', '☆': 'Stern (nur Umriss)', '♥': 'Herz (ausgefüllt)', '♡': 'Herz (nur Umriss)', '☺': 'Lächelndes Gesicht', '☹': 'Trauriges Gesicht', '♪': 'Achtelnote', '♫': 'Zwei Achtelnoten',
+  '✓': 'Haken', '✔': 'Haken (fett)', '✗': 'Kreuz (Ablehnung)', '✘': 'Kreuz (fett)', '★': 'Stern (ausgefüllt)', '☆': 'Stern (nur Umriss)', '♥': 'Herz (ausgefüllt)', '♡': 'Herz (nur Umriss)', '☺': 'Lächelndes Gesicht', '☹': 'Trauriges Gesicht', '𝅘': 'Notenkopf (ausgefüllt, ohne Hals)', '𝅗': 'Notenkopf (hohl, ohne Hals)', '𝅝': 'Ganze Note (hohler Kopf)', '𝄞': 'Violinschlüssel', '𝄢': 'Bassschlüssel', '♯': 'Kreuz (Vorzeichen)', '♭': 'Be (Vorzeichen)', '♮': 'Auflösungszeichen', '𝄻': 'Ganze Pause', '𝄼': 'Halbe Pause', '𝄽': 'Viertelpause', '𝄾': 'Achtelpause', '𝄿': 'Sechzehntelpause', '♪': 'Achtelnote', '♫': 'Zwei Achtelnoten',
   '☀': 'Sonne', '☁': 'Wolke', '☂': 'Regenschirm', '❄': 'Schneeflocke', '✎': 'Bleistift', '✉': 'Briefumschlag', '☎': 'Telefon', '⚠': 'Warndreieck', '✂': 'Schere', '☑': 'Kästchen mit Haken', '☐': 'Leeres Kästchen',
 };
 

@@ -14,7 +14,7 @@ const GROUPS = [
   ['Schule und Studium', ['mathe', 'mathe2', 'griechisch']],
   ['Sprachen mit Akzenten', ['franz', 'west', 'ost', 'kyrill']],
   ['Asiatische Schriften', ['kana', 'kanji', 'zh1', 'zh2', 'zh3']],
-  ['Sonstiges', ['symbole']],
+  ['Sonstiges', ['symbole', 'noten']],
 ];
 const clean = (t) => [...new Set([...(t || '').normalize('NFC')].filter(c => !/\s/.test(c)))].join('');
 

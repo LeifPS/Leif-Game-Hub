@@ -57,7 +57,7 @@ export function docsView(app) {
       fo ? h('button', { type: 'button', class: 'crumb', onclick: () => { app.folder = null; q = ''; draw(); } }, '‹ Dokumente') : null,
       h('h1', null, fo ? fo.name : 'Dokumente'), h('p', { class: 'mut sm' }, `${nDocs} ${nDocs === 1 ? 'Dokument' : 'Dokumente'}` + (!fo && app.folders.length ? ` · ${app.folders.length} ${app.folders.length === 1 ? 'Ordner' : 'Ordner'}` : ''))),
       fo ? btn('Ordner-Einstellungen', { icon: 'sliders', cls: 'icon', onclick: () => folderSheet(fo), title: 'Name, Farbe und Papier für neue Dokumente' }) : btn('Neuer Ordner', { icon: 'folder', cls: 'icon', onclick: () => newFolder(), title: 'Neuer Ordner (z. B. ein Fach)' }),
-      btn('Textdatei hochladen', { icon: 'upload', cls: 'icon', onclick: () => imp.click(), title: 'Textdateien (.txt, .md) hochladen' }), btn('Vorlagen', { icon: 'grid', cls: 'icon', onclick: () => openTemplates(app), title: 'Vorlagen' }), btn('Neues Dokument', { icon: 'plus', cls: 'pri icon', onclick: async () => { const d = await app.newDoc(); app.openDoc(d.id); }, title: 'Neues Dokument' }), imp));
+      btn('Textdatei importieren', { icon: 'fileadd', cls: 'icon', onclick: () => imp.click(), title: 'Textdatei importieren (.txt, .md, .hdf)' }), ...(!fo && app.trash.length ? [btn('Papierkorb', { icon: 'trash', cls: 'icon', onclick: trashSheet, title: `Papierkorb (${app.trash.length})` })] : []), btn('Vorlagen', { icon: 'grid', cls: 'icon', onclick: () => openTemplates(app), title: 'Vorlagen' }), btn('Neues Dokument', { icon: 'plus', cls: 'pri icon', onclick: async () => { const d = await app.newDoc(); app.openDoc(d.id); }, title: 'Neues Dokument' }), imp));
     wrap.append(reminderCard());
     const s = h('input', { type: 'search', placeholder: 'Dokumente durchsuchen …', value: q, 'aria-label': 'Dokumente durchsuchen', oninput: () => { q = s.value; grid(); } });
     // Sortieren: Knopf neben der Suche (dahinter liegt eine unsichtbare Auswahlliste, so kommt auf dem iPhone die normale Auswahl)
@@ -73,7 +73,6 @@ export function docsView(app) {
       box.replaceChildren(...fs, ...(ds.length ? ds.map(card) : fs.length ? [] : [h('div', { class: 'empty', style: { gridColumn: '1 / -1' } }, q ? 'Nichts gefunden.' : app.folder ? 'Dieser Ordner ist noch leer. Tippe oben auf + für ein neues Dokument.' : 'Noch keine Dokumente. Tippe oben auf + für ein neues.')]));
     }
     grid();
-    if (!app.folder && app.trash.length) wrap.append(h('button', { type: 'button', class: 'trashlink', onclick: trashSheet }, ic('trash'), `Papierkorb (${app.trash.length})`));
     // ---- Kachel ----
     function card(d) {
       const F = FORMATS[fmtOf(d.s || {})] || FORMATS.gn, ratio = `${F.w} / ${F.h}`;

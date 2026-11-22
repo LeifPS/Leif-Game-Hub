@@ -2,6 +2,7 @@
 import { h } from './util.js';
 
 const P = {
+  fileadd: 'M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M12 11v6M9 14h6',
   highlighter: 'M15.5 4.5l4 4L11 17H7v-4zM13 7l4 4',
   sort: 'M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4',
   plus: 'M12 5v14M5 12h14', x: 'M18 6 6 18M6 6l12 12', check: 'M20 6 9 17l-5-5', download: 'M12 15V3M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5', upload: 'M12 3v12M17 8l-5-5-5 5M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4',

@@ -8,7 +8,7 @@ const ALNUM = (s) => s.toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').r
 const EL_ALIAS = {
   titel: 'title', ueberschrift: 'heading', absatz: 'paragraph', hinweis: 'note', merke: 'note', beispiel: 'example', aufgabe: 'task', antwort: 'answer', zitat: 'quote',
   fussnote: 'footnote', beschriftung: 'label', abstand: 'spacer', trennlinie: 'divider', seitenumbruch: 'pagebreak', liste: 'list', eintrag: 'item', formel: 'formula',
-  gleichung: 'equation', bruch: 'fraction', wurzel: 'root', rechenweg: 'calculation', schritt: 'step', wertetabelle: 'valuetable', tabelle: 'table', vokabeln: 'vocab', vokabel: 'vocab', vokabelliste: 'vocab', zeile: 'row', zelle: 'cell',
+  gleichung: 'equation', bruch: 'fraction', wurzel: 'root', rechenweg: 'calculation', schritt: 'step', wertetabelle: 'valuetable', tabelle: 'table', noten: 'music', musik: 'music', vokabeln: 'vocab', vokabel: 'vocab', vokabelliste: 'vocab', zeile: 'row', zelle: 'cell',
   koordinatensystem: 'graph', diagramm: 'chart', balkendiagramm: 'chart', saeulendiagramm: 'chart', kreisdiagramm: 'chart', liniendiagramm: 'chart', ablauf: 'flow', flussdiagramm: 'flow', flowchart: 'flow', baum: 'tree', baumdiagramm: 'tree', hierarchie: 'tree', hierarchy: 'tree', mengen: 'venn', zeitstrahl: 'timeline', pyramide: 'pyramid', kreislauf: 'cycle', zyklus: 'cycle', reaktion: 'chem', chemie: 'chem', reaktionsgleichung: 'chem', geometrie: 'graph', geometry: 'graph', konstruktion: 'graph', graf: 'graph', funktionsgraph: 'graph', funktion: 'function', punkt: 'point', strecke: 'segment', spalten: 'columns', spalte: 'column', gruppe: 'group',
   metadaten: 'metadata', seite: 'page', bild: 'image', verweis: 'reference', text: 'text',
 };
@@ -24,6 +24,7 @@ const DEFS = {
   valuetable: { text: false, props: ['funktion', 'xvon', 'xbis', 'schritt', 'titel', 'spaltenname', 'nachkommastellen', 'dezimal', 'kopf', 'richtung'] },
   table: { text: false, props: ['titel', 'kopf', 'zeile', 'spaltenbreiten', 'rahmen', 'zellabstand', 'kopfzeile', 'dezimal'], kids: ['row'] },
   vocab: { text: true, props: ['titel', 'kopf', 'linie', 'aufteilung'] },
+  music: { text: true, props: ['schluessel', 'takt', 'text', 'titel'] },
   row: { text: true, props: ['hoehe'], kids: ['cell'] }, cell: { text: true, props: ['spalten'] },
   graph: { text: false, props: ['titel', 'xmin', 'xmax', 'ymin', 'ymax', 'xbereich', 'ybereich', 'raster', 'rasterx', 'rastery', 'achsen', 'achsenbeschriftung', 'xbeschriftung', 'ybeschriftung', 'skala', 'skalax', 'skalay', 'marken', 'legende', 'gleichskaliert', 'nullstellen', 'extrema', 'schnittpunkte', 'funktion', 'punkt', 'strecke', 'figur', 'abbildung', 'kreis', 'gerade', 'dezimal', 'zahlen', 'einheit'], kids: ['function', 'point', 'segment', 'label'] },
   function: { text: false, props: ['ausdruck', 'name', 'bereich', 'linienbreite', 'linienart', 'nullstellen', 'extrema'] },

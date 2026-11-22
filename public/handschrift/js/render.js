@@ -361,7 +361,7 @@ export function layout(text, S, font) {
   const grid = gpp && gpp.vp ? { cell: gpp.hp * PXPT, gx0: gpp.v0 * PXPT, gy0: gpp.h0 * PXPT } : gst ? { cell: gst, gx0: S.ml - Math.floor(S.ml / gst) * gst, gy0: (S.mt + lineH + 3) - Math.floor((S.mt + lineH + 3) / gst) * gst } : null;
   const bctx = {
     grid, get gridOk() { return !!grid && !inSub; },
-    u: S.size, k, lineH, lineMul: 1, PH, MT, MB, space: S.size * 1.1 * S.wsp,
+    u: S.size, k, lineH, lineMul: 1, PH, MT, MB, space: S.size * 1.1 * S.wsp, px: PXPT, notenPapier: S.paper === 'gnnoten',
     get W() { return right - left; },
     mathInline: (src, scl, col) => { const r = mathBox(bctx, src, { sc: scl, col, inl: true }); return r.box; },
     has: (c) => !!font.resolve(c), prep: (t) => prep(t, S),

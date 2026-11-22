@@ -3,6 +3,7 @@
 // Einträge: Zeichen { g, m, x, y, rot }, Strich { path:{ pts, w, col?, a? } }.
 import { parseMath, layoutMath, compile, splitRel, MathError } from './mathx.js';
 import { visualBlock } from './visuals.js';
+import { musicBlock } from './music.js';
 import { getP, allP, text, textLines, elems, bool, num, splitBar, range, color, isColor, size, MM, KNOWN, normKey } from './hdf.js';
 
 export const shiftItems = (items, dx, dy) => items.map(it => it.path ? { path: { ...it.path, pts: it.path.pts.map(([x, y]) => [x + dx, y + dy]) } }
@@ -483,6 +484,7 @@ export function renderBlock(el, ctx) {
     case 'root': return rootBlock(el, ctx);
     case 'table': return tableBlock(el, ctx);
     case 'vocab': return vocabBlock(el, ctx);
+    case 'music': return musicBlock(el, { ...ctx, textBox: (str, sc, col) => textBox(ctx, str, sc, col) });
     case 'valuetable': return valueTableBlock(el, ctx);
     case 'graph': return graphBlock(el, ctx);
     case 'chart': case 'flow': case 'tree': case 'mindmap': case 'venn': case 'timeline': case 'pyramid': case 'cycle': return visualBlock(el, { ...ctx, textBox: (s, sc, col) => textBox(ctx, s, sc, col) }, el.name);

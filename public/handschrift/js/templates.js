@@ -362,6 +362,12 @@ la boulangerie = die Bäckerei
 aller à l'école = zur Schule gehen
 le déjeuner = das Mittagessen
 [/vokabeln]` },
+  { id: 'liedblatt', cat: 'lernen', title: 'Liedblatt (Noten)', desc: 'Melodie mit Liedtext auf Notenlinien – Notenköpfe und Schlüssel in deiner Schrift', s: { paper: 'gnnoten', fmt: 'gn', paperColor: 'weiss', scan: false, size: 15, ml: 50, mr: 46, mt: 60, mb: 60 }, text: `# Alle meine Entchen
+[noten]
+takt: 4/4
+text: Al-le mei-ne Ent-chen schwim-men auf dem See, schwim-men auf dem See
+c d e f | g2 g2 | a4 a a a | g1 | a4 a a a | g1 | f4 f f f | e2 e2 | d4 d d d | c1 ||
+[/noten]` },
   { id: 'karteikarten', cat: 'lernen', title: 'Karteikarten', desc: 'Frage und Antwort in Rahmen, zum Ausdrucken und Abfragen', s: KAR, text: `[titel]Karteikarten[/titel]
 
 [gruppe]
