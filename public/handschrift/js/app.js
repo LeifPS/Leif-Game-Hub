@@ -10,6 +10,9 @@ import { docsView } from './docs.js';
 import { moreView } from './more.js';
 
 const app = {
+  folders: [], folder: null,
+  async saveFolders() { await kvSet('folders', this.folders); },
+  folderOf(id) { return this.folders.find((f) => f.id === id) || null; },
   fonts: [], fontId: 'leif', fontCache: new Map(), docs: [], doc: null, view: 'write', theme: 'auto', installPrompt: null, swState: 'pending', views: {},
   async getFont(id) {
     id = this.fonts.find(f => f.id === id) ? id : this.fonts[0].id;
@@ -30,7 +33,8 @@ const app = {
   docSaved(d) { const i = this.docs.findIndex(x => x.id === d.id); if (i < 0) this.docs.unshift(d); else this.docs[i] = d; this.docs.sort((a, b) => (b.updated || 0) - (a.updated || 0)); },
   async newDoc(o = {}) {
     const last = await kvGet('lastS', {}), now = Date.now();
-    const d = { id: uid(), title: 'Neues Dokument', text: '', s: { ...DEF, ...last }, fontId: this.fontId, created: now, updated: now, ...o, ...(o.s ? { s: { ...DEF, ...o.s } } : {}) };
+    const folder = o.folder !== undefined ? o.folder : this.folder, fv = (this.folderOf(folder) || {}).s || {};   // Vorgaben des Ordners (z. B. kariert für Mathe)
+    const d = { id: uid(), title: 'Neues Dokument', text: '', fontId: this.fontId, created: now, updated: now, ...o, folder: folder || null, s: { ...DEF, ...last, ...fv, ...(o.s || {}) } };
     if (!o.id) d.id = uid(); await dbPut('docs', d); this.docSaved(d); return d;
   },
   async openDoc(id) { const d = this.docs.find(x => x.id === id); if (!d) return; this.doc = d; d.opened = Date.now(); dbPut('docs', d); kvSet('docId', id); if (d.fontId && this.fonts.find(f => f.id === d.fontId)) this.fontId = d.fontId; await this.views.write.load(d); this.show('write'); },
@@ -67,7 +71,7 @@ Viel Spaß beim Schreiben!`;
 async function boot() {
   const root = document.getElementById('app');
   app.theme = await kvGet('theme', 'auto'); applyTheme(app.theme);
-  await app.loadFonts(); await app.loadDocs();
+  await app.loadFonts(); await app.loadDocs(); app.folders = await kvGet('folders', []);
   app.fontId = await kvGet('fontId', app.fonts[0].id); if (!app.fonts.find(f => f.id === app.fontId)) app.fontId = app.fonts[0].id;
   app.views.write = editorView(app); app.views.fonts = fontsView(app); app.views.docs = docsView(app); app.views.more = moreView(app);
   const nav = (cls) => NAV.map(([k, t, i]) => h('button', { type: 'button', class: cls, dataset: { nav: k }, onclick: () => app.show(k) }, ic(i), h('span', null, t)));

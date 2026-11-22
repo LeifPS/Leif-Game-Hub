@@ -326,3 +326,10 @@ textarea#txt{font:15.5px/1.65 ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consol
 .fgrid{grid-template-columns:minmax(0,1fr)}.fcard2,.fsamp,.fname{min-width:0}.fsamp{overflow:hidden}
 @media(max-width:699px){.fnew{min-height:0;flex-direction:row;justify-content:flex-start;text-align:left;padding:14px 16px}.fnew .fplus{margin:0;width:36px;height:36px;font-size:22px}.fnew .xs{display:none}}
 @media(min-width:700px){.fgrid{grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}}
+
+/* Ordner */
+.dcard.folder .ficon{width:100%;aspect-ratio:948/1226;display:flex;align-items:flex-end;justify-content:center;padding:0 6% 14%;margin-bottom:6px}
+.dcard.folder .ficon svg{width:100%;height:auto;filter:drop-shadow(0 3px 6px rgba(0,0,0,.12));transition:transform .12s}
+.dcard.folder:hover .ficon svg{transform:translateY(-2px)}
+.crumb{border:0;background:none;color:var(--ac);font-weight:500;font-size:15px;padding:0;margin:0 0 4px;cursor:pointer}
+.sw{border:0;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
