@@ -2,7 +2,7 @@
 import { reminderCard } from './backup.js';
 import { h, saveFile, toast, fmtTime } from './util.js';
 import { btn, sheet, confirmBox, promptBox, chips } from './ui.js';
-import { dbDel, dbPut, kvGet, kvSet } from './store.js';
+import { dbDel, dbPut, kvGet, kvSet, merkeLoeschung } from './store.js';
 import { fileBase } from './exporter.js';
 import { layout, drawPage, ensureImages, PAPERS, PAPER_COLORS, PENS, GNPAPER, DEF } from './render.js';
 import { uid } from './util.js';
@@ -120,13 +120,13 @@ export function docsView(app) {
   const FCOLORS = ['#4f7cff', '#ff6b5e', '#34c38f', '#ffb020', '#a66cff', '#ff7ab6', '#3fc1d9', '#8e8e93'];
   async function newFolder() {
     const nm = await promptBox('Name des Ordners (z. B. Mathe)', ''); if (!nm) return;
-    const f = { id: uid(), name: nm, color: FCOLORS[app.folders.length % FCOLORS.length], s: {} };
+    const f = { id: uid(), name: nm, color: FCOLORS[app.folders.length % FCOLORS.length], s: {}, updated: Date.now() };
     app.folders.push(f); await app.saveFolders(); draw(); folderSheet(f, true);
   }
   // Vorgaben eines Ordners: gelten für neue Dokumente darin (alles andere wie bei allen Dokumenten)
   function folderSheet(f, neu) {
     sheet(neu ? `Ordner „${f.name}“` : f.name, (b, api) => {
-      const fs = f.s || (f.s = {}), save = async () => { await app.saveFolders(); draw(); };
+      const fs = f.s || (f.s = {}), save = async () => { f.updated = Date.now(); await app.saveFolders(); draw(); };
       const pickPaper = (v) => {
         if (v === '') { for (const k of ['paper', 'fmt', 'paperColor', 'size', 'ml', 'mr', 'mt', 'mb']) delete fs[k]; save(); return; }
         const gp = GNPAPER[v]; fs.paper = v;
@@ -145,15 +145,15 @@ export function docsView(app) {
         h('label', { class: 'f' }, 'Stift'), chips([['', 'Wie immer'], ...Object.entries(PENS).map(([k, p]) => [k, p.name])], () => fs.pen || '', (k) => { if (!k) { for (const x of ['pen', 'ink', 'weight', 'inkAlpha']) delete fs[x]; } else { const p = PENS[k]; Object.assign(fs, { pen: k, ink: p.ink, weight: p.weight, inkAlpha: p.alpha }); } save(); }),
         h('div', { style: { display: 'grid', gap: '8px', marginTop: '22px' } },
           btn('Auf vorhandene Dokumente im Ordner anwenden', { icon: 'refresh', onclick: async () => { const ds = app.docs.filter((d) => d.folder === f.id); for (const d of ds) { d.s = { ...d.s, ...fs }; d.updated = Date.now(); await dbPut('docs', d); app.docSaved(d); } toast(`${ds.length} ${ds.length === 1 ? 'Dokument' : 'Dokumente'} angepasst`); draw(); } }),
-          btn('Ordner löschen', { icon: 'trash', cls: 'danger', onclick: async () => { api.close(); if (await confirmBox(`Ordner „${f.name}“ löschen? Die Dokumente darin bleiben erhalten und landen wieder in „Dokumente“.`, 'Ordner löschen')) { for (const d of app.docs.filter((x) => x.folder === f.id)) { d.folder = null; await dbPut('docs', d); } app.folders = app.folders.filter((x) => x.id !== f.id); if (app.folder === f.id) app.folder = null; await app.saveFolders(); draw(); } } })));
+          btn('Ordner löschen', { icon: 'trash', cls: 'danger', onclick: async () => { api.close(); if (await confirmBox(`Ordner „${f.name}“ löschen? Die Dokumente darin bleiben erhalten und landen wieder in „Dokumente“.`, 'Ordner löschen')) { for (const d of app.docs.filter((x) => x.folder === f.id)) { d.folder = null; d.updated = Date.now(); await dbPut('docs', d); } app.folders = app.folders.filter((x) => x.id !== f.id); merkeLoeschung('folders', f.id); if (app.folder === f.id) app.folder = null; await app.saveFolders(); draw(); } } })));
     });
   }
   function moveSheet(d) {
     sheet('In Ordner verschieben', (b, api) => {
-      const go = async (id) => { api.close(); d.folder = id; await dbPut('docs', d); app.docSaved(d); toast(id ? `In „${app.folderOf(id).name}“ verschoben` : 'Nach „Dokumente“ verschoben'); draw(); };
+      const go = async (id) => { api.close(); d.folder = id; d.updated = Date.now(); await dbPut('docs', d); app.docSaved(d); toast(id ? `In „${app.folderOf(id).name}“ verschoben` : 'Nach „Dokumente“ verschoben'); draw(); };
       b.append(h('div', { class: 'dlist' },
         ...[[null, 'Dokumente (kein Ordner)', '#8e8e93'], ...app.folders.map((f) => [f.id, f.name, f.color])].map(([id, nm, c]) => h('button', { type: 'button', class: 'it', onclick: () => go(id) }, h('span', { style: { width: '14px', height: '14px', borderRadius: '4px', background: c, flex: 'none' } }), h('span', { class: 'ti' }, h('b', null, nm)), (d.folder || null) === id ? h('span', { class: 'chip ac' }, 'Hier') : null)),
-        h('button', { type: 'button', class: 'it', onclick: async () => { api.close(); const nm = await promptBox('Name des neuen Ordners', ''); if (!nm) return; const f = { id: uid(), name: nm, color: FCOLORS[app.folders.length % FCOLORS.length], s: {} }; app.folders.push(f); await app.saveFolders(); go(f.id); } }, h('span', { class: 'ti' }, h('b', { style: { color: 'var(--ac)' } }, '+ Neuer Ordner')))));
+        h('button', { type: 'button', class: 'it', onclick: async () => { api.close(); const nm = await promptBox('Name des neuen Ordners', ''); if (!nm) return; const f = { id: uid(), name: nm, color: FCOLORS[app.folders.length % FCOLORS.length], s: {}, updated: Date.now() }; app.folders.push(f); await app.saveFolders(); go(f.id); } }, h('span', { class: 'ti' }, h('b', { style: { color: 'var(--ac)' } }, '+ Neuer Ordner')))));
     });
   }
 

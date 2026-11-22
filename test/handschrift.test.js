@@ -45,3 +45,27 @@ test('handschrift.leifps.de: kein Konto-Server, nur Lesen', async () => {
   assert.equal((await handschriftWeiche(r('https://handschrift.leifps.de/', 'POST'), env)).status, 405);
   assert.equal((await handschriftWeiche(r('https://handschrift.leifps.de/'), {})).status, 404);
 });
+
+import { makeD1 } from './helpers/d1.js';
+test('STools-Abgleich: Stücke hochladen, festschreiben, wieder holen; alte Fassung verschwindet', async () => {
+  const env2 = { ...env, DB: makeD1() }, B = 'https://st.leifps.de/api/sync/abcd1234';
+  const call = (u, method = 'GET', body) => handschriftWeiche(new Request(B + u, { method, body: body == null ? undefined : typeof body === 'string' ? body : JSON.stringify(body) }), env2);
+  assert.equal((await call('')).status, 404);
+  assert.equal((await call('/v00001/0', 'PUT', 'QUJD')).status, 200);
+  assert.equal((await call('/v00001/1', 'PUT', 'REVG')).status, 200);
+  assert.equal((await call('/commit', 'POST', { v: 'v00001', parts: 3, updated: 5 })).status, 409, 'fehlendes Stück');
+  assert.equal((await call('/commit', 'POST', { v: 'v00001', parts: 2, updated: 5 })).status, 200);
+  assert.deepEqual(await (await call('')).json(), { v: 'v00001', parts: 2, updated: 5 });
+  assert.equal(await (await call('/v00001/1')).text(), 'REVG');
+  await call('/v00002/0', 'PUT', 'WFla'); await call('/commit', 'POST', { v: 'v00002', parts: 1, updated: 9 });
+  assert.equal((await call('/v00001/0')).status, 404, 'alte Fassung gelöscht');
+  assert.equal((await call('/v00002/0', 'PUT', '<script>')).status, 413, 'nur Base64');
+  assert.equal((await handschriftWeiche(new Request('https://st.leifps.de/api/sync/../x'), env2)).status, 404);
+  assert.equal((await handschriftWeiche(new Request('https://st.leifps.de/api/ich'), env2)).status, 404, 'sonst keine API');
+});
+test('STools-Titel: ohne KI-Anbindung freundliche Fehlermeldung, mit KI kurzer Titel', async () => {
+  const req = (e) => handschriftWeiche(new Request('https://st.leifps.de/api/titel', { method: 'POST', body: JSON.stringify({ text: 'Die pq-Formel löst quadratische Gleichungen' }) }), e);
+  assert.equal((await req({ ...env })).status, 503);
+  const e2 = { ...env, DB: makeD1(), AI: { run: async () => ({ response: '„Die pq-Formel.“\nmehr' }) } };
+  assert.deepEqual(await (await req(e2)).json(), { titel: 'Die pq-Formel' });
+});

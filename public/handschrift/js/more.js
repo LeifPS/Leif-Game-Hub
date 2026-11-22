@@ -3,6 +3,8 @@ import { h, toast, fmtSize } from './util.js';
 import { btn, seg, confirmBox } from './ui.js';
 import { usage, persist } from './store.js';
 import { doBackup, restoreButton } from './backup.js';
+import { syncStatus, syncNow, newCode, setCode, fmtCode, normCode, validCode } from './sync.js';
+import { promptBox } from './ui.js';
 import { lastSync, daysLeft, checkNow, SYNC_DAYS } from './session.js';
 import { HDF_DOC, HDF_PROMPT, HDF_EXAMPLE } from './hdfdoc.js';
 
@@ -36,6 +38,19 @@ export function moreView(app) {
       h('p', { class: 'mut sm' }, 'Deine Schriften und Dokumente liegen nur in diesem Browser. Exportiere wichtige Schriften als Datei, bevor du Browserdaten löschst.'),
       h('div', { class: 'row wrap2' }, persisted ? h('span', { class: 'chip ok' }, 'Dauerhaft gespeichert') : btn('Dauerhaften Speicher anfordern', { cls: 'sm', onclick: async () => { const ok = await persist(); toast(ok ? 'Der Browser löscht die Daten nicht mehr von selbst.' : 'Der Browser hat das abgelehnt.'); draw(); } }),
         btn('Alle Daten löschen', { cls: 'sm danger', icon: 'trash', onclick: async () => { if (await confirmBox('Wirklich ALLE Schriften und Dokumente von diesem Gerät löschen? Das lässt sich nicht rückgängig machen.', 'Alles löschen')) { await app.wipe(); } } }))));
+    // Abgleich zwischen Geräten
+    { const st = await syncStatus(), on = validCode(st.code);
+      const when = st.at ? new Date(st.at).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : null;
+      const go = async () => { try { const r = await syncNow(); toast(!r ? 'Offline – später nochmal' : r.geholt ? `Abgeglichen: ${r.geholt} ${r.geholt === 1 ? 'Änderung' : 'Änderungen'} von einem anderen Gerät übernommen` : 'Abgeglichen – alles auf dem gleichen Stand', 3400); } catch (e) { toast('Abgleich fehlgeschlagen: ' + e.message, 5000, 'err'); } draw(); };
+      wrap.append(grp('Abgleich zwischen Geräten',
+        h('p', { class: 'mut sm', style: { margin: '0 0 10px' } }, on ? 'Schriften, Dokumente und Ordner werden automatisch zwischen deinen Geräten abgeglichen. Gib auf dem anderen Gerät denselben Code ein.' : 'Halte iPhone und iPad automatisch auf dem gleichen Stand. Die Daten werden auf deinem Gerät verschlüsselt, der Server kann sie nicht lesen. Ohne den Code kommt niemand heran, auch du nicht – schreib ihn dir auf.'),
+        on ? h('div', { class: 'synccode' }, h('code', null, fmtCode(st.code)), btn('Code kopieren', { icon: 'copy', cls: 'icon sm', title: 'Code kopieren', onclick: async () => { try { await navigator.clipboard.writeText(fmtCode(st.code)); toast('Code kopiert'); } catch (e) { toast('Kopieren nicht möglich', 3000, 'err'); } } })) : null,
+        on ? h('p', { class: 'xs mut', style: { margin: '8px 0 10px' } }, st.err ? '⚠ ' + st.err : when ? 'Zuletzt abgeglichen: ' + when : 'Noch nicht abgeglichen') : null,
+        h('div', { class: 'row wrap2' },
+          on ? btn('Jetzt abgleichen', { icon: 'refresh', cls: 'pri', onclick: go }) : btn('Abgleich einschalten', { icon: 'refresh', cls: 'pri', onclick: async () => { await setCode(newCode()); await draw(); go(); } }),
+          on ? null : btn('Code von anderem Gerät eingeben', { cls: 'sm', onclick: async () => { const t = await promptBox('Code vom anderen Gerät (24 Zeichen)', ''); if (t == null) return; const c = normCode(t); if (!validCode(c)) { toast('Der Code hat 24 Zeichen, z. B. abcd-efgh-…', 4000, 'err'); return; } await setCode(c); await draw(); go(); } }),
+          on ? btn('Ausschalten', { cls: 'sm ghost', onclick: async () => { const { confirmBox } = await import('./ui.js'); if (await confirmBox('Abgleich auf diesem Gerät ausschalten? Deine Daten bleiben hier erhalten. Mit dem Code kannst du ihn später wieder einschalten.', 'Ausschalten')) { await setCode(''); draw(); } } }) : null)));
+    }
     // Sicherung
     wrap.append(grp('Sicherung',
       h('p', { class: 'mut sm', style: { margin: '8px 0' } }, 'Speichert alle eigenen Schriften und Dokumente in einer Datei (.stools). Lege sie am besten in iCloud Drive ab. Damit kannst du alles auf einem neuen Gerät oder nach dem Löschen der Browserdaten wiederherstellen. Die App erinnert dich, wenn sich deine Schrift geändert hat.'),
@@ -57,7 +72,7 @@ export function moreView(app) {
       faq('Was passiert mit fehlenden Akzenten?', 'Akzentbuchstaben, die du nicht geschrieben hast, setzt die App aus dem Buchstaben und einem gezeichneten Akzent zusammen. Echte Zeichen aus einem Paket sehen immer besser aus.'),
       faq('Wie komme ich in GoodNotes?', 'Beim Export „GoodNotes: echte Striche“ wählen und die .goodnotes-Datei speichern. In GoodNotes dann auf + → Importieren tippen. Du bekommst echte Handschrift-Striche, die du radieren und weiterbearbeiten kannst. Als Papier kannst du unter Einstellungen „GoodNotes liniert“ oder „GoodNotes kariert“ wählen, dann sitzt die Schrift genau auf den Linien. Alternativ geht auch PDF.'),
       faq('Kann ich Zeichen direkt in der App zeichnen?', 'Ja. Beim Erstellen einer Schrift im Schritt „Vorlage“ „Direkt in der App zeichnen“ wählen, oder später bei „Ergänzen“. Jedes Zeichen zeichnest du mit Finger oder Apple Pencil in ein Feld mit Hilfslinien. Die Striche bleiben als echte Striche erhalten und landen im GoodNotes-Export 1:1.'),
-      faq('Wo liegen meine Daten?', 'Nur auf diesem Gerät, in diesem Browser. Es gibt kein Konto und es wird nichts hochgeladen. Mit „Alles sichern“ (oben) nimmst du alle Schriften und Dokumente auf ein anderes Gerät mit; eine einzelne Schrift geht auch als .hsfont.')));
+      faq('Wo liegen meine Daten?', 'Auf diesem Gerät, in diesem Browser. Es gibt kein Konto. Nur wenn du den Abgleich einschaltest, liegt zusätzlich ein verschlüsselter Stand auf dem Server, den nur Geräte mit deinem Code lesen können. Mit „Alles sichern“ (oben) nimmst du alle Schriften und Dokumente auf ein anderes Gerät mit; eine einzelne Schrift geht auch als .hsfont.')));
     wrap.append(h('p', { class: 'xs mut', style: { textAlign: 'center', margin: '18px 0 0' } }, `STools ${VERSION} · läuft komplett auf deinem Gerät · Beispielschrift „always * forever“ © Brittney Murphy (privat/nicht-kommerziell)`));
   }
   draw();

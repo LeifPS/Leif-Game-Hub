@@ -10,7 +10,13 @@ const run = (store, mode, fn) => open().then(db => new Promise((ok, fail) => { c
 export const dbGet = (s, k) => run(s, 'readonly', st => st.get(k));
 export const dbAll = (s) => run(s, 'readonly', st => st.getAll());
 export const dbPut = (s, v) => run(s, 'readwrite', st => st.put(v)).then((r) => { if (s === 'fonts' || s === 'docs') merkeAenderung(s, v); return r; });
-export const dbDel = (s, k) => run(s, 'readwrite', st => st.delete(k));
+export const dbDel = (s, k) => run(s, 'readwrite', st => st.delete(k)).then((r) => { if (s === 'fonts' || s === 'docs') merkeLoeschung(s, k); return r; });
+// Ohne Merker (für den Abgleich, damit eingespielte Änderungen nicht wieder als eigene Änderung zählen)
+export const rawPut = (s, v) => run(s, 'readwrite', st => st.put(v));
+export const rawDel = (s, k) => run(s, 'readwrite', st => st.delete(k));
+// Gelöschtes merken (Grabsteine), damit der Abgleich es auch auf anderen Geräten löscht
+export function merkeLoeschung(s, id) { merkt = merkt.then(async () => { const t = await kvGet('tomb', {}); (t[s] || (t[s] = {}))[id] = Date.now(); await kvSet('tomb', t); aenderungsHoerer.forEach((f) => f()); }).catch(() => {}); }
+export const aenderungsHoerer = new Set();
 export const kvGet = async (k, d) => { try { const r = await dbGet('kv', k); return r ? r.v : d; } catch { return d; } };
 export const kvSet = (k, v) => dbPut('kv', { k, v }).catch(() => {});
 export const persist = async () => { try { return navigator.storage && navigator.storage.persist ? await navigator.storage.persist() : false; } catch { return false; } };
@@ -35,7 +41,7 @@ const dirtyKey = (s) => 'dirty_' + s;
 let merkt = Promise.resolve();
 function merkeAenderung(s, v) {
   if (s === 'docs' && v && v.opened && v.updated && v.opened > v.updated + 2000 && Date.now() - v.opened < 5000) return;   // nur geöffnet, nicht geändert
-  merkt = merkt.then(async () => { if (!(await kvGet(dirtyKey(s), 0))) await kvSet(dirtyKey(s), Date.now()); }).catch(() => {});
+  merkt = merkt.then(async () => { if (!(await kvGet(dirtyKey(s), 0))) await kvSet(dirtyKey(s), Date.now()); aenderungsHoerer.forEach((f) => f()); }).catch(() => {});
 }
 export async function backupBlob() {
   const fonts = await dbAll('fonts'), docs = await dbAll('docs');

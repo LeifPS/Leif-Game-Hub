@@ -3,7 +3,8 @@ import { startSession } from './session.js';
 import { h, uid } from './util.js';
 import { ic, mark } from './ui.js';
 import { Font, DEF } from './render.js';
-import { dbAll, dbPut, kvGet, kvSet, persist } from './store.js';
+import { dbAll, dbPut, kvGet, kvSet, persist, aenderungsHoerer } from './store.js';
+import { initSync } from './sync.js';
 import { editorView } from './editor.js';
 import { fontsView } from './fonts.js';
 import { docsView } from './docs.js';
@@ -11,7 +12,14 @@ import { moreView } from './more.js';
 
 const app = {
   folders: [], folder: null,
-  async saveFolders() { await kvSet('folders', this.folders); },
+  async saveFolders() { await kvSet('folders', this.folders); aenderungsHoerer.forEach((f) => f()); },
+  // Der Abgleich hat Änderungen von einem anderen Gerät eingespielt
+  async syncApplied() {
+    this.folders = await kvGet('folders', []); await this.loadFonts(); this.fontCache.clear(); await this.loadDocs();
+    if (!this.fonts.find((f) => f.id === this.fontId)) this.fontId = this.fonts[0].id;
+    if (this.doc) { const n = this.docs.find((d) => d.id === this.doc.id); if (!n) { this.doc = null; if (this.view === 'write') this.show('docs'); } else if ((n.updated || 0) > (this.doc.updated || 0)) { this.doc = n; await this.views.write.load(n); } else this.doc = n; }
+    for (const k of ['docs', 'fonts', 'more']) this.views[k].refresh && this.views[k].refresh();
+  },
   folderOf(id) { return this.folders.find((f) => f.id === id) || null; },
   fonts: [], fontId: 'leif', fontCache: new Map(), docs: [], doc: null, view: 'write', theme: 'auto', installPrompt: null, swState: 'pending', views: {},
   async getFont(id) {
@@ -87,7 +95,7 @@ async function boot() {
   { const bt = document.getElementById('boot'); if (bt) { bt.style.transition = 'opacity .25s'; bt.style.opacity = '0'; setTimeout(() => bt.remove(), 280); } }
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); app.installPrompt = e; if (app.view === 'more') app.views.more.refresh(); });
   window.addEventListener('online', () => app.view === 'more' && app.views.more.refresh()); window.addEventListener('offline', () => app.view === 'more' && app.views.more.refresh());
-  registerSw(); startSession();
+  registerSw(); startSession(); initSync(app);
   if (app.fonts.some((f) => !f.builtin)) persist();   // Browser bitten, die Daten nicht von selbst zu löschen (still, ohne Nachfrage)
   for (const ev of ["gesturestart", "gesturechange"]) document.addEventListener(ev, e => e.preventDefault(), { passive: false });   // iOS: kein Pinch-Zoom
   window.__app = app;

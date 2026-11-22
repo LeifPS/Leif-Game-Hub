@@ -1,6 +1,7 @@
 // Ansicht „Schreiben“: Textfeld, Werkzeugleiste, Live-Vorschau, Einstellungen, Export, Sonderzeichen
 import { h, debounce, toast, saveFile, fmtSize, autoName } from './util.js';
 import { ic, btn, sheet, range, toggle, seg, chips, confirmBox } from './ui.js';
+import { exportVideo, videoSupported } from './video.js';
 import { layout, drawPage, ensureImages, FORMATS, PAPERS, PAPER_COLORS, PENS, DEF, GNPAPER, fmtOf } from './render.js';
 import { exportPdf, exportGoodNotes, exportGoodNotesInk, exportPngs, zipOf, fileBase } from './exporter.js';
 import { PACKS } from './packs.js';
@@ -18,7 +19,21 @@ export function editorView(app) {
 
   // ---------- Kopf ----------
   const title = h('input', { class: 'title', type: 'text', maxlength: 80, placeholder: 'Titel', 'aria-label': 'Titel des Dokuments', oninput: () => { doc.title = title.value; doc.autoT = !title.value.trim(); saveSoon(); } });
-  const bar = h('div', { class: 'bar' }, btn('Zurück zu den Dokumenten', { icon: 'cl', cls: 'icon', onclick: async () => { await saveNow(); app.show('docs'); } }), h('div', { class: 't' }, title),
+  // Titel vorschlagen lassen (nur auf Knopfdruck, nur online; der Text geht dafür einmal an den Server)
+  const aiBtn = btn('Titel vorschlagen', { icon: 'wand', cls: 'icon', title: 'Titel vorschlagen lassen (KI, braucht Internet)', onclick: async () => {
+    if (!doc || !(doc.text || '').trim()) { toast('Erst etwas schreiben, dann kann ich einen Titel vorschlagen.'); return; }
+    if (!navigator.onLine) { toast('Dafür brauchst du Internet.', 3000, 'err'); return; }
+    aiBtn.disabled = true;
+    try {
+      const r = await fetch('/api/titel', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: doc.text.slice(0, 2500) }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.titel) throw new Error(j.error || 'Kein Vorschlag');
+      doc.title = j.titel; doc.autoT = false; title.value = j.titel; saveSoon();
+      toast(`Titel: „${j.titel}“ – nochmal tippen für einen anderen`, 3000);
+    } catch (e) { toast('Titelvorschlag: ' + e.message, 4000, 'err'); }
+    aiBtn.disabled = false;
+  } });
+  const bar = h('div', { class: 'bar' }, btn('Zurück zu den Dokumenten', { icon: 'cl', cls: 'icon', onclick: async () => { await saveNow(); app.show('docs'); } }), h('div', { class: 't' }, title), aiBtn,
     btn('Einstellungen', { icon: 'sliders', cls: 'icon', onclick: () => openSettings() }), btn('Exportieren', { icon: 'download', cls: 'pri', onclick: () => openExport() }));
   const segEl = h('div', { class: 'seg2' }, seg([['ed', 'Schreiben'], ['pv', 'Vorschau']], () => pane, v => { pane = v; showPane(); }));
   // ---------- Werkzeugleiste ----------
@@ -271,7 +286,7 @@ export function editorView(app) {
       };
       const pickFmt = (v) => { const was = GNPAPER[s.paper]; s.fmt = v; if (was && v !== 'gn') s.paper = 'lined'; ch(); if (was && v !== 'gn') { api.close(); setTimeout(openSettings, 280); } };
       const sec = (t) => h('h3', { style: { margin: '20px 0 4px' } }, t);
-      b.append(h('div', { class: 'row wrap2', style: { gap: '8px', marginBottom: '4px' } }, btn('Neu würfeln', { icon: 'dice', cls: 'sm', onclick: () => { s.seed = (Math.random() * 1e6) | 0; ch(); } }), btn('Als Standard merken', { cls: 'sm', onclick: () => { const v = { ...s }; delete v.rr; delete v.seed; kvSet('lastS', v); toast('Das gilt jetzt für neue Dokumente'); } }), ...(app.folderOf(doc.folder) ? [btn(`Für „${app.folderOf(doc.folder).name}“ merken`, { cls: 'sm', title: 'Gilt dann für neue Dokumente in diesem Ordner', onclick: async () => { const f = app.folderOf(doc.folder), v = { ...s }; delete v.rr; delete v.seed; f.s = v; await app.saveFolders(); toast(`Gilt jetzt für neue Dokumente in „${f.name}“`); } })] : []), btn('Zurücksetzen', { cls: 'sm', onclick: () => { Object.assign(s, { ...DEF }); ch(); b.parentNode.parentNode && b.replaceChildren(); openSettings(); } })));
+      b.append(h('div', { class: 'row wrap2', style: { gap: '8px', marginBottom: '4px' } }, btn('Neu würfeln', { icon: 'dice', cls: 'sm', onclick: () => { s.seed = (Math.random() * 1e6) | 0; ch(); } }), btn('Als Standard merken', { cls: 'sm', onclick: () => { const v = { ...s }; delete v.rr; delete v.seed; kvSet('lastS', v); toast('Das gilt jetzt für neue Dokumente'); } }), ...(app.folderOf(doc.folder) ? [btn(`Für „${app.folderOf(doc.folder).name}“ merken`, { cls: 'sm', title: 'Gilt dann für neue Dokumente in diesem Ordner', onclick: async () => { const f = app.folderOf(doc.folder), v = { ...s }; delete v.rr; delete v.seed; f.s = v; f.updated = Date.now(); await app.saveFolders(); toast(`Gilt jetzt für neue Dokumente in „${f.name}“`); } })] : []), btn('Zurücksetzen', { cls: 'sm', onclick: () => { Object.assign(s, { ...DEF }); ch(); b.parentNode.parentNode && b.replaceChildren(); openSettings(); } })));
       b.append(sec('Papier'), h('label', { class: 'f' }, 'Format'), chips(Object.entries(FORMATS).map(([k, v]) => [k, v.name]), () => fmtOf(s), pickFmt),
         h('label', { class: 'f' }, 'Papierart'), chips(Object.entries(PAPERS), () => s.paper, pickPaper),
         GNPAPER[s.paper] ? h('p', { class: 'xs mut' }, 'Die Schrift sitzt genau auf den Linien der eingebauten GoodNotes-Vorlage' + (GNPAPER[s.paper].vp ? ' (auf jeder zweiten Zeile des Rasters)' : '') + '. Im GoodNotes-Export mit echten Strichen wird diese Vorlage als Hintergrund verwendet. Zeilenabstand und Format sind dabei fest.') : null,
@@ -332,7 +347,8 @@ export function editorView(app) {
         h('div', { style: { display: 'grid', gap: '10px' } },
           btn('PDF speichern', { icon: 'download', onclick: pdf(false) }),
           btn('PNG je Seite' + (L.pages.length > 1 ? ' (ZIP)' : ''), { icon: 'image', onclick: png(false) }),
-          btn('Nur Schrift, transparent (PNG)', { icon: 'layers', onclick: png(true) })),
+          btn('Nur Schrift, transparent (PNG)', { icon: 'layers', onclick: png(true) }),
+          videoSupported() ? btn('Schreib-Video (erste gewählte Seite)', { icon: 'pen', onclick: run(async () => { const ps = sel.trim() ? pagesOf(sel) : [0]; if (!ps || !ps.length) throw new Error('Seitenauswahl verstehe ich nicht'); msg.textContent = 'Video wird aufgenommen … bitte die App offen lassen'; const { blob, ext } = await exportVideo(L, S(), ps[0], prog); const r = await saveFile(blob, fileBase(doc.title) + '.' + ext, { share: true }); msg.textContent = r === 'abgebrochen' ? '' : `Video fertig (${fmtSize(blob.size)})`; }) }) : null),
         bar, msg, h('div', { class: 'note' }, h('b', null, 'In GoodNotes: '), 'Auf + → Importieren tippen und die Datei wählen. Jede Seite wird eine Seite im Heft. Das transparente PNG fügst du als Bild auf eigenes Papier ein.'));
     });
   }
