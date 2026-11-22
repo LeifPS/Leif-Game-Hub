@@ -13,6 +13,8 @@ Diese Beschreibung listet alles auf, was das Format kann. Alle Elemente sind opt
 - Kurzform: Mehrere Werte in einer Zeile trennt man mit " | " (mit Leerzeichen drumherum), z. B. zeile: -2 | 0
 - Zahlen mit Punkt oder Komma. Angezeigt wird mit Komma. Maße: 5mm, 2cm, 40pt, 50% (ohne Einheit = Prozent).
 - Farben: rot, blau, gruen, schwarz, orange, lila, gelb, grau, braun, rosa, tuerkis, hellblau oder #rrggbb.
+- Das Dokument steht am besten in einem Codeblock: Chat-Programme stellen sonst eckige Klammern und Zeilenumbrüche anders dar, und die Elemente gehen beim Kopieren verloren.
+- Formeln außerhalb der Formel-Elemente stehen zwischen $…$ (z. B. in [aufgabe] oder normalem Text), sonst erscheinen sie als gewöhnlicher Text.
 - Fehler zerstören nie das ganze Blatt: Ein kaputtes Element wird rot markiert oder als Platzhalter gezeigt, der Rest wird gezeichnet.
 - Das Blatt ist für GoodNotes-Papier "kariert" ausgelegt: Koordinatensysteme und Tabellen liegen auf den Kästchen.
 
@@ -30,7 +32,7 @@ Wörter in Formeln (z. B. "und", "oder", Einheiten) in Anführungszeichen setzen
 [antwort]  Leeres Antwortfeld. hoehe: 40mm | linien: 4 (Schreiblinien) | kaestchen: ja (Karomuster)
 [zitat] quelle: … | Inhalt   [liste] typ: nummeriert, darin [eintrag]Text[/eintrag]
 [spalten] mit mehreren [spalte]…[/spalte] nebeneinander (breite: 50% optional, abstand: 6mm). Spalten dürfen alles enthalten.
-[gruppe] rand: ja – fasst Inhalt zusammen.   [abstand] hoehe: 10mm   [trennlinie]   [seitenumbruch]
+[kasten] Rahmen um beliebigen Inhalt, optional titel: … (z. B. für ein Ergebnis).   [gruppe] rand: ja – fasst Inhalt zusammen.   [abstand] hoehe: 10mm   [trennlinie]   [seitenumbruch]
 ### Formeln und Rechnen
 [formel]
 ausdruck: f(x) = (x^2 - 4) / 2
