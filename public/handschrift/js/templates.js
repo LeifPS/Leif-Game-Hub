@@ -351,6 +351,17 @@ zeile: | |
 [/tabelle]
 ` },
 
+  { id: 'vokabelliste', cat: 'lernen', title: 'Vokabelliste (zweispaltig)', desc: 'Einfach „Wort = Übersetzung“ tippen, die App setzt zwei saubere Spalten', s: KAR, text: `[titel]Vocabulaire – Unité 3[/titel]
+
+[vokabeln]
+kopf: Französisch | Deutsch
+le chat = die Katze
+avoir faim = Hunger haben
+la boulangerie = die Bäckerei
+être en retard = zu spät sein
+aller à l'école = zur Schule gehen
+le déjeuner = das Mittagessen
+[/vokabeln]` },
   { id: 'karteikarten', cat: 'lernen', title: 'Karteikarten', desc: 'Frage und Antwort in Rahmen, zum Ausdrucken und Abfragen', s: KAR, text: `[titel]Karteikarten[/titel]
 
 [gruppe]

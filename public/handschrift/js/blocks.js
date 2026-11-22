@@ -166,7 +166,7 @@ function tableFromRows(ctx, head, rows, o, el) {
     let yy = 0; for (let i = 0; i < rh.length - 1; i++) { yy += rh[i]; items.push(P([[0, yy], [Wt, yy]], i === 0 && head ? 1.1 : .8, col)); }
     let xx = 0; for (let i = 0; i < T.cw.length - 1; i++) { xx += T.cw[i]; items.push(P([[xx, 0], [xx, Ht]], .8, col)); }
   }
-  return { w: Wt, h: Ht, base: 1.85 * u, flat: true, items, align: o.align || 'mitte', snap: ctx.gridOk ? { x: 0, y: 0 } : null };
+  return { w: Wt, h: Ht, base: 1.85 * u, flat: true, items, align: o.align || 'mitte', snap: ctx.gridOk ? { x: 0, y: 0 } : null, cw: T.cw, rh };
 }
 function tableBlock(el, ctx) {
   const o = opts(el, ctx); let head = null; const rows = [];
@@ -178,6 +178,38 @@ function tableBlock(el, ctx) {
   if (!t) return bw;
   const tb = textBox(ctx, ctx.prep(t), 1, o.col), dY = tb.asc + tb.desc + .5 * ctx.u, items = [...shiftItems(tb.items, (bw.w - tb.w) / 2, tb.asc), ...shiftItems(bw.items, 0, dY)];
   return { ...bw, items, h: bw.h + dY, base: tb.asc, snap: bw.snap ? { x: 0, y: dY } : null };
+}
+// Vokabelliste: jede Zeile „Wort = Übersetzung“ (auch –, |, Tab); zwei Spalten über die ganze Breite, ohne Rahmen, optional Trennlinie
+function vocabBlock(el, ctx) {
+  const o = opts(el, ctx), rows = [];
+  for (const raw of text(el).split('\n')) {
+    const l = raw.trim(); if (!l) continue;
+    const m = /^(.*?)\s*(?:\t|\s=\s|\s[–—-]\s|\s\|\s)\s*(.*)$/.exec(l);
+    if (!m) { ctx.err(el.line, `Vokabel ohne Übersetzung: „${l}“ (Beispiel: le chat = die Katze)`, 'warn'); rows.push([l, '']); } else rows.push([m[1].trim(), m[2].trim()]);
+  }
+  if (!rows.length) { ctx.err(el.line, '[vokabeln] ohne Zeilen', 'warn'); return null; }
+  const kopf = getP(el, 'kopf'), head = kopf ? splitBar(kopf).slice(0, 2) : null;
+  const split = Math.min(.7, Math.max(.3, (parseFloat(getP(el, 'aufteilung')) || 50) / 100));
+  const fake = { kids: [], props: [{ k: 'rahmen', v: 'nein' }, { k: 'ausrichtung', v: 'links' }] };
+  const t = tableFromRows(ctx, head, rows, { ...o, align: 'links' }, fake);
+  // zweite Spalte bei „aufteilung“ (Standard: Mitte) beginnen lassen
+  const W = ctx.W, c0 = t.cw[0], want = Math.max(c0, W * split), gc = ctx.grid ? ctx.grid.cell : 0, x2 = gc ? Math.round(want / gc) * gc : want, dx = x2 - c0;
+  const items = t.items.map((it) => it); const shifted = [];
+  // Einträge der zweiten Spalte erkennen: alles, was rechts von c0 beginnt
+  for (const it of items) { const xs = itemMinX(it); shifted.push(xs != null && xs >= c0 - 1 ? shiftItems([it], dx, 0)[0] : it); }
+  const Ht = t.h, col = o.col || GRAY;
+  if (bool(getP(el, 'linie'), true)) shifted.push(P([[x2 - .45 * ctx.u, .15 * ctx.u], [x2 - .45 * ctx.u, Ht - .15 * ctx.u]], .8, col));
+  if (head) shifted.push(P([[0, t.rh[0]], [Math.min(W, t.w + dx), t.rh[0]]], .9, col));
+  let out = { ...t, items: shifted, w: Math.min(W, t.w + dx), align: 'links' };
+  const ti = getP(el, 'titel');
+  if (ti) { const tb = textBox(ctx, ctx.prep('**' + ti + '**'), 1, o.col), dY = tb.asc + tb.desc + .5 * ctx.u; out = { ...out, items: [...shiftItems(tb.items, 0, tb.asc), ...shiftItems(out.items, 0, dY)], h: out.h + dY, base: tb.asc, snap: out.snap ? { x: 0, y: dY } : null }; }
+  return out;
+}
+function itemMinX(it) {
+  if (it.pts) return Math.min(...it.pts.map((p) => p[0]));
+  if (it.x != null) return it.x;
+  if (it.path && it.path.pts) return Math.min(...it.path.pts.map((p) => p[0]));
+  return null;
 }
 function valueTableBlock(el, ctx) {
   const o = opts(el, ctx), fs = getP(el, 'funktion'); if (!fs) { ctx.err(el.line, '[value_table] braucht funktion'); return null; }
@@ -450,6 +482,7 @@ export function renderBlock(el, ctx) {
     case 'fraction': return fractionBlock(el, ctx);
     case 'root': return rootBlock(el, ctx);
     case 'table': return tableBlock(el, ctx);
+    case 'vocab': return vocabBlock(el, ctx);
     case 'valuetable': return valueTableBlock(el, ctx);
     case 'graph': return graphBlock(el, ctx);
     case 'chart': case 'flow': case 'tree': case 'mindmap': case 'venn': case 'timeline': case 'pyramid': case 'cycle': return visualBlock(el, { ...ctx, textBox: (s, sc, col) => textBox(ctx, s, sc, col) }, el.name);

@@ -46,7 +46,7 @@ export const PENS = {
   gruen:       { name: 'Grün', ink: '#1b7a3a', weight: .35, alpha: 1 },
 };
 export const DEF = {
-  fmt: 'gn', paper: 'gnlin', paperColor: 'weiss', scan: false, pen: 'kugel_schwarz', ink: '#16161c', weight: .3, inkAlpha: 1,
+  fmt: 'gn', paper: 'gnlin', paperColor: 'weiss', scan: false, tired: .3, pen: 'kugel_schwarz', ink: '#16161c', weight: .3, inkAlpha: 1,
   size: 18, lh: 2.9, sp: .9, wsp: 1, jit: .6, jw: 1, jl: 1, jb: 1, jg: 1, ja: 1, slant: 0, capsc: 1, seed: 7,
   mt: 90, mb: 80, ml: 70, mr: 60, kz: true, markup: true, sz: false, margin: true,
   header: '', pageNum: false, pageNumFmt: '{n}',
@@ -270,9 +270,11 @@ export function layout(text, S, font) {
         const e = { g: { adv: g.adv, st: g.st }, x: cx, y: yb };
         cx += g.adv; if (!startE) startE = e; endE = e; continue;
       }
-      const m = 1 + nS(cx) * .035 * jG;
+      // Ermüdung: je weiter hinten im Text (Seite + Position auf der Seite), desto etwas unruhiger
+      const fat = S.tired ? 1 + S.tired * Math.min(pages.length - 1 + y / PH, 6) * .14 : 1;
+      const m = 1 + nS(cx) * .035 * jG * fat;
       const tEnd = (cx - left) / Math.max(1, right - left), adv = tEnd > .82 && S.endTight !== false ? g.adv * (1 - .2 * (tEnd - .82)) : g.adv;   // am Zeilenende wird man etwas enger
-      const e = { g, m, x: cx, y: y + (slope * (cx - left) + wordDy + nY(cx) * S.size * .09 * jB + g.dy) * VJ + g.up * k, rot: nR(cx) * .045 * jG + g.rot };
+      const e = { g, m, x: cx, y: y + (slope * (cx - left) * fat + wordDy * fat + nY(cx) * S.size * .09 * jB * fat + g.dy * fat) * VJ + g.up * k, rot: (nR(cx) * .045 * jG + g.rot) * fat };
       const pg = pages[pages.length - 1];
       if (g.wk) e.wk = g.wk;
       pg.push(e); cx += adv;

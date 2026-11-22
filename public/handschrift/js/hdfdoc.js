@@ -45,6 +45,11 @@ kopf: x | f(x)
 zeile: -2 | 0
 zeile: 0 | -4
 [/tabelle]   (Zahlen mit Punkt werden mit Komma gesetzt; Zellen mit $Formel$ werden als Formel gesetzt; optional titel, rahmen: ja|nein, ausrichtung.)
+[vokabeln]
+kopf: Französisch | Deutsch
+le chat = die Katze
+avoir faim = Hunger haben
+[/vokabeln]   (Vokabelliste: eine Vokabel pro Zeile, getrennt mit =, – oder |; zwei Spalten über die ganze Breite, ohne Rahmen; optional titel, linie: ja|nein, aufteilung: 40 (Prozent für die linke Spalte).)
 [wertetabelle]  Berechnet Werte selbst: funktion: x^2-4 | xvon: -3 | xbis: 3 | schritt: 1 | nachkommastellen: 2 | kopf: x | f(x) | richtung: waagerecht|senkrecht
 ### Koordinatensystem mit Funktionen
 [graph titel="Parabel"]
