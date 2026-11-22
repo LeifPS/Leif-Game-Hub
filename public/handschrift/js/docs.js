@@ -73,6 +73,7 @@ export function docsView(app) {
       box.replaceChildren(...fs, ...(ds.length ? ds.map(card) : fs.length ? [] : [h('div', { class: 'empty', style: { gridColumn: '1 / -1' } }, q ? 'Nichts gefunden.' : app.folder ? 'Dieser Ordner ist noch leer. Tippe oben auf + für ein neues Dokument.' : 'Noch keine Dokumente. Tippe oben auf + für ein neues.')]));
     }
     grid();
+    if (!app.folder && app.trash.length) wrap.append(h('button', { type: 'button', class: 'trashlink', onclick: trashSheet }, ic('trash'), `Papierkorb (${app.trash.length})`));
     // ---- Kachel ----
     function card(d) {
       const F = FORMATS[fmtOf(d.s || {})] || FORMATS.gn, ratio = `${F.w} / ${F.h}`;
@@ -109,6 +110,23 @@ export function docsView(app) {
       el.addEventListener('contextmenu', (e) => { if (sort === 'custom') e.preventDefault(); });
       return el;
     }
+  }
+
+  // ---------- Papierkorb ----------
+  function trashSheet() {
+    sheet('Papierkorb', (b, api) => {
+      const list = h('div', { class: 'dlist' });
+      const fill = () => {
+        if (!app.trash.length) { list.replaceChildren(h('div', { class: 'empty' }, 'Der Papierkorb ist leer.')); return; }
+        list.replaceChildren(...app.trash.map((d) => { const tage = Math.max(0, 30 - Math.floor((Date.now() - d.deleted) / 864e5));
+          return h('div', { class: 'it' }, h('span', { class: 'ti' }, h('b', null, d.title || 'Ohne Titel'), h('span', { class: 'xs mut' }, `wird in ${tage} ${tage === 1 ? 'Tag' : 'Tagen'} endgültig gelöscht`)),
+            btn('Wiederherstellen', { icon: 'undo', cls: 'icon sm', title: 'Wiederherstellen', onclick: async () => { await app.restoreDoc(d); fill(); draw(); toast('Wiederhergestellt'); } }),
+            btn('Endgültig löschen', { icon: 'trash', cls: 'icon sm danger', title: 'Endgültig löschen', onclick: async () => { if (await confirmBox(`„${d.title || 'Dokument'}“ endgültig löschen? Das lässt sich nicht rückgängig machen.`)) { await app.purgeDoc(d); fill(); draw(); } } })); }));
+      };
+      fill();
+      b.append(h('p', { class: 'sm mut', style: { margin: '0 0 12px' } }, 'Gelöschte Dokumente bleiben hier 30 Tage, danach werden sie automatisch endgültig gelöscht.'), list,
+        app.trash.length > 1 ? h('div', { style: { marginTop: '14px' } }, btn('Papierkorb leeren', { icon: 'trash', cls: 'danger', onclick: async () => { if (await confirmBox(`Alle ${app.trash.length} Dokumente endgültig löschen?`, 'Leeren')) { for (const d of [...app.trash]) await dbDel('docs', d.id); await app.loadDocs(); api.close(); draw(); } } })) : null);
+    });
   }
 
   // ---------- Ordner (z. B. Fächer) ----------
@@ -171,7 +189,7 @@ export function docsView(app) {
         btn('Duplizieren', { icon: 'copy', onclick: async () => { api.close(); await app.newDoc({ ...d, id: undefined, title: (d.title || 'Dokument') + ' (Kopie)', created: Date.now(), updated: Date.now(), opened: 0 }); draw(); toast('Dupliziert'); } }),
         btn('An den Anfang', { icon: 'cl', onclick: move(-1) }), btn('Ans Ende', { icon: 'cr', onclick: move(1) }),
         btn('Text als Datei speichern', { icon: 'download', onclick: () => { api.close(); saveFile(new Blob([d.text], { type: 'text/plain' }), fileBase(d.title) + '.txt'); } }),
-        btn('Löschen', { icon: 'trash', cls: 'danger', onclick: async () => { api.close(); if (await confirmBox(`„${d.title || 'Dokument'}“ wirklich löschen?`)) { await dbDel('docs', d.id); thumbs.delete(d.id); await app.docsChanged(d.id); draw(); } } })));
+        btn('In den Papierkorb', { icon: 'trash', cls: 'danger', onclick: async () => { api.close(); thumbs.delete(d.id); await app.trashDoc(d); draw(); toast('Im Papierkorb – 30 Tage lang wiederherstellbar', 3000); } })));
     });
   }
   init();

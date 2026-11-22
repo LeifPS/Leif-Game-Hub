@@ -454,3 +454,34 @@ label.f{margin:16px 0 7px}
 :root[data-theme=dark] .tamirror .hl{background:rgba(201,168,42,.45);box-shadow:0 0 0 1px rgba(201,168,42,.45)}
 .tamirror .hd{font-weight:700;color:var(--tx)}
 .tamirror .li{color:var(--ac)}
+.trashlink{display:inline-flex;align-items:center;gap:8px;margin:34px 2px 0;border:0;background:none;color:var(--mut);font-weight:500;font-size:14px;cursor:pointer;padding:6px 0}
+.trashlink:hover{color:var(--ac)}
+.trashlink .ic{width:18px;height:18px}
+.dlist .it .ti{display:flex;flex-direction:column}
+/* Text und Blatt verbinden */
+.pg .cv .caretmark{position:absolute;border-radius:6px;background:rgba(47,107,255,.14);box-shadow:0 0 0 1.5px rgba(47,107,255,.55);pointer-events:none;opacity:0}
+.pg .cv .caretmark.on{animation:cm 2.2s ease-out forwards}
+@keyframes cm{0%{opacity:0}12%{opacity:1}70%{opacity:1}100%{opacity:0}}
+.wordpop{position:absolute;transform:translate(-30%,-100%);display:inline-flex;align-items:center;gap:6px;border:0;border-radius:99px;background:rgba(28,28,30,.92);color:#fff;font:600 13px/1 -apple-system,system-ui,sans-serif;padding:8px 12px;box-shadow:0 4px 14px rgba(0,0,0,.2);cursor:pointer;z-index:3;white-space:nowrap;animation:wp .15s ease-out}
+.wordpop .ic{width:15px;height:15px}
+@keyframes wp{from{opacity:0;transform:translate(-30%,-80%)}}
+/* Trenner zwischen Text und Blatt */
+.splitter{display:none}
+@media(min-width:900px){
+  .splitter{display:block;flex:none;width:10px;margin:0 -5px;position:relative;z-index:5;cursor:col-resize;touch-action:none}
+  .splitter i{position:absolute;left:50%;top:50%;width:4px;height:44px;border-radius:4px;background:var(--bd);transform:translate(-50%,-50%);transition:background .15s,height .15s}
+  .splitter:hover i,.splitter.on i{background:var(--ac);height:64px}
+  .pane.ed{border-right:0}
+  .split .pane.pv{border-left:.5px solid var(--sep)}
+}
+/* Ladezustände */
+@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+.pg .cv.loading{background:linear-gradient(90deg,var(--surf) 0,var(--surf2) 50%,var(--surf) 100%);background-size:800px 100%;animation:shimmer 1.2s linear infinite}
+.pg .cv.loading canvas{opacity:0}
+.pg .cv canvas{transition:opacity .2s}
+.view.on{animation:viewin .18s ease-out}
+@keyframes viewin{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}
+.dcard .dprev .dtxt{background:linear-gradient(90deg,#fff 0,#f2f2f5 50%,#fff 100%);background-size:800px 100%;animation:shimmer 1.4s linear infinite;color:transparent;width:100%}
+.fname .sk,.fsamp:empty{background:linear-gradient(90deg,var(--surf2) 0,var(--bd) 50%,var(--surf2) 100%);background-size:800px 100%;animation:shimmer 1.2s linear infinite;border-radius:6px}
+.fsamp:empty{height:26px;width:80%}
+@media (prefers-reduced-motion:reduce){.view.on,.pg .cv.loading,.dcard .dprev .dtxt{animation:none}}

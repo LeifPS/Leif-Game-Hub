@@ -3,7 +3,7 @@ import { startSession } from './session.js';
 import { h, uid } from './util.js';
 import { ic, mark } from './ui.js';
 import { Font, DEF, migrateS } from './render.js';
-import { dbAll, dbPut, kvGet, kvSet, persist, aenderungsHoerer } from './store.js';
+import { dbAll, dbPut, dbDel, kvGet, kvSet, persist, aenderungsHoerer } from './store.js';
 import { initSync } from './sync.js';
 import { editorView } from './editor.js';
 import { fontsView } from './fonts.js';
@@ -21,6 +21,7 @@ const app = {
     for (const k of ['docs', 'fonts', 'more']) this.views[k].refresh && this.views[k].refresh();
   },
   folderOf(id) { return this.folders.find((f) => f.id === id) || null; },
+  trash: [],
   fonts: [], fontId: 'leif', fontCache: new Map(), docs: [], doc: null, view: 'write', theme: 'auto', installPrompt: null, swState: 'pending', views: {},
   async getFont(id) {
     id = this.fonts.find(f => f.id === id) ? id : this.fonts[0].id;
@@ -38,9 +39,16 @@ const app = {
   async fontSaved(rec) { persist(); this.fontCache.delete(rec.id); await this.loadFonts(); this.fontId = rec.id; kvSet('fontId', rec.id); if (this.doc) { this.doc.fontId = rec.id; dbPut('docs', this.doc); } this.views.fonts.refresh(); await this.views.write.refresh(); this.show(this.doc ? 'write' : 'docs'); },
   async fontsChanged() { await this.loadFonts(); if (!this.fonts.find(f => f.id === this.fontId)) this.fontId = this.fonts[0].id; this.fontCache.clear(); this.views.write.refresh(); },
   async loadDocs() {
-    this.docs = (await dbAll('docs')).sort((a, b) => (b.updated || 0) - (a.updated || 0));
-    for (const d of this.docs) if (migrateS(d.s)) { d.updated = Date.now(); await dbPut('docs', d); }   // alte Papiere -> GoodNotes-Vorlagen
+    const all = (await dbAll('docs')).sort((a, b) => (b.updated || 0) - (a.updated || 0));
+    for (const d of all) if (migrateS(d.s)) { d.updated = Date.now(); await dbPut('docs', d); }   // alte Papiere -> GoodNotes-Vorlagen
+    // Papierkorb: gelöschte Dokumente bleiben 30 Tage, danach endgültig weg
+    for (const d of all) if (d.deleted && Date.now() - d.deleted > 30 * 864e5) await dbDel('docs', d.id);
+    this.trash = all.filter((d) => d.deleted && Date.now() - d.deleted <= 30 * 864e5).sort((a, b) => b.deleted - a.deleted);
+    this.docs = all.filter((d) => !d.deleted);
   },
+  async trashDoc(d) { d.deleted = Date.now(); d.updated = Date.now(); await dbPut('docs', d); await this.docsChanged(d.id); },
+  async restoreDoc(d) { delete d.deleted; d.updated = Date.now(); if (d.folder && !this.folderOf(d.folder)) d.folder = null; await dbPut('docs', d); await this.loadDocs(); },
+  async purgeDoc(d) { await dbDel('docs', d.id); await this.loadDocs(); },
   docSaved(d) { const i = this.docs.findIndex(x => x.id === d.id); if (i < 0) this.docs.unshift(d); else this.docs[i] = d; this.docs.sort((a, b) => (b.updated || 0) - (a.updated || 0)); },
   async newDoc(o = {}) {
     const last = await kvGet('lastS', {}), now = Date.now();

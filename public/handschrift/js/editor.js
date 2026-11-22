@@ -10,7 +10,7 @@ import { PACKS } from './packs.js';
 import { openWizard } from './wizard.js';
 import { openTopUp } from './extra.js';
 import { checkText } from './grammar.js';
-import { dbPut, kvSet } from './store.js';
+import { dbPut, kvSet, kvGet } from './store.js';
 
 const MARGINS = { schmal: [70, 60, 90, 80], normal: [120, 100, 140, 120], breit: [170, 150, 180, 150] };
 
@@ -168,7 +168,18 @@ export function editorView(app) {
   const hlUpd = attachHighlight(ta);   // formatierte Ansicht unter dem Textfeld
   pagesEl = h('div', { class: 'preview' });
   const pvPane = h('div', { class: 'pane pv' }, pagesEl);
-  const split = h('div', { class: 'split' }, edPane, pvPane);
+  // Trenner zwischen Text und Blatt (nur bei nebeneinander), Breite wird gemerkt
+  const splitter = h('div', { class: 'splitter', role: 'separator', 'aria-orientation': 'vertical', title: 'Ziehen, um die Breite zu ändern' }, h('i'));
+  const split = h('div', { class: 'split' }, edPane, splitter, pvPane);
+  const setSplit = (pc) => { pc = Math.max(25, Math.min(70, pc)); edPane.style.flex = `0 0 ${pc}%`; edPane.style.maxWidth = 'none'; return pc; };
+  kvGet('splitW', null).then((v) => { if (v) setSplit(v); });
+  splitter.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); splitter.setPointerCapture(e.pointerId); splitter.classList.add('on'); let last = null;
+    const mv = (ev) => { const r = split.getBoundingClientRect(); last = setSplit((ev.clientX - r.left) / r.width * 100); };
+    const up = () => { splitter.classList.remove('on'); splitter.removeEventListener('pointermove', mv); if (last) { kvSet('splitW', last); dirty.clear(); wraps.forEach((w, i) => dirty.add(i)); drawVisible(); } };
+    splitter.addEventListener('pointermove', mv); splitter.addEventListener('pointerup', up, { once: true }); splitter.addEventListener('pointercancel', up, { once: true });
+  });
+  splitter.addEventListener('dblclick', () => { edPane.style.flex = ''; edPane.style.maxWidth = ''; kvSet('splitW', null); });
   root.append(bar, segEl, split);
   const showPane = () => { edPane.classList.toggle('on', pane === 'ed'); pvPane.classList.toggle('on', pane === 'pv'); segEl.replaceChildren(seg([['ed', 'Schreiben'], ['pv', 'Vorschau']], () => pane, v => { pane = v; showPane(); })); if (pane === 'pv') drawVisible(); };
 
@@ -190,25 +201,68 @@ export function editorView(app) {
     pruneRerolls();
     const n = L.pages.length;
     while (wraps.length < n) {
-      const i = wraps.length, cv = h('canvas'), box = h('div', { class: 'cv', style: { aspectRatio: `${L.PW} / ${L.PH}` } }, cv);
+      const i = wraps.length, cv = h('canvas'), box = h('div', { class: 'cv loading', style: { aspectRatio: `${L.PW} / ${L.PH}` } }, cv);
       const w = h('div', { class: 'pg' }, h('div', { class: 'cap' }, h('span'), btn('Als PNG', { cls: 'sm ghost', onclick: () => pagePng(i) })), box);
-      box.addEventListener('click', (ev) => { if (!rerollAt(w._i, ev, box)) w.classList.toggle('zoom'); }); w._cv = cv; w._i = i; w._box = box; pagesEl.append(w); wraps.push(w); io && io.observe(w);
+      box.addEventListener('click', (ev) => { if (!wordTap(w._i, ev, box)) w.classList.toggle('zoom'); }); w._cv = cv; w._i = i; w._box = box; pagesEl.append(w); wraps.push(w); io && io.observe(w);
     }
     while (wraps.length > n) { const w = wraps.pop(); io && io.unobserve(w); w.remove(); }
     wraps.forEach((w, i) => { w._box.style.aspectRatio = `${L.PW} / ${L.PH}`; w.firstChild.firstChild.textContent = `Seite ${i + 1} von ${n}`; dirty.add(i); });
     drawVisible(); updateInfo();
   }
   // Wort in der Vorschau antippen -> nur dieses Wort bekommt andere Varianten
-  function rerollAt(pi, ev, box) {
+  // ---------- Text und Blatt verbinden ----------
+  // Wörter im Text und auf dem Blatt werden über ihren Text und die Nummer des Vorkommens zugeordnet (wk = 'Nr:Wort').
+  const MARK = /\*\*|__|~~|==|\[(?:\/|rot|blau|gruen|grün|schwarz|orange|lila|gelb|grau)\]/g;
+  const cleanWord = (w) => w.replace(MARK, '');
+  function wordAtCaret() {
+    const v = ta.value, p = ta.selectionStart; if (!v) return null;
+    let s0 = p, e0 = p; while (s0 > 0 && !/\s/.test(v[s0 - 1])) s0--; while (e0 < v.length && !/\s/.test(v[e0])) e0++;
+    const w = cleanWord(v.slice(s0, e0)); if (!w) return null;
+    let k = 0; for (const m of v.slice(0, s0).matchAll(/\S+/g)) if (cleanWord(m[0]) === w) k++;
+    return { w, k };
+  }
+  function entriesOfWord(w, k) {
+    if (!L) return null; const hits = new Map();
+    L.pages.forEach((pg, pi) => { for (const e of pg) if (e.wk && e.g && e.wk.slice(e.wk.indexOf(':') + 1) === w) { const n = +e.wk.slice(0, e.wk.indexOf(':')); if (!hits.has(n)) hits.set(n, { pi, es: [] }); hits.get(n).es.push(e); } });
+    const list = [...hits.entries()].sort((a, b) => a[0] - b[0]).map((x) => x[1]);
+    return list[Math.min(k, list.length - 1)] || null;
+  }
+  function markOnPage(hit, scroll = true) {
+    const w = wraps[hit.pi]; if (!w) return;
+    const u = S().size, x0 = Math.min(...hit.es.map((e) => e.x)) - u * .25, x1 = Math.max(...hit.es.map((e) => e.x + e.g.adv)) + u * .25, y0 = Math.min(...hit.es.map((e) => e.y)) - u * 1.55, y1 = Math.max(...hit.es.map((e) => e.y)) + u * .55;
+    let m = w._box.querySelector('.caretmark'); if (!m) { m = h('div', { class: 'caretmark' }); w._box.append(m); }
+    Object.assign(m.style, { left: (x0 / L.PW * 100) + '%', top: (y0 / L.PH * 100) + '%', width: ((x1 - x0) / L.PW * 100) + '%', height: ((y1 - y0) / L.PH * 100) + '%' });
+    m.classList.remove('on'); void m.offsetWidth; m.classList.add('on');
+    for (const o of wraps) if (o !== w) o._box.querySelector('.caretmark')?.remove();
+    if (scroll) { const pv = pagesEl.parentNode, r = m.getBoundingClientRect(), pr = pv.getBoundingClientRect(); if (r.top < pr.top + 40 || r.bottom > pr.bottom - 40) pv.scrollBy({ top: r.top - pr.top - pr.height / 3, behavior: 'smooth' }); }
+  }
+  let caretT = 0;
+  const followCaret = () => { clearTimeout(caretT); caretT = setTimeout(() => { if (document.activeElement !== ta) return; const c = wordAtCaret(); if (!c) return; const hit = entriesOfWord(c.w, c.k); if (hit) markOnPage(hit); }, 250); };
+  ta.addEventListener('click', followCaret); ta.addEventListener('keyup', (e) => { if (/Arrow|Home|End|Page/.test(e.key)) followCaret(); });
+  // Wort auf dem Blatt antippen: Cursor springt im Text dorthin, dazu ein kleiner Knopf zum Neu-Schreiben
+  function wordTap(pi, ev, box) {
     if (!L || !L.pages[pi]) return false;
     const r = box.getBoundingClientRect(), px = (ev.clientX - r.left) * L.PW / r.width, py = (ev.clientY - r.top) * L.PH / r.height, u = S().size;
     let hit = null;
-    for (const e of L.pages[pi]) if (e.wk && e.g && px >= e.x - u * .1 && px <= e.x + e.g.adv + u * .1 && py >= e.y - u * 1.5 && py <= e.y + u * .5) { hit = e.wk; break; }
-    if (!hit) return false;
-    const s = S(); s.rr = { ...(s.rr || {}) }; s.rr[hit] = (s.rr[hit] || 0) + 1;
-    saveSoon(); render();
-    toast(`„${hit.slice(hit.indexOf(':') + 1)}“ neu geschrieben – nochmal tippen für eine andere Variante`, 2200);
+    for (const e of L.pages[pi]) if (e.wk && e.g && px >= e.x - u * .1 && px <= e.x + e.g.adv + u * .1 && py >= e.y - u * 1.5 && py <= e.y + u * .5) { hit = e; break; }
+    if (!hit) { box.querySelector('.wordpop')?.remove(); return false; }
+    const wk = hit.wk, n = +wk.slice(0, wk.indexOf(':')), w = wk.slice(wk.indexOf(':') + 1);
+    // k-tes Vorkommen dieses Worts auf dem Blatt -> k-tes Vorkommen im Text
+    const nums = [...new Set(L.pages.flat().filter((e) => e.wk && e.wk.slice(e.wk.indexOf(':') + 1) === w).map((e) => +e.wk.slice(0, e.wk.indexOf(':'))))].sort((a, b) => a - b), k = nums.indexOf(n);
+    let seen = 0, at = -1; for (const m of ta.value.matchAll(/\S+/g)) if (cleanWord(m[0]) === w) { if (seen === k) { at = m.index; break; } seen++; }
+    const es = L.pages[pi].filter((e) => e.wk === wk);
+    markOnPage({ pi, es }, false);
+    if (at >= 0) { ta.focus({ preventScroll: true }); ta.setSelectionRange(at, at + [...ta.value.slice(at)].join('').match(/^\S+/)[0].length); const lh = parseFloat(getComputedStyle(ta).lineHeight) || 24, line = ta.value.slice(0, at).split('\n').length; if (pane === 'ed' || matchMedia('(min-width:900px)').matches) ta.scrollTop = Math.max(0, line * lh - ta.clientHeight / 3); }
+    box.querySelector('.wordpop')?.remove();
+    const x1 = Math.max(...es.map((e) => e.x + e.g.adv)), y0 = Math.min(...es.map((e) => e.y)) - u * 1.6;
+    const pop = h('button', { type: 'button', class: 'wordpop', style: { left: Math.min(92, x1 / L.PW * 100) + '%', top: Math.max(0, y0 / L.PH * 100 - 4) + '%' }, onclick: (e2) => { e2.stopPropagation(); reroll(wk); } }, ic('refresh'), 'Neu schreiben');
+    box.append(pop); setTimeout(() => pop.remove(), 4000);
     return true;
+  }
+  function reroll(wk) {
+    const s = S(); s.rr = { ...(s.rr || {}) }; s.rr[wk] = (s.rr[wk] || 0) + 1;
+    saveSoon(); render();
+    toast(`„${wk.slice(wk.indexOf(':') + 1)}“ neu geschrieben`, 1600);
   }
   function pruneRerolls() {   // Einträge zu Wörtern, die es nicht mehr gibt, entfernen
     const s = S(); if (!s.rr || !L) return;
@@ -222,7 +276,7 @@ export function editorView(app) {
       if (!dirty.has(i)) return; const r = w.getBoundingClientRect();
       if (r.bottom < h0.top - 600 || r.top > h0.bottom + 600 || (r.width === 0 && i > 1)) return;
       dirty.delete(i); const ent = L.pages[i];
-      ensureImages(ent).then(() => { if (my === version && L.pages[i] === ent) drawPage(w._cv, ent, L, S(), scaleFor(L.pages.length), false); });
+      ensureImages(ent).then(() => { if (my === version && L.pages[i] === ent) { drawPage(w._cv, ent, L, S(), scaleFor(L.pages.length), false); w._box.classList.remove('loading'); } });
     });
   }
   io = new IntersectionObserver(() => drawVisible(), { root: null, rootMargin: '600px' });
@@ -303,7 +357,7 @@ export function editorView(app) {
         h('p', { class: 'mut xs', style: { margin: '-4px 0 8px' } }, 'Auf späteren Seiten wird die Schrift ganz leicht unruhiger, wie beim echten Schreiben.'),
         toggle('Buchstabenpaare unterschneiden', 'T, V, W, F, P und Satzzeichen rücken näher heran, wie beim echten Schreiben', () => s.kern !== false, (v) => { s.kern = v; ch(); }),
         toggle('Am Zeilenende enger', 'Die letzten Buchstaben einer Zeile stehen etwas dichter', () => s.endTight !== false, (v) => { s.endTight = v; ch(); }),
-        h('p', { class: 'mut xs', style: { margin: '6px 0' } }, 'Tipp: Gefällt dir ein Wort in der Vorschau nicht, tippe es an. Dann wird nur dieses Wort neu geschrieben.'),
+        h('p', { class: 'mut xs', style: { margin: '6px 0' } }, 'Tipp: Tippe ein Wort im Blatt an – der Cursor springt im Text dorthin, und mit „Neu schreiben“ bekommt nur dieses Wort andere Varianten.'),
         ...(s.rr && Object.keys(s.rr).length ? [btn(`Neu geschriebene Wörter zurücksetzen (${Object.keys(s.rr).length})`, { cls: 'sm', onclick: () => { s.rr = {}; ch(); api.close(); openSettings(); } })] : []),
         btn('Alle Variationen aus', { cls: 'sm', onclick: () => { s.jit = 0; ch(); api.close(); openSettings(); } }));
       b.append(sec('Text'), toggle('Mathe-Kürzel', 'x^2 → x², a_1 → a₁, -> → →, \\alpha → α', () => s.kz, setK('kz')), toggle('Formatierung', '**fett**, __unterstrichen__, ==markiert==, # Überschrift', () => s.markup, setK('markup')), toggle('ß als ss schreiben', null, () => s.sz, setK('sz')));
