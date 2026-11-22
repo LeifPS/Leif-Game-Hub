@@ -9,7 +9,7 @@ const EL_ALIAS = {
   titel: 'title', ueberschrift: 'heading', absatz: 'paragraph', hinweis: 'note', merke: 'note', beispiel: 'example', aufgabe: 'task', antwort: 'answer', zitat: 'quote',
   fussnote: 'footnote', beschriftung: 'label', abstand: 'spacer', trennlinie: 'divider', seitenumbruch: 'pagebreak', liste: 'list', eintrag: 'item', formel: 'formula',
   gleichung: 'equation', bruch: 'fraction', wurzel: 'root', rechenweg: 'calculation', schritt: 'step', wertetabelle: 'valuetable', tabelle: 'table', noten: 'music', musik: 'music', vokabeln: 'vocab', vokabel: 'vocab', vokabelliste: 'vocab', zeile: 'row', zelle: 'cell',
-  koordinatensystem: 'graph', diagramm: 'chart', balkendiagramm: 'chart', saeulendiagramm: 'chart', kreisdiagramm: 'chart', liniendiagramm: 'chart', ablauf: 'flow', flussdiagramm: 'flow', flowchart: 'flow', baum: 'tree', baumdiagramm: 'tree', hierarchie: 'tree', hierarchy: 'tree', mengen: 'venn', zeitstrahl: 'timeline', pyramide: 'pyramid', kreislauf: 'cycle', zyklus: 'cycle', reaktion: 'chem', chemie: 'chem', reaktionsgleichung: 'chem', geometrie: 'graph', geometry: 'graph', konstruktion: 'graph', graf: 'graph', funktionsgraph: 'graph', funktion: 'function', punkt: 'point', strecke: 'segment', spalten: 'columns', spalte: 'column', gruppe: 'group', kasten: 'box', rahmen: 'box', merkkasten: 'box', ergebnis: 'box',
+  koordinatensystem: 'graph', diagramm: 'chart', balkendiagramm: 'chart', saeulendiagramm: 'chart', kreisdiagramm: 'chart', liniendiagramm: 'chart', ablauf: 'flow', flussdiagramm: 'flow', flowchart: 'flow', baum: 'tree', baumdiagramm: 'tree', hierarchie: 'tree', hierarchy: 'tree', mengen: 'venn', zeitstrahl: 'timeline', pyramide: 'pyramid', kreislauf: 'cycle', zyklus: 'cycle', reaktion: 'chem', chemie: 'chem', reaktionsgleichung: 'chem', geometrie: 'graph', geometry: 'graph', konstruktion: 'graph', graf: 'graph', funktionsgraph: 'graph', funktion: 'function', punkt: 'point', strecke: 'segment', spalten: 'columns', spalte: 'column', gruppe: 'group',
   metadaten: 'metadata', seite: 'page', bild: 'image', verweis: 'reference', text: 'text',
 };
 // Elemente, die in Stufe 1 gerendert werden (Rest: sichtbarer Platzhalter, siehe KNOWN_LATER)
@@ -34,7 +34,7 @@ const DEFS = {
   pyramid: { text: false, props: ['titel', 'stufe', 'breite'] }, cycle: { text: false, props: ['titel', 'stufe', 'breite'] }, chem: { text: true, props: ['gleichung', 'zeile', 'ausdruck'] },
   point: { text: false, props: ['name', 'x', 'y', 'marke', 'beschriftung'] }, segment: { text: false, props: ['von', 'bis', 'pfeil', 'linienbreite', 'linienart', 'name'] },
   label: { text: true, props: ['x', 'y', 'name', 'text'] },
-  columns: { text: false, props: ['anzahl', 'verteilung'], kids: ['column'] }, column: { text: true }, group: { text: true }, box: { text: true, props: ['titel', 'farbe'] },
+  columns: { text: false, props: ['anzahl', 'verteilung'], kids: ['column'] }, column: { text: true }, group: { text: true },
   metadata: { text: false }, page: { text: true, props: ['format', 'papier'] }, image: { text: false, props: ['quelle'] }, reference: { text: false, props: ['ziel'] },
 };
 // bekannte, aber noch nicht umgesetzte Elemente der HDF-Grundbibliothek -> Platzhalter
@@ -83,15 +83,8 @@ export function parseHdf(src) {
   };
   const selfClosing = new Set(['pagebreak', 'spacer', 'divider']);
   // Elemente, die ihren Inhalt unverändert als Text behalten (nicht in Eigenschaften zerlegen)
-  const lnOf = lines.map((_, i) => i + 1);   // Zeilennummern bleiben richtig, auch wenn unten Zeilen geteilt werden
   for (let i = 0; i < lines.length; i++) {
-    // Schließendes Tag am Ende einer Inhaltszeile („dx = dt[/rechenweg]“, auch mehrere: „…[/formel] [/kasten]“) abtrennen,
-    // wenn es zu einem offenen Element gehört – sonst würde der Rest des Blatts im Element verschwinden
-    {
-      const tc = /^(.*?\S)\s*(\[\s*\/\s*([A-Za-zÄÖÜäöüß][\wÄÖÜäöüß-]*)\s*\])\s*$/.exec(lines[i]);
-      if (tc && !/^\s*\[/.test(lines[i]) && stack.some((e, k) => k > 0 && e.name === normEl(tc[3]))) { lines.splice(i, 1, tc[1], tc[2]); lnOf.splice(i, 1, lnOf[i], lnOf[i]); }
-    }
-    const L = lines[i], ln = lnOf[i], cur = top();
+    const L = lines[i], ln = i + 1, cur = top();
     if (/^\s*\\\[/.test(L)) { cur.kids.push({ text: L.replace(/^(\s*)\\\[/, '$1['), line: ln }); continue; }   // \[ = wörtliche Klammer am Zeilenanfang
     const m = TAG_RE.exec(L);
     if (m) {
@@ -99,15 +92,10 @@ export function parseHdf(src) {
       // [farbe]-Text des alten Formats ([rot], [blau] ..., [/]) ist kein Element
       if (!closing && !isOpenKnown(name) && /^(rot|blau|gruen|grün|schwarz|orange|lila|gelb|grau)$/i.test(raw)) { cur.kids.push({ text: L, line: ln }); continue; }
       if (closing) {
-        if (rest) { lines.splice(i + 1, 0, rest); lnOf.splice(i + 1, 0, ln); }   // „[/formel] [/kasten]“: Rest als eigene Zeile
         let k = stack.length - 1; while (k > 0 && stack[k].name !== name) k--;
         if (k === 0) { err(ln, `Schließendes [/${raw}] ohne passendes Öffnen`); continue; }
         for (let j = stack.length - 1; j > k; j--) err(stack[j].line, `[${stack[j].rawName}] wurde nicht geschlossen`);
         stack[k].endLine = ln; stack.length = k; continue;
-      }
-      // Mehrere Tags in einer Zeile („[kasten][ueberschrift]Ende[/ueberschrift]“): nach dem ersten Tag teilen
-      if (rest && isOpenKnown(name) && /^\[\s*\/?\s*[A-Za-zÄÖÜäöüß]/.test(rest) && !selfClosing.has(name)) {
-        lines.splice(i, 1, L.trimEnd().slice(0, L.trimEnd().length - rest.length).trimEnd(), rest); lnOf.splice(i, 1, ln, ln); i--; continue;
       }
       if (!isOpenKnown(name)) {
         // unbekannter Tag: nur als Element behandeln, wenn später ein passendes Schließen folgt – sonst Text (z. B. "[1]" oder "[Quelle]")

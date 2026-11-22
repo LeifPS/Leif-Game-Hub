@@ -6,21 +6,42 @@ Ein HDF-Dokument ist reiner Text. Die App STools setzt ihn in der Handschrift de
 
 Diese Beschreibung listet alles auf, was das Format kann. Alle Elemente sind optional: Ein Dokument kann auch nur aus normalem Text bestehen. Die Elemente sind Werkzeuge für Inhalte, die sie brauchen (eine Formel für eine Formel, ein Graph für einen Graphen).
 
+## Kurz und vollständig: ein kleines Beispieldokument
+\`\`\`
+[titel]Bestimmtes Integral[/titel]
+
+Gesucht ist $I = int_0^1 x^2 dx$.
+
+[rechenweg]
+schritt: I = int_0^1 x^2 dx
+schritt: = [x^3/3]_0^1 | Stammfunktion
+schritt: = 1/3
+[/rechenweg]
+\`\`\`
+Das ist alles, was es zum Aufbau braucht: normaler Text, Formeln in $…$ und Elemente in eckigen Klammern.
+
+## Alle Elemente (es gibt genau diese, andere Namen kennt die App nicht)
+titel, ueberschrift, text, beispiel, aufgabe, antwort, zitat, liste (mit eintrag), spalten (mit spalte), gruppe, abstand, trennlinie, seitenumbruch,
+formel, gleichung, rechenweg (mit schritt), bruch, wurzel, tabelle, wertetabelle, vokabeln, noten,
+graph (mit funktion, punkt, strecke), geometrie, diagramm (balkendiagramm, kreisdiagramm, liniendiagramm), ablauf, baum, mindmap, mengen, zeitstrahl, pyramide, kreislauf, reaktion.
+Ein unbekannter Name (z. B. [box], [calculation-step], [loesung]) erscheint als roter Platzhalter.
+
 ## Grundregeln
 - Normaler Text steht einfach als Zeilen. Markdown geht: # Überschrift, ## Unter-Überschrift, **fett**, __unterstrichen__, ==markiert==, ~~durchgestrichen~~, Listen mit "- " oder "1. ". Leerzeile = Absatz.
-- Ein Element beginnt mit [name] allein in einer Zeile und endet mit [/name]. Dazwischen stehen Eigenschaften "schluessel: wert" (eine pro Zeile) und/oder Text. Einzeiler: [titel]Mein Titel[/titel].
+- Ein Element beginnt mit [name] allein in einer Zeile und endet mit [/name] allein in einer Zeile. Dazwischen stehen Eigenschaften "schluessel: wert" (eine pro Zeile) und/oder Text. Ausnahme Einzeiler: [titel]Mein Titel[/titel] (Öffnen, Text und Schließen in genau einer Zeile).
+- Ein [/name] am Ende einer Textzeile (z. B. "x = 2[/formel]") wird nicht erkannt; mehrere Tags in einer Zeile ebenfalls nicht.
 - Alle Namen kleingeschrieben. Umlaute auch als ae/oe/ue erlaubt (hoehe, groesse). Deutsche und englische Elementnamen gehen (formel = formula).
 - Kurzform: Mehrere Werte in einer Zeile trennt man mit " | " (mit Leerzeichen drumherum), z. B. zeile: -2 | 0
 - Zahlen mit Punkt oder Komma. Angezeigt wird mit Komma. Maße: 5mm, 2cm, 40pt, 50% (ohne Einheit = Prozent).
 - Farben: rot, blau, gruen, schwarz, orange, lila, gelb, grau, braun, rosa, tuerkis, hellblau oder #rrggbb.
-- Das Dokument steht am besten in einem Codeblock: Chat-Programme stellen sonst eckige Klammern und Zeilenumbrüche anders dar, und die Elemente gehen beim Kopieren verloren.
-- Formeln außerhalb der Formel-Elemente stehen zwischen $…$ (z. B. in [aufgabe] oder normalem Text), sonst erscheinen sie als gewöhnlicher Text.
+- Formeln im normalen Text (auch in [aufgabe], [beispiel], Listen, Tabellenzellen) stehen zwischen $…$. Ohne $ erscheinen sie als gewöhnlicher Text.
+- Eckige Klammern und Zeilenumbrüche bleiben beim Kopieren aus einem Chat nur erhalten, wenn das Dokument in einem Codeblock steht.
 - Fehler zerstören nie das ganze Blatt: Ein kaputtes Element wird rot markiert oder als Platzhalter gezeigt, der Rest wird gezeichnet.
 - Das Blatt ist für GoodNotes-Papier "kariert" ausgelegt: Koordinatensysteme und Tabellen liegen auf den Kästchen.
 
 ## Formelschreibweise (überall, wo ein Ausdruck steht)
 Einfache Tastaturzeichen: x^2, x^(n+1), a_1, (a+b)/2, sqrt(x), root(x, 3), frac(a, b), abs(x-2), pi, alpha, beta, Delta, inf, sin(x), cos(x), ln(x), log_2(8), <=, >=, !=, ->, =>, <=>, +-, *, :, ·, ×, °, %. Griechische Namen werden zu Buchstaben. Brüche mit / werden gestapelt gesetzt, Klammern passen sich an. Multiplikation "2*x" wird als "2x" gesetzt, "3*4" als "3·4". Punkt-Koordinaten: P(2|3).
-Große Operatoren: int_a^b f(x) dx (Integral, auch iint, iiint, oint), sum_(i=1)^n a_i, prod_(k=1)^n k, lim_(x->0) sin(x)/x (Bruch gehört zum Limes-Term), [F(x)]_a^b. Vektor: vec(1, 2, 3). Matrix: mat(1, 2; 3, 4) (Zeilen mit ; trennen). Fallunterscheidung: cases(x^2, x>0; 0, x<=0). Nach int steht dx, dy, dt automatisch als Differential.
+Große Operatoren (nur diese Schreibweise, nicht ∫(0 bis 1) oder integral(0, 1)): int_a^b f(x) dx (Integral, auch iint, iiint, oint), sum_(i=1)^n a_i, prod_(k=1)^n k, lim_(x->0) sin(x)/x (Bruch gehört zum Limes-Term), [F(x)]_a^b. Vektor: vec(1, 2, 3). Matrix: mat(1, 2; 3, 4) (Zeilen mit ; trennen). Fallunterscheidung: cases(x^2, x>0; 0, x<=0). Nach int steht dx, dy, dt automatisch als Differential.
 Formeln mitten im Satz: $f(x) = x^2 - 4$ (gilt in Text, Listen, Kästen und Zellen; Brüche werden dort kompakt gesetzt). Ein einzelnes $ mit Leerzeichen daneben (5 $) bleibt Text, \\$ ergibt ein $-Zeichen.
 Wörter in Formeln (z. B. "und", "oder", Einheiten) in Anführungszeichen setzen: x_1 = 2 "und" x_2 = -2. Ein Ausdruck, der mit = oder einem Relationszeichen beginnt, wird als Fortsetzung gesetzt (z. B. "= 4").
 
@@ -32,7 +53,7 @@ Wörter in Formeln (z. B. "und", "oder", Einheiten) in Anführungszeichen setzen
 [antwort]  Leeres Antwortfeld. hoehe: 40mm | linien: 4 (Schreiblinien) | kaestchen: ja (Karomuster)
 [zitat] quelle: … | Inhalt   [liste] typ: nummeriert, darin [eintrag]Text[/eintrag]
 [spalten] mit mehreren [spalte]…[/spalte] nebeneinander (breite: 50% optional, abstand: 6mm). Spalten dürfen alles enthalten.
-[kasten] Rahmen um beliebigen Inhalt, optional titel: … (z. B. für ein Ergebnis).   [gruppe] rand: ja – fasst Inhalt zusammen.   [abstand] hoehe: 10mm   [trennlinie]   [seitenumbruch]
+[gruppe] rand: ja – fasst Inhalt zusammen.   [abstand] hoehe: 10mm   [trennlinie]   [seitenumbruch]
 ### Formeln und Rechnen
 [formel]
 ausdruck: f(x) = (x^2 - 4) / 2

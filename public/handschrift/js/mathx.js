@@ -20,11 +20,7 @@ export function splitRel(ast) { const parts = []; let n = ast; while (n.t === 'b
 function tokenize(src, opt) {
   let s = src.normalize('NFC');
   s = s.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻ⁿ]+/g, (m) => '^(' + [...m].map(c => SUPD[c]).join('') + ')').replace(/[₀₁₂₃₄₅₆₇₈₉₊₋]+/g, (m) => '_(' + [...m].map(c => SUBD[c]).join('') + ')');
-  s = s.replace(/\\([A-Za-z]+)/g, (m, n) => GREEK[n] ? n : m.slice(1));
-  // nachsichtig: „integral(0 bis 1)“, „∫(0 bis 1)“, „sum(i=1 bis n)“, „lim(x->0)“ -> int_(0)^(1) …; ∫ ∑ ∏ als Zeichen
-  s = s.replace(/(∫|∑|∏|\b(?:integral|int|summe|sum|prod|produkt))\s*\(\s*([^()]*?(?:\([^()]*\)[^()]*?)*)\s+(?:bis|to|\.\.)\s+([^()]*?(?:\([^()]*\)[^()]*?)*)\s*\)/gi,
-    (m, op, a, b) => ({ '∫': 'int', '∑': 'sum', '∏': 'prod', integral: 'int', summe: 'sum', produkt: 'prod' }[op.toLowerCase()] || op.toLowerCase()) + '_(' + a + ')^(' + b + ') ');
-  s = s.replace(/∫/g, ' int ').replace(/∑/g, ' sum ').replace(/∏/g, ' prod ').replace(/\blim\s*\(\s*([^()]*?->[^()]*?)\s*\)/g, 'lim_($1) ');   // \alpha -> alpha (LaTeX-Namen werden nachsichtig akzeptiert)
+  s = s.replace(/\\([A-Za-z]+)/g, (m, n) => GREEK[n] ? n : m.slice(1));   // \alpha -> alpha (LaTeX-Namen werden nachsichtig akzeptiert)
   const toks = []; let i = 0;
   const MULTI = [['<=>', '⇔'], ['<->', '↔'], ['=>', '⇒'], ['->', '→'], ['<-', '←'], ['<=', '≤'], ['>=', '≥'], ['!=', '≠'], ['==', '='], ['+-', '±'], ['-+', '∓'], ['~=', '≈'], ['<>', '≠']];
   while (i < s.length) {

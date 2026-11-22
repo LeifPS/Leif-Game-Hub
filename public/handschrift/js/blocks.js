@@ -496,7 +496,6 @@ export function renderBlock(el, ctx) {
     case 'columns': return columnsBlock(el, ctx);
     case 'quote': return quoteBlock(el, ctx);
     case 'group': return groupBlock(el, ctx);
-    case 'box': return noteBlock(el, ctx, '');   // Kasten mit Rahmen, Titel nur wenn angegeben
     case 'page': return { md: el.kids };
     case 'title': return { md: '# ' + text(el).trim() };
     case 'heading': return { md: '## ' + text(el).trim() };
