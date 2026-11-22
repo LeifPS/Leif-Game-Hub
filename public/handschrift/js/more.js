@@ -7,6 +7,7 @@ import { syncStatus, syncNow, newCode, setCode, fmtCode, normCode, validCode } f
 import { promptBox } from './ui.js';
 import { lastSync, daysLeft, checkNow, SYNC_DAYS } from './session.js';
 import { HDF_DOC, HDF_LINK, HDF_EXAMPLE } from './hdfdoc.js';
+import { ANLEITUNG } from './anleitung.js';
 
 export const VERSION = '1.0';
 export function moreView(app) {
@@ -63,6 +64,12 @@ export function moreView(app) {
         btn('Nur den Link kopieren', { icon: 'copy', cls: 'sm', title: 'Kurzer Satz mit Link zur Beschreibung (für KIs, die Webseiten lesen können)', onclick: async () => { try { await navigator.clipboard.writeText(HDF_LINK); toast('Link kopiert'); } catch (e) { toast('Kopieren nicht möglich', 3000, 'err'); } } }),
         btn('Beispiel-Arbeitsblatt öffnen', { cls: 'sm', onclick: async () => { const d = await app.newDoc({ title: 'Beispiel: Quadratische Funktionen', text: HDF_EXAMPLE, fontId: app.fontId, s: { paper: 'gnkar', fmt: 'gn', paperColor: 'weiss', scan: false, size: 18, ml: 110, mr: 70, mt: 60, mb: 50 } }); await app.openDoc(d.id); } })),
       h('p', { class: 'mut sm', style: { margin: '10px 0 0' } }, 'Der Link (st.leifps.de/hdf) führt immer zur aktuellen Beschreibung. Manche KIs öffnen Links nicht zuverlässig, dann die ganze Beschreibung kopieren.')));
+    // Anleitung: alle Funktionen verständlich erklärt
+    const absatz = (t) => t.startsWith('[') ? h('pre', { class: 'anl-code' }, t) : h('p', null, t);
+    const anl = ([titel, teile]) => { const kids = []; let ul = null;
+      for (const t of teile) { if (t.startsWith('- ')) { if (!ul) kids.push(ul = h('ul')); ul.append(h('li', null, t.slice(2))); } else { ul = null; kids.push(absatz(t)); } }
+      return h('details', { class: 'faq anl' }, h('summary', null, titel), ...kids); };
+    wrap.append(grp('Anleitung: alle Funktionen', ...ANLEITUNG.map(anl)));
     // Hilfe
     wrap.append(grp('Hilfe',
       faq('Wie entsteht meine Schrift?', 'Unter „Schriften“ wählst du Pakete (z. B. Standard, Mathe, Französisch). Du bekommst einen Bogen, schreibst jedes Zeichen in sein Kästchen und lädst den Bogen wieder hoch. Die App schneidet die Zeichen aus und baut daraus deine Schrift.'),

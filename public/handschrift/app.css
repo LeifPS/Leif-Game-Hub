@@ -521,3 +521,5 @@ label.f{margin:16px 0 7px}
 .gprev canvas{max-width:100%;height:auto}
 .gpair{display:flex;gap:8px;flex-wrap:wrap}.gpair .btn{flex:1;min-width:120px}
 button.chip{border:0;cursor:pointer}
+details.anl ul{margin:6px 0 0;padding-left:20px;color:var(--mut)}details.anl li{margin:3px 0}
+details.anl pre.anl-code{margin:8px 0 0;padding:8px 10px;border-radius:8px;background:var(--surf2);font:12px/1.45 ui-monospace,Menlo,monospace;white-space:pre-wrap;overflow-x:auto}
