@@ -1,7 +1,7 @@
 // Ansicht „Dokumente“ (Startseite): Blätter als Kacheln mit Vorschau der ersten Seite, sortier- und durchsuchbar
 import { reminderCard } from './backup.js';
 import { h, saveFile, toast, fmtTime } from './util.js';
-import { btn, sheet, confirmBox, promptBox, chips, ic, mark } from './ui.js';
+import { btn, sheet, confirmBox, promptBox, chips, ic } from './ui.js';
 import { dbDel, dbPut, kvGet, kvSet, merkeLoeschung } from './store.js';
 import { fileBase } from './exporter.js';
 import { layout, drawPage, ensureImages, PAPERS, PAPER_COLORS, PENS, GNPAPER, DEF, gnApply, FORMATS, fmtOf, INKS } from './render.js';
@@ -53,7 +53,6 @@ export function docsView(app) {
     const imp = h('input', { type: 'file', accept: '.txt,.md,.markdown,.hdf,text/plain', multiple: true, class: 'sr', onchange: async () => { let last; for (const f of imp.files) last = await app.newDoc({ title: f.name.replace(/\.[^.]+$/, ''), text: await f.text() }); imp.value = ''; if (last) { toast('Hochgeladen'); draw(); } } });
     const fo = app.folderOf(app.folder); if (!fo) app.folder = null;
     const nDocs = sorted().length;
-    if (!fo) wrap.append(h('div', { class: 'brand mbrand' }, mark(24), 'STools', h('span', { class: 'beta' }, 'Beta')));   // auf dem Handy (ohne Seitenleiste) steht der Name oben
     wrap.append(h('div', { class: 'row phead' }, h('div', { class: 'sp1' },
       fo ? h('button', { type: 'button', class: 'crumb', onclick: () => { app.folder = null; q = ''; draw(); } }, '‹ Dokumente') : null,
       h('h1', null, fo ? fo.name : 'Dokumente'), h('p', { class: 'mut sm' }, `${nDocs} ${nDocs === 1 ? 'Dokument' : 'Dokumente'}` + (!fo && app.folders.length ? ` · ${app.folders.length} ${app.folders.length === 1 ? 'Ordner' : 'Ordner'}` : ''))),
