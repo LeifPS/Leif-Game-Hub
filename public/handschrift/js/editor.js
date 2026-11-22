@@ -4,6 +4,7 @@ import { ic, btn, sheet, range, toggle, seg, chips, confirmBox } from './ui.js';
 import { exportVideo, videoSupported } from './video.js';
 import { layout, drawPage, ensureImages, FORMATS, PAPERS, PAPER_COLORS, PENS, DEF, GNPAPER, fmtOf, gnOf, gnApply, INKS } from './render.js';
 import { gnPicker } from './papier.js';
+import { attachHighlight } from './texthl.js';
 import { exportPdf, exportGoodNotes, exportGoodNotesInk, exportPngs, zipOf, fileBase } from './exporter.js';
 import { PACKS } from './packs.js';
 import { openWizard } from './wizard.js';
@@ -48,7 +49,7 @@ export function editorView(app) {
   const fire = () => { ta.focus(); ta.dispatchEvent(new Event('input')); hPush(); };
   function hGo(d) {
     hPush(); const n = hi + d; if (n < 0 || n >= hist.length) return; hi = n; applying = true;
-    ta.value = hist[n].v; ta.setSelectionRange(hist[n].s, hist[n].e); applying = false; doc.text = ta.value; saveSoon(); renderSoon(); updUndo(); ta.focus();
+    ta.value = hist[n].v; ta.setSelectionRange(hist[n].s, hist[n].e); applying = false; hlUpd(); doc.text = ta.value; saveSoon(); renderSoon(); updUndo(); ta.focus();
   }
   const wrap = (a, b = a) => () => { hPush(); const s = ta.selectionStart, e = ta.selectionEnd, v = ta.value, sel = v.slice(s, e); ta.setRangeText(a + sel + b, s, e, 'end'); if (!sel) ta.setSelectionRange(s + a.length, s + a.length); fire(); };
   const linePre = (p) => () => { hPush(); const s = ta.selectionStart, v = ta.value, ls = v.lastIndexOf('\n', s - 1) + 1, m = /^(#{1,3} |[-*] |\d{1,3}[.)] )/.exec(v.slice(ls)); if (m && m[0] === p) ta.setRangeText('', ls, ls + p.length, 'preserve'); else { if (m) ta.setRangeText('', ls, ls + m[0].length, 'preserve'); ta.setRangeText(p, ls, ls, 'preserve'); } fire(); };
@@ -164,6 +165,7 @@ export function editorView(app) {
   });
   info = h('div', { class: 'stat' }); missEl = h('div', { class: 'miss', hidden: true }); errEl = h('div', { class: 'miss', hidden: true });
   const edPane = h('div', { class: 'pane ed on' }, tb, findBar, ta, missEl, errEl, info);
+  const hlUpd = attachHighlight(ta);   // formatierte Ansicht unter dem Textfeld
   pagesEl = h('div', { class: 'preview' });
   const pvPane = h('div', { class: 'pane pv' }, pagesEl);
   const split = h('div', { class: 'split' }, edPane, pvPane);
@@ -370,7 +372,7 @@ export function editorView(app) {
 
   return {
     el: root,
-    async load(d) { doc = d; title.value = d.title || ''; ta.value = d.text || ''; hReset(); toggleFind(false); wraps.forEach(w => w.remove()); wraps = []; dirty.clear(); L = null; await render(); },
+    async load(d) { doc = d; title.value = d.title || ''; ta.value = d.text || ''; hlUpd(); hReset(); toggleFind(false); wraps.forEach(w => w.remove()); wraps = []; dirty.clear(); L = null; await render(); },
     refresh() { return render(); },
     focus() { ta && ta.focus(); },
     get doc() { return doc; },
