@@ -6,19 +6,25 @@ Ein HDF-Dokument ist reiner Text. Die App STools setzt ihn in der Handschrift de
 
 Diese Beschreibung listet alles auf, was das Format kann. Alle Elemente sind optional: Ein Dokument kann auch nur aus normalem Text bestehen. Die Elemente sind Werkzeuge für Inhalte, die sie brauchen (eine Formel für eine Formel, ein Graph für einen Graphen).
 
-## Kurz und vollständig: ein kleines Beispieldokument
+## Das Wichtigste zuerst
+- Normaler Text mit Markdown ist die Grundlage: # Überschrift, ## Unter-Überschrift, **fett**, Listen mit "- " oder "1. ".
+- Formeln schreibt man mit $…$ – mitten im Satz oder allein in einer Zeile. Das ist der normale Weg für jede Formel und jede Rechnung, auch für mehrere Rechenschritte (einfach jede Zeile als $…$).
+- Elemente in eckigen Klammern sind nur für Dinge, die mit Text und $…$ nicht gehen: Graphen, Tabellen, Diagramme, Noten, Antwortfelder usw.
+
+Beispiel:
 \`\`\`
-[titel]Bestimmtes Integral[/titel]
+# Bestimmtes Integral
 
 Gesucht ist $I = int_0^1 x^2 dx$.
 
-[rechenweg]
-schritt: I = int_0^1 x^2 dx
-schritt: = [x^3/3]_0^1 | Stammfunktion
-schritt: = 1/3
-[/rechenweg]
+## Lösung
+
+$I = int_0^1 x^2 dx$
+$= [x^3/3]_0^1$
+$= 1/3$
+
+**Ergebnis:** $I = 1/3$
 \`\`\`
-Das ist alles, was es zum Aufbau braucht: normaler Text, Formeln in $…$ und Elemente in eckigen Klammern.
 
 ## Alle Elemente (es gibt genau diese, andere Namen kennt die App nicht)
 titel, ueberschrift, text, beispiel, aufgabe, antwort, zitat, liste (mit eintrag), spalten (mit spalte), gruppe, abstand, trennlinie, seitenumbruch,
@@ -34,12 +40,12 @@ Ein unbekannter Name (z. B. [box], [calculation-step], [loesung]) erscheint als 
 - Kurzform: Mehrere Werte in einer Zeile trennt man mit " | " (mit Leerzeichen drumherum), z. B. zeile: -2 | 0
 - Zahlen mit Punkt oder Komma. Angezeigt wird mit Komma. Maße: 5mm, 2cm, 40pt, 50% (ohne Einheit = Prozent).
 - Farben: rot, blau, gruen, schwarz, orange, lila, gelb, grau, braun, rosa, tuerkis, hellblau oder #rrggbb.
-- Formeln im normalen Text (auch in [aufgabe], [beispiel], Listen, Tabellenzellen) stehen zwischen $…$. Ohne $ erscheinen sie als gewöhnlicher Text.
+- Formeln stehen zwischen $…$ (auch in [aufgabe], [beispiel], Listen, Tabellenzellen). Ohne $ erscheinen sie als gewöhnlicher Text.
 - Eckige Klammern und Zeilenumbrüche bleiben beim Kopieren aus einem Chat nur erhalten, wenn das Dokument in einem Codeblock steht.
 - Fehler zerstören nie das ganze Blatt: Ein kaputtes Element wird rot markiert oder als Platzhalter gezeigt, der Rest wird gezeichnet.
 - Das Blatt ist für GoodNotes-Papier "kariert" ausgelegt: Koordinatensysteme und Tabellen liegen auf den Kästchen.
 
-## Formelschreibweise (überall, wo ein Ausdruck steht)
+## Formelschreibweise (innerhalb von $…$ und in Formel-Elementen)
 Einfache Tastaturzeichen: x^2, x^(n+1), a_1, (a+b)/2, sqrt(x), root(x, 3), frac(a, b), abs(x-2), pi, alpha, beta, Delta, inf, sin(x), cos(x), ln(x), log_2(8), <=, >=, !=, ->, =>, <=>, +-, *, :, ·, ×, °, %. Griechische Namen werden zu Buchstaben. Brüche mit / werden gestapelt gesetzt, Klammern passen sich an. Multiplikation "2*x" wird als "2x" gesetzt, "3*4" als "3·4". Punkt-Koordinaten: P(2|3).
 Große Operatoren (nur diese Schreibweise, nicht ∫(0 bis 1) oder integral(0, 1)): int_a^b f(x) dx (Integral, auch iint, iiint, oint), sum_(i=1)^n a_i, prod_(k=1)^n k, lim_(x->0) sin(x)/x (Bruch gehört zum Limes-Term), [F(x)]_a^b. Vektor: vec(1, 2, 3). Matrix: mat(1, 2; 3, 4) (Zeilen mit ; trennen). Fallunterscheidung: cases(x^2, x>0; 0, x<=0). Nach int steht dx, dy, dt automatisch als Differential.
 Formeln mitten im Satz: $f(x) = x^2 - 4$ (gilt in Text, Listen, Kästen und Zellen; Brüche werden dort kompakt gesetzt). Ein einzelnes $ mit Leerzeichen daneben (5 $) bleibt Text, \\$ ergibt ein $-Zeichen.
@@ -50,15 +56,15 @@ Wörter in Formeln (z. B. "und", "oder", Einheiten) in Anführungszeichen setzen
 [titel]Text[/titel]   [ueberschrift]Text[/ueberschrift]   [text]Absatz[/text]
 [beispiel]  Kasten. Eigenschaft titel (Standard "Beispiel"); Inhalt: Text/Markdown.
 [aufgabe]  nummer: 1  | punkte: 3 | Inhalt: Aufgabentext, darf Formeln/Graphen/Tabellen enthalten.
-[antwort]  Leeres Antwortfeld. hoehe: 40mm | linien: 4 (Schreiblinien) | kaestchen: ja (Karomuster)
+[antwort]  Leeres Antwortfeld zum Selbst-Ausfüllen (kein Platz für ein Ergebnis). hoehe: 40mm | linien: 4 (Schreiblinien) | kaestchen: ja (Karomuster)
 [zitat] quelle: … | Inhalt   [liste] typ: nummeriert, darin [eintrag]Text[/eintrag]
 [spalten] mit mehreren [spalte]…[/spalte] nebeneinander (breite: 50% optional, abstand: 6mm). Spalten dürfen alles enthalten.
 [gruppe] rand: ja – fasst Inhalt zusammen.   [abstand] hoehe: 10mm   [trennlinie]   [seitenumbruch]
-### Formeln und Rechnen
+### Formeln und Rechnen (Sonderfälle – normalerweise reicht $…$)
 [formel]
 ausdruck: f(x) = (x^2 - 4) / 2
 [/formel]
-(mehrere Zeilen möglich, jede Zeile eine Formel, zentriert) – Eigenschaften: groesse (z. B. 120%), farbe, ausrichtung: links|mitte|rechts, malzeichen: punkt|kreuz|weg, dezimal: komma|punkt.
+(zentriert und etwas größer als $…$; mehrere Zeilen möglich, jede Zeile eine Formel) – Eigenschaften: groesse (z. B. 120%), farbe, ausrichtung: links|mitte|rechts, malzeichen: punkt|kreuz|weg, dezimal: komma|punkt.
 [gleichung]  Zeilen werden am Gleichheitszeichen untereinander ausgerichtet. Pro Zeile: zeile: Ausdruck | Randnotiz
   zeile: 2x + 3 = 11
   zeile: 2x = 8 | -3
