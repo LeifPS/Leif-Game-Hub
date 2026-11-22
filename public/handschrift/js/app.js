@@ -2,7 +2,7 @@
 import { startSession } from './session.js';
 import { h, uid } from './util.js';
 import { ic, mark } from './ui.js';
-import { Font, DEF } from './render.js';
+import { Font, DEF, migrateS } from './render.js';
 import { dbAll, dbPut, kvGet, kvSet, persist, aenderungsHoerer } from './store.js';
 import { initSync } from './sync.js';
 import { editorView } from './editor.js';
@@ -37,7 +37,10 @@ const app = {
   },
   async fontSaved(rec) { persist(); this.fontCache.delete(rec.id); await this.loadFonts(); this.fontId = rec.id; kvSet('fontId', rec.id); if (this.doc) { this.doc.fontId = rec.id; dbPut('docs', this.doc); } this.views.fonts.refresh(); await this.views.write.refresh(); this.show(this.doc ? 'write' : 'docs'); },
   async fontsChanged() { await this.loadFonts(); if (!this.fonts.find(f => f.id === this.fontId)) this.fontId = this.fonts[0].id; this.fontCache.clear(); this.views.write.refresh(); },
-  async loadDocs() { this.docs = (await dbAll('docs')).sort((a, b) => (b.updated || 0) - (a.updated || 0)); },
+  async loadDocs() {
+    this.docs = (await dbAll('docs')).sort((a, b) => (b.updated || 0) - (a.updated || 0));
+    for (const d of this.docs) if (migrateS(d.s)) { d.updated = Date.now(); await dbPut('docs', d); }   // alte Papiere -> GoodNotes-Vorlagen
+  },
   docSaved(d) { const i = this.docs.findIndex(x => x.id === d.id); if (i < 0) this.docs.unshift(d); else this.docs[i] = d; this.docs.sort((a, b) => (b.updated || 0) - (a.updated || 0)); },
   async newDoc(o = {}) {
     const last = await kvGet('lastS', {}), now = Date.now();
@@ -80,6 +83,8 @@ async function boot() {
   const root = document.getElementById('app');
   app.theme = await kvGet('theme', 'auto'); applyTheme(app.theme);
   await app.loadFonts(); await app.loadDocs(); app.folders = await kvGet('folders', []);
+  { const ls = await kvGet('lastS', null); if (ls && ls.paper && migrateS(ls)) await kvSet('lastS', ls); }
+  { let ch = false; for (const f of app.folders) if (f.s && f.s.paper && migrateS(f.s)) { f.updated = Date.now(); ch = true; } if (ch) await kvSet('folders', app.folders); }
   app.fontId = await kvGet('fontId', app.fonts[0].id); if (!app.fonts.find(f => f.id === app.fontId)) app.fontId = app.fonts[0].id;
   app.views.write = editorView(app); app.views.fonts = fontsView(app); app.views.docs = docsView(app); app.views.more = moreView(app);
   const nav = (cls) => NAV.map(([k, t, i]) => h('button', { type: 'button', class: cls, dataset: { nav: k }, onclick: () => app.show(k) }, ic(i), h('span', null, t)));

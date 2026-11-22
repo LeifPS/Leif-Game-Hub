@@ -59,8 +59,8 @@ export function docsView(app) {
       btn('Textdatei hochladen', { icon: 'upload', cls: 'icon', onclick: () => imp.click(), title: 'Textdateien (.txt, .md) hochladen' }), btn('Vorlagen', { icon: 'grid', cls: 'icon', onclick: () => openTemplates(app), title: 'Vorlagen' }), btn('Neues Dokument', { icon: 'plus', cls: 'pri icon', onclick: async () => { const d = await app.newDoc(); app.openDoc(d.id); }, title: 'Neues Dokument' }), imp));
     wrap.append(reminderCard());
     const s = h('input', { type: 'search', placeholder: 'Dokumente durchsuchen …', value: q, 'aria-label': 'Dokumente durchsuchen', oninput: () => { q = s.value; grid(); } });
-    wrap.append(s, h('div', { style: { margin: '10px 0 4px', overflowX: 'auto' } }, chips(SORTS, () => sort, (v) => { sort = v; kvSet('docSort', v); grid(); hint(); })));
-    const hintEl = h('p', { class: 'xs mut', style: { margin: '2px 2px 8px' } }); wrap.append(hintEl);
+    wrap.append(s, h('div', { class: 'dsort' }, chips(SORTS, () => sort, (v) => { sort = v; kvSet('docSort', v); grid(); hint(); })));
+    const hintEl = h('p', { class: 'xs mut', style: { margin: '-12px 2px 18px' } }); wrap.append(hintEl);
     const hint = () => { hintEl.textContent = sort === 'custom' ? 'Zum Sortieren eine Kachel gedrückt halten und verschieben.' : ''; hintEl.hidden = sort !== 'custom'; }; hint();
     const box = h('div', { class: 'dgrid' }); wrap.append(box);
     function grid() {
@@ -142,8 +142,7 @@ export function docsView(app) {
         h('label', { class: 'f' }, 'Farbe'), colors,
         h('h3', { style: { margin: '22px 0 2px' } }, 'Für neue Dokumente in diesem Ordner'),
         h('p', { class: 'mut xs', style: { margin: '0 0 6px' } }, 'Alles, was du hier nicht festlegst, ist wie bei deinen anderen Dokumenten (Einstellungen → „Als Standard merken“).'),
-        h('label', { class: 'f' }, 'Papierart'), chips([['', 'Wie immer'], ...Object.entries(PAPERS)], () => fs.paper || '', pickPaper),
-        h('label', { class: 'f' }, 'Papierfarbe'), chips([['', 'Wie immer'], ...Object.keys(PAPER_COLORS).map((k) => [k, k[0].toUpperCase() + k.slice(1)])], () => fs.paperColor || '', (v) => { if (v) fs.paperColor = v; else delete fs.paperColor; save(); }),
+        h('label', { class: 'f' }, 'GoodNotes-Vorlage'), chips([['', 'Wie immer'], ...Object.entries(PAPERS)], () => fs.paper || '', pickPaper),
         h('label', { class: 'f' }, 'Stift'), chips([['', 'Wie immer'], ...Object.entries(PENS).map(([k, p]) => [k, p.name])], () => fs.pen || '', (k) => { if (!k) { for (const x of ['pen', 'ink', 'weight', 'inkAlpha']) delete fs[x]; } else { const p = PENS[k]; Object.assign(fs, { pen: k, ink: p.ink, weight: p.weight, inkAlpha: p.alpha }); } save(); }),
         h('div', { style: { display: 'grid', gap: '8px', marginTop: '22px' } },
           btn('Auf vorhandene Dokumente im Ordner anwenden', { icon: 'refresh', onclick: async () => { const ds = app.docs.filter((d) => d.folder === f.id); for (const d of ds) { d.s = { ...d.s, ...fs }; d.updated = Date.now(); await dbPut('docs', d); app.docSaved(d); } toast(`${ds.length} ${ds.length === 1 ? 'Dokument' : 'Dokumente'} angepasst`); draw(); } }),

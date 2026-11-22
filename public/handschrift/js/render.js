@@ -15,10 +15,20 @@ export const FORMATS = {
   quad: { name: 'Quadrat', w: 1400, h: 1400 },
   gn:   { name: 'GoodNotes Standard', w: 948, h: 1226 },
 };
+// Zur Auswahl stehen nur noch echte GoodNotes-Vorlagen (Standardseite). Die alten Papiere (lined, grid, dots, blank, …) gibt es intern weiter
+// (Vorschaubilder), alte Dokumente werden mit migrateS umgestellt.
 export const PAPERS = {
-  lined: 'Liniert', grid: 'Kariert', dots: 'Punkte', blank: 'Leer', college: 'Schulheft (eng)', legal: 'Gelbes Blatt',
-  gnlin: 'GoodNotes liniert', gnlin2: 'GoodNotes liniert schmal', gnkar: 'GoodNotes kariert', gndot: 'GoodNotes gepunktet', gncornell: 'GoodNotes Cornell',
+  gnleer: 'Leer', gnlin: 'Liniert', gnlin2: 'Liniert schmal', gnkar: 'Kariert', gndot: 'Gepunktet', gncornell: 'Cornell', gnnoten: 'Notenlinien',
 };
+const ALT_PAPIER = { lined: 'gnlin', legal: 'gnlin', college: 'gnlin2', grid: 'gnkar', dots: 'gndot', blank: 'gnleer' };
+/** Einstellungen eines (alten) Dokuments auf GoodNotes-Papier umstellen. Gibt true zurück, wenn sich etwas geändert hat. */
+export function migrateS(s) {
+  if (!s || GNPAPER[s.paper]) return false;
+  const gp = GNPAPER[ALT_PAPIER[s.paper] || 'gnlin'];
+  s.paper = ALT_PAPIER[s.paper] || 'gnlin';
+  Object.assign(s, { fmt: 'gn', paperColor: 'weiss', size: gp.size, ml: gp.ml, mr: gp.mr, mt: gp.mt, mb: gp.mb });
+  return true;
+}
 // Eingebaute GoodNotes-Vorlagen (Standardseite 455,04 x 588,45 pt = 948 x 1226 px bei 150 dpi).
 // h0/hp: erste Linie und Abstand (pt, Mitte der 0,5 pt dicken Linie); v0/vp: senkrechte Linien; every: Schreibzeile = jede n-te Linie
 const PXPT = 150 / 72;
@@ -28,6 +38,9 @@ export const GNPAPER = {
   // aus GoodNotes-Vorlagen (2026-11-22): liniert schmal (17,5 pt, Linien 50 … 557,5), gepunktet (Punkte r = 0,5 pt alle 16 pt ab 0), Cornell (16 pt, Linien 50 … 562; dunkle Linien bei 82 und 498, Randspalte bis 91,26)
   gnlin2: { h0: 50.25, hp: 17.5, y1: 557.75, every: 1, size: 13, ml: 110, mr: 70, mt: 60, mb: 50 },
   gndot: { h0: 0, hp: 16, v0: 0, vp: 16, every: 2, dots: true, size: 18, ml: 110, mr: 70, mt: 60, mb: 50 },
+  gnleer: { h0: 50.25, hp: 25, every: 1, noLines: true, size: 18, ml: 110, mr: 70, mt: 60, mb: 50 },
+  // Notenlinien: 7 Systeme ab (22|75), alle 68 pt, je 5 Linien im Abstand 8 pt, bis x = 433,04 und y = 550; geschrieben wird unter den Systemen (Liedtext)
+  gnnoten: { h0: 127.25, hp: 68, every: 1, noLines: true, staff: { x0: 22, x1: 433.04, y0: 75, step: 68, lines: [0, 8, 16, 24, 32], clip: 550 }, size: 15, ml: 50, mr: 46, mt: 60, mb: 60 },
   gncornell: { h0: 50.25, hp: 16, y1: 562.25, every: 1, size: 12, ml: 203, mr: 30, mt: 170, mb: 200, dark: [[0, 82.25, 455.04, 82.25], [0, 498.25, 455.04, 498.25], [91.258, 82, 91.258, 498.5]] },
 };
 export const fmtOf = (S) => GNPAPER[S.paper] ? 'gn' : S.fmt;
@@ -429,7 +442,9 @@ export function drawPaper(ctx, S, lineH, PW, PH) {
   const y0 = S.mt + lineH + 3;
   if (GNPAPER[S.paper]) {
     const gp = GNPAPER[S.paper]; ctx.fillStyle = 'rgb(208,210,211)'; const t = .5 * PXPT, yEnd = gp.y1 ? gp.y1 * PXPT + 1 : PH + 2;
-    if (gp.dots) { for (let y = gp.h0 * PXPT; y < PH + 2; y += gp.hp * PXPT) for (let x = gp.v0 * PXPT; x < PW + 2; x += gp.vp * PXPT) { ctx.beginPath(); ctx.arc(x, y, .5 * PXPT, 0, 6.3); ctx.fill(); } }
+    if (gp.staff) { const st = gp.staff; for (let y = st.y0; y < st.clip; y += st.step) for (const d of st.lines) if (y + d < st.clip) ctx.fillRect(st.x0 * PXPT, (y + d + .25) * PXPT - t / 2, (st.x1 - st.x0) * PXPT, t); }
+    if (gp.noLines) { /* nur Leer bzw. eigene Zeichnung (Notenlinien) */ }
+    else if (gp.dots) { for (let y = gp.h0 * PXPT; y < PH + 2; y += gp.hp * PXPT) for (let x = gp.v0 * PXPT; x < PW + 2; x += gp.vp * PXPT) { ctx.beginPath(); ctx.arc(x, y, .5 * PXPT, 0, 6.3); ctx.fill(); } }
     else {
       for (let y = gp.h0 * PXPT; y < yEnd; y += gp.hp * PXPT) ctx.fillRect(0, y - t / 2, PW, t);
       if (gp.vp) for (let x = gp.v0 * PXPT; x < PW + 2; x += gp.vp * PXPT) ctx.fillRect(x - t / 2, 0, t, PH);
