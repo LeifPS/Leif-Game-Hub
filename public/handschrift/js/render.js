@@ -283,7 +283,8 @@ export function layout(text, S, font) {
         if (prev && !prev.math) { const kk = KERN(prev.ch, ch) * S.size * scl; prev.adv -= kk; w -= kk; }
         let dy = (rng() - .5) * jB * S.size * .06, rot = (rng() - .5) * jG * .04;
         if (wr) { dy += (wr() - .5) * S.size * .08 * Math.max(.4, jB); rot += (wr() - .5) * .05 * Math.max(.4, jG); }
-        run.push({ ch, v, sc, sx: r.sx, up: r.up || 0, adv, st, dy, rot, a: .86 + .14 * rng(), wk: wkey, vi: idx, ady: (va.dy || 0) * k * sc });   // ady: Nachjustierung nach unten (+) / oben (−) w += adv;
+        run.push({ ch, v, sc, sx: r.sx, up: r.up || 0, adv, st, dy, rot, a: .86 + .14 * rng(), wk: wkey, vi: idx, ady: (va.dy || 0) * k * sc });   // ady: Nachjustierung nach unten (+) / oben (−)
+        w += adv;
       }
     };
     for (const o of chars) { if (o.math != null) { const mb = bctx.mathInline(maths[o.math], scl, o.col); run.push({ ch: '$', math: mb, adv: mb.w + S.size * .06 * scl, st: o, sc: 1, up: 0, dy: 0, rot: 0 }); w += mb.w + S.size * .06 * scl; continue; } if (o.c === 'ß' && (S.sz || !font.g['ß'])) { add('s', o); add('s', o); } else add(o.c, o); }

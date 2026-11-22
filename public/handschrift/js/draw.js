@@ -10,6 +10,8 @@ const LB = 0.8, RB = 2.2, PEN = 2.1;
 const CW = 72, CH = 100, BASE = 76, CAP = 1.8;                     // Zeichenfläche in Einheiten (x-Höhe = 27 Einheiten)
 const SUBS = new Set([...'₀₁₂₃₄₅₆₇₈₉']);
 const INK = '#1d3a9a';
+let notenFont = null;   // kleine Notenschrift für die Vorlage (einmal laden, bleibt im Cache des Service Workers)
+const loadNoten = () => notenFont ||= (self.FontFace ? new FontFace('HS Noten', 'url(data/noten.woff2)').load().then((f) => { document.fonts.add(f); return true; }).catch(() => false) : Promise.resolve(false));
 
 // Striche (Einheiten, Fläche) -> Zeichen im Format der Schrift (Bild + Striche)
 export function glyphFromStrokes(ch, strokes, pen = PEN) {
@@ -48,6 +50,7 @@ export function glyphFromStrokes(ch, strokes, pen = PEN) {
 // cells: [{ch, v, pack, grp}], onDone(g) mit g = { zeichen: [Zeichen-Objekte] }
 // Mehrere Wiederholungen desselben Zeichens stehen nebeneinander (Feld je Variante); automatisch weiter geht es erst, wenn alle Felder gefüllt sind.
 export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra: nachträglich ergänzte Varianten/Zeichen (kein „Nur 1×“)
+  if (cells.some((c) => /[\u{1D100}-\u{1D1FF}♯♭♮]/u.test(c.ch))) loadNoten().then((ok) => { if (ok) fields.forEach((f) => paint(f)); });
   const modal = h('div', { class: 'modal on nosel drawmod', role: 'dialog', 'aria-label': 'Zeichen zeichnen' }); document.body.append(modal);
   // Mit Stift/Finger nichts markieren (iPad wählte sonst beim Schreiben Kasten und Text aus)
   for (const ev of ['selectstart', 'dragstart']) modal.addEventListener(ev, (e) => e.preventDefault());
@@ -55,7 +58,7 @@ export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra
   modal.append(head, mb, mf);
   const flag = (k, dflt) => { try { const v = localStorage.getItem(k); return v == null ? dflt : v !== '0'; } catch (_) { return dflt; } };
   const setFlag = (k, v) => { try { localStorage.setItem(k, v ? '1' : '0'); } catch (_) { /* Speicher gesperrt */ } };
-  const done = new Map(); let idx = 0, once = false, ghost = flag('hs:ghost2', false), multi = flag('hs:multi', true), sawPen = false, ppu = 4;
+  const done = new Map(); let idx = 0, once = false, ghost = flag('hs:ghost3', true), multi = flag('hs:multi', true), sawPen = false, ppu = 4;
   let fields = [], act = 0;   // fields: { c, cv, ctx, base, bg, strokes, cur } – ein Feld je Variante der aktuellen Gruppe
   const key = (c) => c.ch + '|' + c.v;
   const label = h('div', { class: 'drlabel' });
@@ -107,11 +110,22 @@ export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra
   }
   const pen = (s, g) => { g.strokeStyle = g.fillStyle = INK; g.lineCap = g.lineJoin = 'round'; g.lineWidth = PEN; const q = s.p; if (q.length < 2) { g.beginPath(); g.arc(q[0][0], q[0][1], PEN / 2, 0, 7); g.fill(); return; } g.beginPath(); q.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke(); };
   // Vorlage: Schriftgröße so, dass die x-Höhe genau bis zur gestrichelten Linie reicht (Buchstaben, Ziffern, Satzzeichen); Schriftzeichen und Symbole etwas größer
-  const FONT = 'system-ui,"Hiragino Sans","PingFang SC","Noto Sans CJK SC",sans-serif'; let latinPx = 0; const TALL = /[0-9bdfhklßðþ]/;
+  // Notenzeichen gibt es auf iPad/iPhone nicht in der Systemschrift – dafür liegt eine kleine Notenschrift bei (Noto Music, SIL OFL, nur diese 13 Zeichen)
+  const FONT = '"HS Noten",system-ui,-apple-system,"Hiragino Sans","PingFang SC","Noto Sans CJK SC",sans-serif'; let latinPx = 0; const TALL = /[0-9bdfhklßðþ]/;
+  const setFont = (g, px) => { const want = `${px}px ${FONT}`; g.font = want; if (!g.font || !g.font.includes(String(Math.round(px)).slice(0, 2))) g.font = `${px}px sans-serif`; };   // Safari nimmt manche Schriftlisten im Canvas nicht an
+  // Notenzeichen: Höhe in x-Höhen und Lage (unten an der Grundlinie, mittig auf der Mittellinie …)
+  const MUS = { '𝄞': [3.6, 'mid', 1.0], '𝄢': [1.9, 'top', 0], '𝅘': [.8, 'mid', .45], '𝅗': [.8, 'mid', .45], '𝅝': [.8, 'mid', .45], '♯': [2.2, 'mid', .5], '♭': [2.1, 'flat', 0], '♮': [2.2, 'mid', .5], '𝄻': [.45, 'top', 1], '𝄼': [.45, 'bot', 0], '𝄽': [2.4, 'mid', .6], '𝄾': [1.6, 'mid', .55], '𝄿': [2.2, 'mid', .45] };
+  function ghostMusic(bk, ch) {
+    const [hx, mode, at] = MUS[ch]; setFont(bk, 100); const m = bk.measureText(ch), gh = (m.actualBoundingBoxAscent + m.actualBoundingBoxDescent) || 100;
+    const px = 100 * hx * XH / gh; setFont(bk, px); const n = bk.measureText(ch), up = n.actualBoundingBoxAscent, dn = n.actualBoundingBoxDescent;
+    const yc = BASE - XH * at;   // Bezugspunkt über der Grundlinie
+    const y = mode === 'top' ? BASE - XH * CAP + up : mode === 'bot' ? BASE - dn : mode === 'flat' ? BASE - dn - XH * .1 : yc + (up - dn) / 2;
+    bk.textAlign = 'left'; const l = n.actualBoundingBoxLeft || 0, r = n.actualBoundingBoxRight || n.width; bk.fillText(ch, CW / 2 + (l - r) / 2, y);
+  }
   const fontPx = (ch, bg) => {
     if (/[☀-➿　-ヿ一-鿿]/.test(ch)) return XH * 1.7;
     if (!latinPx) {
-      bg.font = `100px ${FONT}`; const a = bg.measureText('x').actualBoundingBoxAscent, c = bg.measureText('H').actualBoundingBoxAscent;
+      setFont(bg, 100); const a = bg.measureText('x').actualBoundingBoxAscent, c = bg.measureText('H').actualBoundingBoxAscent;
       latinPx = a > 10 && c > 10 ? [Math.max(XH * 1.6, Math.min(XH * 2.4, XH / a * 100)), Math.max(XH * 2.2, Math.min(XH * 3.4, XH * CAP / c * 100))] : [XH * 1.95, XH * 2.7];
     }
     return TALL.test(ch) || ch !== ch.toLowerCase() ? latinPx[1] : latinPx[0];   // Großbuchstaben, Ziffern und lange Buchstaben bis zur oberen Linie
@@ -125,7 +139,7 @@ export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra
     const bk = f.bk; bk.clearRect(0, 0, CW, CH);
     const line = (y, col, w, dash) => { bk.beginPath(); bk.setLineDash(dash || []); bk.strokeStyle = col; bk.lineWidth = w; bk.moveTo(0, y); bk.lineTo(CW, y); bk.stroke(); bk.setLineDash([]); };
     line(BASE - XH * CAP, '#b9bff0', .35, [1.5, 1.5]); line(BASE - XH, '#b9bff0', .35, [1.5, 1.5]); line(BASE + XH * .6, '#e4e6f7', .3, [1.5, 1.5]); line(BASE, '#8d98ea', .6);
-    if (ghost && f.c) { bk.fillStyle = 'rgba(95,105,150,.26)'; bk.font = `${fontPx(f.c.ch, bk)}px ${FONT}`; bk.textAlign = 'center'; bk.textBaseline = 'alphabetic'; bk.fillText(f.c.ch, CW / 2, BASE); }
+    if (ghost && f.c) { bk.fillStyle = 'rgba(95,105,150,.26)'; bk.textBaseline = 'alphabetic'; if (MUS[f.c.ch]) ghostMusic(bk, f.c.ch); else { setFont(bk, fontPx(f.c.ch, bk)); bk.textAlign = 'center'; bk.fillText(f.c.ch, CW / 2, BASE); } }
   }
   function paint(f, back = true) {   // alles neu: statische Ebene, fertige Striche, Anzeige
     if (back) paintBack(f);
@@ -196,7 +210,7 @@ export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra
       ib('Letzten Strich zurücknehmen', 'undo', false, !a || !a.strokes.length, () => { cancelAuto(); a.strokes.pop(); refresh(); paint(a, false); }),
       ib('Feld leeren', 'trash', false, !a || !a.strokes.length, () => { cancelAuto(); a.strokes = []; refresh(); paint(a, false); }),
       h('span', { class: 'drsep' }),
-      ib(ghost ? 'Vorlage zum Nachzeichnen ausblenden' : 'Vorlage zum Nachzeichnen einblenden', 'eye', ghost, false, () => { ghost = !ghost; setFlag('hs:ghost2', ghost); refresh(); fields.forEach(paint); }),
+      ib(ghost ? 'Vorlage zum Nachzeichnen ausblenden' : 'Vorlage zum Nachzeichnen einblenden', 'eye', ghost, false, () => { ghost = !ghost; setFlag('hs:ghost3', ghost); refresh(); fields.forEach(paint); }),
       h('button', { type: 'button', class: 'btn sm drauto' + (auto === 'off' ? '' : ' on'), title: 'Automatisch weiter, wenn du kurz nicht zeichnest', onclick: () => { const k = Object.keys(AUTO); auto = k[(k.indexOf(auto) + 1) % k.length]; try { localStorage.setItem('hs:autoadv', auto); } catch (_) { /* egal */ } cancelAuto(); refresh(); } }, AUTO[auto][0].replace('Auto-Weiter', 'Auto-Weiter:')),
       ib('Weitere Einstellungen', 'sliders', false, false, () => moreSheet()));
   }
