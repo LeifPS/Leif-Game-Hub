@@ -35,9 +35,9 @@ export async function hsApi(request, env) {
       if (env.DB) { await schema(env.DB); if (!(await limit(env.DB, 'titel:' + ip(request), 40, 3600e3))) return J({ error: 'Zu viele Vorschläge in kurzer Zeit. Bitte später nochmal.' }, 429); }
       const b = await request.json().catch(() => ({})), text = String(b.text || '').replace(/\[[^\]\n]{0,40}\]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 2500);
       if (text.length < 3) return J({ error: 'Zu wenig Text für einen Titel.' }, 400);
-      const r = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', { max_tokens: 30, temperature: .7, messages: [
+      let r; try { r = await env.AI.run('@cf/meta/llama-3.1-8b-instruct-fast', { max_tokens: 30, temperature: .7, messages: [
         { role: 'system', content: 'Du gibst für Schulnotizen einen kurzen, treffenden Titel auf Deutsch (2 bis 6 Wörter), in der Sprache des Textes, wenn er nicht deutsch ist. Antworte nur mit dem Titel, ohne Anführungszeichen, ohne Punkt am Ende.' },
-        { role: 'user', content: text } ] });
+        { role: 'user', content: text } ] }); } catch (e) { return J({ error: 'Die KI ist gerade nicht erreichbar (' + String(e && e.message || e).slice(0, 120) + ')' }, 502); }
       const titel = String((r && (r.response || r.result || '')) || '').split('\n')[0].replace(/^["„“'»«\s]+|["„“'»«.\s]+$/g, '').replace(/^Titel:\s*/i, '').slice(0, 60);
       if (!titel) return J({ error: 'Kein Vorschlag erhalten.' }, 502);
       return J({ titel });
