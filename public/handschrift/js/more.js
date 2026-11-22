@@ -6,7 +6,7 @@ import { doBackup, restoreButton } from './backup.js';
 import { syncStatus, syncNow, newCode, setCode, fmtCode, normCode, validCode } from './sync.js';
 import { promptBox } from './ui.js';
 import { lastSync, daysLeft, checkNow, SYNC_DAYS } from './session.js';
-import { HDF_DOC, HDF_LINK, HDF_EXAMPLE } from './hdfdoc.js';
+import { HDF_DOC, HDF_URL, HDF_PROMPT, HDF_EXAMPLE } from './hdfdoc.js';
 import { featureTiles, openFeatures } from './features.js';
 
 export const VERSION = '1.0';
@@ -61,9 +61,10 @@ export function moreView(app) {
       h('p', { class: 'mut sm', style: { margin: '8px 0' } }, 'STools versteht ein Textformat (HDF) mit Formeln, Rechenwegen, Koordinatensystemen, Tabellen, Noten und mehr. Die Beschreibung erklärt nur, was es gibt – was du haben willst, sagst du der KI selbst. Die Antwort fügst du in ein Dokument ein, dann setzt STools alles in deiner Handschrift.'),
       h('div', { class: 'row wrap2' },
         btn('Format-Beschreibung kopieren', { icon: 'copy', cls: 'pri', onclick: async () => { try { await navigator.clipboard.writeText(HDF_DOC); toast('Beschreibung kopiert'); } catch (e) { toast('Kopieren nicht möglich', 3000, 'err'); } } }),
-        btn('Nur den Link kopieren', { icon: 'copy', cls: 'sm', title: 'Kurzer Satz mit Link zur Beschreibung (für KIs, die Webseiten lesen können)', onclick: async () => { try { await navigator.clipboard.writeText(HDF_LINK); toast('Link kopiert'); } catch (e) { toast('Kopieren nicht möglich', 3000, 'err'); } } }),
+        btn('Prompt kopieren', { icon: 'copy', cls: 'sm', title: 'Fertiger Auftrag mit Link: einfügen, deine Aufgabe dahinterschreiben', onclick: async () => { try { await navigator.clipboard.writeText(HDF_PROMPT); toast('Prompt kopiert – in die KI einfügen und deine Aufgabe dahinterschreiben', 3500); } catch (e) { toast('Kopieren nicht möglich', 3000, 'err'); } } }),
+        btn('Nur den Link kopieren', { icon: 'copy', cls: 'sm', onclick: async () => { try { await navigator.clipboard.writeText(HDF_URL); toast('Link kopiert'); } catch (e) { toast('Kopieren nicht möglich', 3000, 'err'); } } }),
         btn('Beispiel-Arbeitsblatt öffnen', { cls: 'sm', onclick: async () => { const d = await app.newDoc({ title: 'Beispiel: Quadratische Funktionen', text: HDF_EXAMPLE, fontId: app.fontId, s: { paper: 'gnkar', fmt: 'gn', paperColor: 'weiss', scan: false, size: 18, ml: 110, mr: 70, mt: 60, mb: 50 } }); await app.openDoc(d.id); } })),
-      h('p', { class: 'mut sm', style: { margin: '10px 0 0' } }, 'Der Link (st.leifps.de/hdf) führt immer zur aktuellen Beschreibung. Manche KIs öffnen Links nicht zuverlässig, dann die ganze Beschreibung kopieren.')));
+      h('p', { class: 'mut sm', style: { margin: '10px 0 0' } }, '„Prompt kopieren“ ist ein fertiger Auftrag mit Link (st.leifps.de/hdf): einfügen und deine Aufgabe dahinterschreiben. Manche KIs öffnen Links nicht zuverlässig (bei ChatGPT die Websuche einschalten), dann die ganze Beschreibung kopieren.')));
     // Was STools kann: Galerie mit Vorschauen in der eigenen Schrift
     wrap.append(grp('Was STools alles kann',
       h('p', { class: 'mut sm', style: { margin: '4px 0 12px' } }, 'Formeln, Graphen, Noten, Diagramme und mehr – in deiner Handschrift. Tippe an, um es auszuprobieren.'),

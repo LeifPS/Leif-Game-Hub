@@ -149,7 +149,9 @@ Streudiagramm, Physik-Schaltbilder, Karten, Bilder, Strukturformeln. Unbekannte 
 - Wertetabellen berechnet die App selbst, Tabellen und Rechenwege zeigt sie so, wie sie geschrieben sind.
 `;
 export const HDF_URL = 'https://st.leifps.de/hdf';
-export const HDF_LINK = `Das Textformat HDF der Handschrift-App STools ist hier beschrieben: ${HDF_URL} – bitte lies die Seite, bevor du ein HDF-Dokument schreibst.`;
+export const HDF_PROMPT = `Öffne ${HDF_URL} und lies die Beschreibung des Textformats HDF (für die Handschrift-App STools) vollständig. Erledige dann meine Aufgabe unten und gib das Ergebnis genau nach dieser Beschreibung aus: nur die Elemente und Schreibweisen, die dort stehen, Formeln in $…$, und das fertige Dokument in einem einzigen Codeblock.
+
+Meine Aufgabe: `;
 export const HDF_EXAMPLE = `[titel]STools-Tour: alle Features[/titel]
 
 Dieses Blatt zeigt jedes Element des Formats. Alles hier ist **Handschrift** (Text, Zahlen, Formeln) oder ein *perfekter Strich* (Linien, Achsen, Rahmen).
