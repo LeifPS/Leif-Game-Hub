@@ -24,16 +24,18 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
     step: skipTo || 1, sel: new Set(preselect.length ? preselect : font ? [] : ['standard', 'sonder']), custom: { chars: customChars, n: 1 },
     reps: { ...REP_DEFAULT }, pages: [], busy: false, result: null, drawn: null, name: font ? font.name : 'Meine Schrift', mode: font ? 'add' : 'new', off: new Set(), fromQr: new Set(), customs: {},
   };
-  const modal = h('div', { class: 'modal on', role: 'dialog', 'aria-label': 'Schrift erstellen' }); document.body.append(modal);
+  const modal = h('div', { class: 'modal on wizard', role: 'dialog', 'aria-label': 'Schrift erstellen' }); document.body.append(modal);
   const close = () => { modal.remove(); };
   const head = h('div', { class: 'bar' }), mb = h('div', { class: 'mb' }), mf = h('div', { class: 'mf' });
   modal.append(head, mb, mf);
   const cells = () => buildCells(maskOf([...S.sel]), S.custom.chars ? { chars: clean(S.custom.chars), n: S.custom.n } : null, S.reps);
-  const stepsEl = () => h('div', { class: 'steps' }, ...['Auswahl', 'Vorlage', 'Hochladen', 'Prüfen'].flatMap((t, i) => [i ? h('u') : null, h('i', { class: S.step === i + 1 ? 'on' : S.step > i + 1 ? 'done' : '' }, S.step > i + 1 ? '✓' : String(i + 1)), S.step === i + 1 ? h('span', null, t) : null]));
+  const STEPS = ['Zeichen wählen', 'Schreiben', 'Hochladen', 'Prüfen'];
+  const stepsEl = () => h('div', { class: 'wzhead' }, h('b', null, font ? `„${font.name}“ erweitern` : 'Neue Schrift'), h('span', { class: 'xs mut' }, `Schritt ${S.step} von 4 · ${STEPS[S.step - 1]}`),
+    h('div', { class: 'wzprog' }, ...STEPS.map((_, i) => h('i', { class: S.step > i + 1 ? 'done' : S.step === i + 1 ? 'on' : '' }))));
   const go = (n) => { S.step = n; draw(); mb.scrollTop = 0; };
 
   function draw() {
-    head.replaceChildren(btn('Schließen', { icon: 'x', cls: 'ghost icon', onclick: () => { if (S.busy) return; close(); } }), stepsEl(), h('span', { style: { width: '40px' } }));
+    head.replaceChildren(h('button', { type: 'button', class: 'wzx', onclick: () => { if (S.busy) return; close(); } }, 'Abbrechen'), stepsEl(), h('span', { class: 'wzx', style: { visibility: 'hidden' } }, 'Abbrechen'));
     mb.replaceChildren(); mf.replaceChildren();
     ({ 1: step1, 2: step2, 3: step3, 4: step4 })[S.step]();
   }
@@ -51,22 +53,23 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
   // ---------- 1. Auswahl ----------
   function step1() {
     const w = h('div', { class: 'wrap' }); mb.append(w);
-    w.append(h('h1', null, font ? `„${font.name}“ erweitern` : 'Deine eigene Schrift erstellen'),
-      h('p', { class: 'mut' }, 'Wähle, welche Zeichen du schreiben möchtest. Daraus entsteht ein Bogen zum Ausfüllen. Du kannst später jederzeit weitere Pakete hinzufügen.'));
-    const sum = h('div');
+    w.append(h('div', { class: 'wzintro' }, h('h1', null, 'Welche Zeichen brauchst du?'),
+      h('p', { class: 'mut' }, 'Wähle Pakete aus. Du kannst später jederzeit weitere dazunehmen – fang ruhig klein an.')));
+    const sum = h('div', { class: 'wzsumtxt' });
     const redraw = () => {
       const c = cells(), uniq = new Set(c.map(x => x.ch)).size, pages = pageCount(c);
-      sum.replaceChildren(h('div', { class: 'row wrap2' }, h('span', { class: 'chip ac' }, `${uniq} Zeichen`), h('span', { class: 'chip' }, `${c.length} Kästchen`), h('span', { class: 'chip' }, `${c.length ? pages : 0} ${pages === 1 ? 'Seite' : 'Seiten'}`)));
-      mf.replaceChildren(h('div', { class: 'mfstack' }, sum, h('div', { class: 'row' }, btn('Bögen hochladen', { cls: 'sm', title: 'Schon ausgefüllte Bögen hochladen', onclick: () => go(3) }), h('span', { class: 'sp1' }), btn('Weiter', { cls: 'pri', disabled: !c.length, onclick: () => { if (S.custom.chars) kvSet('custom:' + hashOf({ chars: clean(S.custom.chars), n: S.custom.n }), { chars: clean(S.custom.chars), n: S.custom.n }); go(2); } }))));
+      sum.replaceChildren(h('b', null, `${uniq} Zeichen`), h('span', { class: 'xs mut' }, `${c.length} Kästchen · ${c.length ? pages : 0} ${pages === 1 ? 'Seite' : 'Seiten'}`));
+      mf.replaceChildren(h('div', { class: 'wzsum' }, sum), h('span', { class: 'sp1' }), btn('Schon ausgefüllt?', { cls: 'ghost sm', title: 'Schon ausgefüllte Bögen hochladen', onclick: () => go(3) }), h('div', null, btn('Weiter', { cls: 'pri', disabled: !c.length, onclick: () => { if (S.custom.chars) kvSet('custom:' + hashOf({ chars: clean(S.custom.chars), n: S.custom.n }), { chars: clean(S.custom.chars), n: S.custom.n }); go(2); } })));
       list.querySelectorAll('.pack').forEach(b => b.classList.toggle('on', S.sel.has(b.dataset.id)));
       for (const [id, el] of Object.entries(infoEls)) { const inf = packInfo(PACK_BY_ID[id], S.reps); el.textContent = `${inf.zeichen} Zeichen · ${inf.seiten} ${inf.seiten === 1 ? 'Seite' : 'Seiten'}`; }
     };
     const list = h('div'), infoEls = {};
     for (const [gname, ids] of GROUPS) {
-      list.append(h('h3', { style: { margin: '16px 0 8px' } }, gname));
+      list.append(h('h4', { class: 'wzgrp' }, gname));
+      const grid = h('div', { class: 'packgrid' }); list.append(grid);
       for (const id of ids) {
         const p = PACK_BY_ID[id], inf = packInfo(p, S.reps);
-        list.append(h('button', { type: 'button', class: 'pack', dataset: { id }, onclick: () => { S.sel.has(id) ? S.sel.delete(id) : S.sel.add(id); redraw(); } },
+        grid.append(h('button', { type: 'button', class: 'pack', dataset: { id }, onclick: () => { S.sel.has(id) ? S.sel.delete(id) : S.sel.add(id); redraw(); } },
           h('div', { class: 'pi' }, p.icon), h('div', { class: 'pt' }, h('b', null, p.name, have.has(id) ? h('span', { class: 'chip ok', style: { marginLeft: '8px' } }, 'vorhanden') : null), h('span', { class: 'sm mut' }, p.text), infoEls[id] = h('div', { class: 'xs mut', style: { marginTop: '3px' } }, `${inf.zeichen} Zeichen · ${inf.seiten} ${inf.seiten === 1 ? 'Seite' : 'Seiten'}`)),
           h('div', { class: 'ck' }, ic('check'))));
       }
@@ -74,12 +77,14 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
     const ta = h('textarea', { class: 'f', rows: 2, placeholder: 'z. B. ŝ ǒ ₂ ✿ …', value: S.custom.chars, oninput: () => { S.custom.chars = ta.value; redraw(); } });
     ta.value = S.custom.chars;
     const repRow = (label, key) => h('div', { class: 'row', style: { marginTop: '8px' } }, h('span', { class: 'sm sp1' }, label), h('div', { class: 'seg' }, ...[1, 2, 3, 4].map(n => h('button', { type: 'button', class: S.reps[key] === n ? 'on' : '', onclick: (e) => { S.reps[key] = n; [...e.target.parentNode.children].forEach((b, i) => b.classList.toggle('on', i + 1 === n)); redraw(); } }, n + '×'))));
-    const repCard = h('div', { class: 'card', style: { margin: '14px 0 0' } }, h('b', null, 'Wie oft schreibst du jedes Zeichen?'),
-      h('p', { class: 'sm mut', style: { margin: '4px 0 0' } }, 'Mehrere Varianten pro Zeichen lassen den Text natürlicher aussehen, kosten aber mehr Zeit. Normal reichen 2× bei Kleinbuchstaben und 1× bei allem anderen.'),
-      repRow('Kleinbuchstaben (a, b, ä, é …)', 'low'), repRow('Alle anderen Zeichen', 'oth'));
-    w.append(repCard, list, h('h3', { style: { margin: '18px 0 6px' } }, 'Eigene Zeichen'), h('p', { class: 'sm mut' }, 'Jedes beliebige Unicode-Zeichen, das du zusätzlich brauchst. Einfach hier einfügen oder tippen.'), ta,
-      h('div', { class: 'row', style: { marginTop: '8px' } }, h('span', { class: 'sm' }, 'Wie oft schreiben?'), h('div', { class: 'seg' }, ...[1, 2, 3].map(n => h('button', { type: 'button', class: S.custom.n === n ? 'on' : '', onclick: (e) => { S.custom.n = n; [...e.target.parentNode.children].forEach((b, i) => b.classList.toggle('on', i + 1 === n)); redraw(); } }, n + '×')))),
-      h('div', { class: 'note' }, 'Tipp: Mehr Pakete heißt mehr Seiten zum Ausfüllen. Fang mit „Standard“ an, der Rest geht später immer noch.'));
+    const more = h('details', { class: 'wzmore' }, h('summary', null, 'Weitere Einstellungen'),
+      h('div', { class: 'card' }, h('b', null, 'Wie oft schreibst du jedes Zeichen?'),
+        h('p', { class: 'sm mut', style: { margin: '4px 0 0' } }, 'Mehr Varianten wirken natürlicher, kosten aber Zeit. Empfohlen: Kleinbuchstaben 2×, alles andere 1×.'),
+        repRow('Kleinbuchstaben (a, b, ä, é …)', 'low'), repRow('Alle anderen Zeichen', 'oth')),
+      h('div', { class: 'card' }, h('b', null, 'Eigene Zeichen'), h('p', { class: 'sm mut', style: { margin: '4px 0 8px' } }, 'Jedes Zeichen, das in keinem Paket steckt – einfach einfügen oder tippen.'), ta,
+        h('div', { class: 'row', style: { marginTop: '8px' } }, h('span', { class: 'sm sp1' }, 'Wie oft schreiben?'), h('div', { class: 'seg' }, ...[1, 2, 3].map(n => h('button', { type: 'button', class: S.custom.n === n ? 'on' : '', onclick: (e) => { S.custom.n = n; [...e.target.parentNode.children].forEach((b, i) => b.classList.toggle('on', i + 1 === n)); redraw(); } }, n + '×'))))));
+    if (S.custom.chars) more.open = true;
+    w.append(list, more);
     redraw();
   }
 
@@ -104,23 +109,21 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
       } catch (e) { msg.textContent = 'Das hat nicht geklappt: ' + e.message; } finally { S.busy = false; bar.style.display = 'none'; bar.firstChild.style.width = '0'; }
     };
     const canShare = !!(navigator.canShare && navigator.canShare({ files: [new File([''], 'a.pdf', { type: 'application/pdf' })] }));
-    w.append(h('h1', null, 'So willst du schreiben'), h('p', { class: 'mut' }, `${c.length} Kästchen auf ${pages} ${pages === 1 ? 'Seite' : 'Seiten'}. Entweder zeichnest du die Zeichen gleich hier in der App, oder du holst dir eine Vorlage zum Ausfüllen.`),
-      h('h3', { style: { margin: '16px 0 8px' } }, 'Option 1: Direkt in der App zeichnen'),
-      h('div', { class: 'card' }, h('p', { class: 'sm mut', style: { margin: '0 0 10px' } }, 'Jedes Zeichen kommt einzeln in ein Feld mit Hilfslinien (die Vorlage zum Nachzeichnen lässt sich zuschalten). Mit Finger oder Apple Pencil, ohne Drucken und Hochladen.'),
-        btn('Jetzt zeichnen', { icon: 'edit', cls: 'pri', disabled: !c.length, onclick: startDraw })),
-      h('h3', { style: { margin: '20px 0 8px' } }, 'Option 2: Vorlage holen und ausfüllen'),
-      h('p', { class: 'sm mut', style: { margin: '0 0 8px' } }, 'Jeder Bogen hat einen eigenen QR-Code, daran erkennt die App später automatisch, welche Zeichen darauf stehen.'),
-      h('div', { class: 'card' },
-        h('div', { class: 'grid2' }, btn('Als PDF laden', { icon: 'download', cls: 'pri', onclick: () => make('pdf', false) }), btn('Als Bilder (ZIP)', { icon: 'image', onclick: () => make('png', false) })),
-        canShare ? h('div', { style: { marginTop: '10px' } }, btn('Teilen / in GoodNotes öffnen', { icon: 'share', cls: 'sm', onclick: () => make('pdf', true) })) : null, bar, msg),
-      h('h3', { style: { margin: '20px 0 8px' } }, 'So geht es bei Option 2 weiter'),
-      h('div', { class: 'card sm' }, h('ol', { style: { margin: 0, paddingLeft: '20px', display: 'grid', gap: '8px' } },
-        h('li', null, h('b', null, 'Ausfüllen: '), 'Öffne die PDF in GoodNotes (oder druck sie aus) und schreib jedes Zeichen in sein Kästchen, so wie du es sonst schreibst. Die blaue Linie ist die Grundlinie.'),
-        h('li', null, h('b', null, 'Stift: '), 'Am besten ein dunkler Stift in normaler Schreibgröße. Nicht den Kästchenrand berühren.'),
-        h('li', null, h('b', null, 'Exportieren: '), 'In GoodNotes über Teilen → „Als PDF exportieren“ (oder als Bilder). Bei Papier: scannen oder gerade von oben fotografieren.'),
-        h('li', null, h('b', null, 'Hochladen: '), 'Im nächsten Schritt wählst du die Datei aus. Alles läuft auf deinem Gerät, nichts wird hochgeladen.'))),
-      h('div', { class: 'note' }, 'Du musst nicht alles auf einmal schaffen: Du kannst Seite für Seite hochladen und später weitere Seiten ergänzen.'));
-    mf.append(btn('Zurück', { onclick: () => go(1) }), h('span', { class: 'sp1' }), btn('Ich habe sie ausgefüllt', { onclick: () => go(3) }));
+    w.append(h('div', { class: 'wzintro' }, h('h1', null, 'Wie möchtest du schreiben?'), h('p', { class: 'mut' }, `${new Set(c.map((x) => x.ch)).size} Zeichen, ${c.length} Kästchen. Wähle, was dir lieber ist.`)),
+      h('div', { class: 'wzopts' },
+        h('div', { class: 'wzopt rec' }, h('span', { class: 'chip ac' }, 'Empfohlen'), h('div', { class: 'wzic' }, ic('edit')), h('h3', null, 'In der App zeichnen'),
+          h('p', { class: 'sm mut' }, 'Jedes Zeichen einzeln mit Finger oder Apple Pencil, mit Hilfslinien. Kein Drucken, kein Hochladen – und die Striche bleiben im GoodNotes-Export echte Striche.'),
+          btn('Jetzt zeichnen', { icon: 'edit', cls: 'pri', disabled: !c.length, onclick: startDraw })),
+        h('div', { class: 'wzopt' }, h('div', { class: 'wzic' }, ic('file')), h('h3', null, 'Bogen ausfüllen'),
+          h('p', { class: 'sm mut' }, `Du bekommst ${pages} ${pages === 1 ? 'Bogen' : 'Bögen'} (A4) mit Kästchen und QR-Code. Ausfüllen in GoodNotes oder auf Papier, danach hochladen.`),
+          h('div', { class: 'wzbtns' }, canShare ? btn('In GoodNotes öffnen', { icon: 'share', cls: 'pri', onclick: () => make('pdf', true) }) : null, btn('PDF speichern', { icon: 'download', cls: canShare ? '' : 'pri', onclick: () => make('pdf', false) }), btn('Als Bilder (ZIP)', { icon: 'image', cls: 'ghost sm', onclick: () => make('png', false) })), bar, msg)),
+      h('details', { class: 'wzmore' }, h('summary', null, 'So füllst du den Bogen richtig aus'),
+        h('div', { class: 'card sm' }, h('ol', { style: { margin: 0, paddingLeft: '20px', display: 'grid', gap: '8px' } },
+          h('li', null, h('b', null, 'Ausfüllen: '), 'Schreib jedes Zeichen in sein Kästchen, so wie du sonst schreibst. Die blaue Linie ist die Grundlinie.'),
+          h('li', null, h('b', null, 'Stift: '), 'Dunkler Stift in normaler Schreibgröße, den Kästchenrand nicht berühren.'),
+          h('li', null, h('b', null, 'Exportieren: '), 'In GoodNotes über Teilen → „Exportieren“ → PDF. Bei Papier: gerade von oben fotografieren oder scannen.'),
+          h('li', null, h('b', null, 'Hochladen: '), 'Im nächsten Schritt. Du kannst auch Seite für Seite hochladen und später ergänzen.')))));
+    mf.append(btn('Zurück', { cls: 'ghost', onclick: () => go(1) }), h('span', { class: 'sp1' }), btn('Bogen ist ausgefüllt', { onclick: () => go(3) }));
   }
 
   // ---------- 3. Hochladen ----------
@@ -188,14 +191,13 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
     const w = h('div', { class: 'wrap' }); mb.append(w);
     const listEl = h('div', { class: 'pgs' }), statEl = h('p', { class: 'sm mut', style: { minHeight: '20px' } });
     const input = h('input', { type: 'file', accept: 'application/pdf,image/*', multiple: true, class: 'sr', onchange: () => { addFiles([...input.files], listEl, statEl); input.value = ''; } });
-    const drop = h('div', { class: 'drop' }, ic('upload'), h('p', { style: { margin: '8px 0 4px', fontWeight: 600 } }, 'Ausgefüllte Bögen hier ablegen'), h('p', { class: 'sm mut' }, 'PDF oder Bilder, auch mehrere Dateien auf einmal'), btn('Dateien auswählen', { cls: 'pri', onclick: () => input.click() }), input);
+    const drop = h('div', { class: 'drop' }, h('div', { class: 'wzic' }, ic('upload')), h('p', { style: { margin: '10px 0 4px', fontWeight: 650, fontSize: '16px' } }, 'Ausgefüllte Bögen hier ablegen'), h('p', { class: 'sm mut', style: { margin: '0 0 14px' } }, 'PDF oder Fotos, auch mehrere auf einmal'), btn('Dateien auswählen', { cls: 'pri', onclick: () => input.click() }), input);
     drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); }); drop.addEventListener('dragleave', () => drop.classList.remove('over'));
     drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); addFiles([...e.dataTransfer.files], listEl, statEl); });
-    w.append(h('h1', null, 'Bögen hochladen'), h('p', { class: 'mut' }, 'Die App liest den QR-Code, richtet jeden Bogen aus und schneidet die Kästchen aus. Fotos gehen auch, ein PDF-Export aus GoodNotes liefert aber das beste Ergebnis.'), drop, statEl, listEl,
-      h('div', { class: 'note' }, 'Deine Bögen bleiben auf deinem Gerät. Es wird nichts an einen Server geschickt.'));
+    w.append(h('div', { class: 'wzintro' }, h('h1', null, 'Bögen hochladen'), h('p', { class: 'mut' }, 'Die App erkennt jeden Bogen am QR-Code, richtet ihn gerade aus und schneidet die Zeichen aus. Ein PDF-Export aus GoodNotes klappt am besten. Alles bleibt auf deinem Gerät.')), drop, statEl, listEl);
     renderFoot3 = () => {
       const ready = S.pages.filter(p => p.status === 'ok').length;
-      mf.replaceChildren(btn('Zurück', { onclick: () => go(S.sel.size ? 2 : 1) }), h('span', { class: 'sp1' }), h('span', { class: 'sm mut' }, ready ? `${ready} ${ready === 1 ? 'Bogen' : 'Bögen'} bereit` : ''), btn('Zeichen bauen', { cls: 'pri', disabled: !ready || S.busy, onclick: () => go(4) }));
+      mf.replaceChildren(btn('Zurück', { cls: 'ghost', onclick: () => go(S.sel.size ? 2 : 1) }), h('span', { class: 'sp1' }), h('span', { class: 'sm mut' }, ready ? `${ready} ${ready === 1 ? 'Bogen' : 'Bögen'} bereit` : ''), btn('Zeichen bauen', { cls: 'pri', disabled: !ready || S.busy, onclick: () => go(4) }));
     };
     draw3(listEl); renderFoot3();
   }
@@ -205,7 +207,7 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
     const w = h('div', { class: 'wrap' }); mb.append(w);
     const all = S.pages.filter(p => p.status === 'ok').flatMap(p => p.cells);
     const bar = h('div', { class: 'prog', style: { margin: '14px 0' } }, h('i')), msg = h('p', { class: 'sm mut' }, 'Zeichen werden gebaut …');
-    w.append(h('h1', null, 'Fast fertig'), msg, bar);
+    w.append(h('div', { class: 'wzintro' }, h('h1', null, 'Fast fertig'), h('p', { class: 'mut' }, 'Prüf kurz die Zeichen und gib deiner Schrift einen Namen.')), msg, bar);
     mf.append(btn('Zurück', { onclick: () => go(3), disabled: true }));
     S.busy = true;
     try {
@@ -234,9 +236,9 @@ export function openWizard(app, { font = null, preselect = [], customChars = '',
       missPages.length ? h('div', { class: 'note' }, `Noch nicht hochgeladen: Seite ${[...new Set(missPages)].join(', ')}. Du kannst sie später ergänzen.`) : '',
       S.result.stats.cells < 20 ? h('div', { class: 'note warn' }, 'Das sind sehr wenige Zeichen. Falls das nicht stimmt, war die Seite vielleicht unscharf oder schief fotografiert.') : '',
       h('p', { class: 'sm mut' }, 'Gelb umrandet: Zeichen berührt den Kästchenrand (vermutlich abgeschnitten) und ist, wenn genug andere da sind, schon abgewählt. Tippe ein Zeichen an, um es aus- oder wieder einzuschließen.'), tiles,
-      h('label', { class: 'f' }, 'Name der Schrift'), nameIn,
+      h('label', { class: 'f' }, 'Name der Schrift'), nameIn, (() => { const pv = h('div', { class: 'wzname' }); const paint = async () => { try { const { Font, fontText } = await import('./render.js'); const tmp = new Font({ g: S.result.g, meta: { xh: 27, sc: 3, pad: 4 }, ref: S.result.ref }); await tmp.load(); pv.replaceChildren(await fontText(tmp, (S.name || 'Meine Schrift') + ' – So sieht sie aus', { size: 30 })); } catch (e) { pv.replaceChildren(); } }; paint(); nameIn.addEventListener('change', paint); return pv; })(),
       target ? h('div', { style: { marginTop: '10px' } }, h('div', { class: 'seg' }, h('button', { type: 'button', class: S.mode === 'add' ? 'on' : '', onclick: (e) => { S.mode = 'add'; [...e.target.parentNode.children].forEach((b, i) => b.classList.toggle('on', !i)); } }, `Zu „${target.name}“ hinzufügen`), h('button', { type: 'button', class: S.mode === 'new' ? 'on' : '', onclick: (e) => { S.mode = 'new'; [...e.target.parentNode.children].forEach((b, i) => b.classList.toggle('on', !!i)); } }, 'Als neue Schrift'))) : null);
-    mf.replaceChildren(btn('Zurück', { onclick: () => go(S.drawn ? 1 : 3) }), h('span', { class: 'sp1' }), btn('Schrift speichern', { icon: 'check', cls: 'pri', onclick: save }));
+    mf.replaceChildren(btn('Zurück', { cls: 'ghost', onclick: () => go(S.drawn ? 2 : 3) }), h('span', { class: 'sp1' }), btn('Schrift speichern', { icon: 'check', cls: 'pri', onclick: save }));
   }
   async function save() {
     if (S.busy) return; S.busy = true;
