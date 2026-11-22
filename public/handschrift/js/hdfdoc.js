@@ -35,6 +35,7 @@ Ein unbekannter Name (z. B. [box], [calculation-step], [loesung]) erscheint als 
 ## Grundregeln
 - Normaler Text steht einfach als Zeilen. Markdown geht: # Überschrift, ## Unter-Überschrift, **fett**, __unterstrichen__, ==markiert==, ~~durchgestrichen~~, Listen mit "- " oder "1. ". Leerzeile = Absatz.
 - Ein Element beginnt mit [name] allein in einer Zeile und endet mit [/name] allein in einer Zeile. Dazwischen stehen Eigenschaften "schluessel: wert" (eine pro Zeile) und/oder Text. Ausnahme Einzeiler: [titel]Mein Titel[/titel] (Öffnen, Text und Schließen in genau einer Zeile).
+- Jedes [name] wird mit genau seinem eigenen [/name] geschlossen. Darüber hinaus gibt es keine Abschluss-Tags: Das Dokument endet einfach mit dem letzten Inhalt (kein [/escape], [/hdf], [/dokument] o. Ä.).
 - Ein [/name] am Ende einer Textzeile (z. B. "x = 2[/formel]") wird nicht erkannt; mehrere Tags in einer Zeile ebenfalls nicht.
 - Alle Namen kleingeschrieben. Umlaute auch als ae/oe/ue erlaubt (hoehe, groesse). Deutsche und englische Elementnamen gehen (formel = formula).
 - Kurzform: Mehrere Werte in einer Zeile trennt man mit " | " (mit Leerzeichen drumherum), z. B. zeile: -2 | 0
