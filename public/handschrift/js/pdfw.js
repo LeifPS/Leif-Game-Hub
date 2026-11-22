@@ -10,7 +10,7 @@ export function makePdf(pages, title = 'Handschrift') {
   begin(1); push('<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
   begin(2); push('<< /Type /Pages /Count ' + n + ' /Kids [' + pages.map((_, i) => (4 + 3 * i) + ' 0 R').join(' ') + '] >>\nendobj\n');
   const t = title.replace(/[^\x20-\x7e]/g, '?').replace(/[()\\]/g, '');
-  begin(3); push('<< /Title (' + t + ') /Producer (STools) >>\nendobj\n');
+  begin(3); push('<< /Title (' + t + ') /Producer (STools Beta) >>\nendobj\n');
   pages.forEach((p, i) => {
     const im = 5 + 3 * i, ct = 6 + 3 * i, pg = 4 + 3 * i, [pw, ph] = p.pt;
     begin(im); push('<< /Type /XObject /Subtype /Image /Width ' + p.px[0] + ' /Height ' + p.px[1] + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + p.jpeg.length + ' >>\nstream\n'); push(p.jpeg); push('\nendstream\nendobj\n');
