@@ -23,7 +23,8 @@ export const PAPERS = {
 const ALT_PAPIER = { lined: 'gnlin', legal: 'gnlin', college: 'gnlin2', grid: 'gnkar', dots: 'gndot', blank: 'gnleer' };
 /** Einstellungen eines (alten) Dokuments auf GoodNotes-Papier umstellen. Gibt true zurück, wenn sich etwas geändert hat. */
 export function migrateS(s) {
-  if (!s || GNPAPER[s.paper]) return false;
+  if (!s) return false;
+  if (GNPAPER[s.paper]) { if (s.paperColor && s.paperColor !== 'weiss') { s.paperColor = 'weiss'; return true; } return false; }   // Papierfarben gibt es nicht mehr
   const gp = GNPAPER[ALT_PAPIER[s.paper] || 'gnlin'];
   s.paper = ALT_PAPIER[s.paper] || 'gnlin';
   Object.assign(s, { fmt: 'gn', paperColor: 'weiss', size: gp.size, ml: gp.ml, mr: gp.mr, mt: gp.mt, mb: gp.mb });
