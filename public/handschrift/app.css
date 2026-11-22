@@ -385,3 +385,4 @@ label.f{margin:16px 0 7px}
 .swc input{opacity:0;width:100%;height:100%;cursor:pointer;border:0;padding:0}
 .hlbtn .hlbar{fill:#ffd84d;stroke:none}
 :root[data-theme=dark] .hlbtn .hlbar{fill:#c9a82a}
+.boldbtn svg.ic{stroke-width:2.5}

@@ -133,9 +133,9 @@ export function editorView(app) {
     });
   }
   // Textmarker: Linien-Symbol wie die übrigen, mit kleinem gelbem Strich (so sieht der Marker auch auf dem Blatt aus)
-  const hlBtn = () => { const b = btn('Textmarker', { icon: 'highlighter', cls: 'icon hlbtn', onclick: wrap('=='), title: 'Textmarker (==Text==)' }); const sv = b.querySelector('svg'), r = document.createElementNS('http://www.w3.org/2000/svg', 'rect'); r.setAttribute('x', '13'); r.setAttribute('y', '18.6'); r.setAttribute('width', '9'); r.setAttribute('height', '3.4'); r.setAttribute('rx', '1.7'); r.setAttribute('class', 'hlbar'); sv.append(r); return b; };
+  const hlBtn = () => { const b = btn('Textmarker', { icon: 'highlighter', cls: 'icon hlbtn', onclick: wrap('=='), title: 'Textmarker (==Text==)' }); const sv = b.querySelector('svg'), r = document.createElementNS('http://www.w3.org/2000/svg', 'rect'); r.setAttribute('x', '4'); r.setAttribute('y', '19'); r.setAttribute('width', '16'); r.setAttribute('height', '3'); r.setAttribute('rx', '1.5'); r.setAttribute('class', 'hlbar'); sv.append(r); return b; };
   const tb = h('div', { class: 'tb', role: 'toolbar', 'aria-label': 'Formatierung' }, fontBtn, h('i', { class: 'vs' }),
-    btn('Fett', { icon: 'bold', cls: 'icon', onclick: wrap('**'), title: 'Fett (**Text**)' }), btn('Unterstrichen', { icon: 'underline', cls: 'icon', onclick: wrap('__'), title: 'Unterstrichen (__Text__)' }),
+    btn('Fett', { icon: 'bold', cls: 'icon boldbtn', onclick: wrap('**'), title: 'Fett (**Text**)' }), btn('Unterstrichen', { icon: 'underline', cls: 'icon', onclick: wrap('__'), title: 'Unterstrichen (__Text__)' }),
     btn('Durchgestrichen', { icon: 'strike', cls: 'icon', onclick: wrap('~~'), title: 'Durchgestrichen (~~Text~~)' }), hlBtn(),
     btn('Farbe', { icon: 'palette', cls: 'icon', onclick: colorMenu }), h('i', { class: 'vs' }),
     btn('Überschrift', { icon: 'head', cls: 'icon', onclick: linePre('# '), title: 'Überschrift (# am Zeilenanfang)' }), btn('Liste', { icon: 'list', cls: 'icon', onclick: linePre('- '), title: 'Aufzählung (- am Zeilenanfang)' }), btn('Nummerierung', { icon: 'numlist', cls: 'icon', onclick: linePre('1. '), title: 'Nummerierte Liste (1. am Zeilenanfang)' }),
