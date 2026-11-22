@@ -198,3 +198,131 @@ kbd{font-family:ui-monospace,Menlo,monospace;background:var(--surf2);border-radi
 
 .nosel,.nosel *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 .nosel canvas{-webkit-user-drag:none}
+
+/* =========================================================
+   Design 2: angelehnt an GoodNotes / iOS – ruhig, hell, klare Hierarchie
+   ========================================================= */
+:root{
+  --bg:#f2f2f7;--surf:#fff;--surf2:#f2f2f7;--tx:#1c1c1e;--mut:#8a8a8e;--bd:#e3e3e8;--ac:#2f6bff;--ac2:#1f56e0;--acs:#e9f0ff;
+  --sh:0 1px 2px rgba(0,0,0,.04);--r:14px;--nav:rgba(249,249,251,.86);--sep:#e5e5ea;
+}
+:root[data-theme=dark]{--bg:#000;--surf:#1c1c1e;--surf2:#2c2c2e;--tx:#f2f2f7;--mut:#8d8d93;--bd:#38383a;--ac:#5b8cff;--ac2:#7aa2ff;--acs:#1a2647;--sh:none;--nav:rgba(22,22,24,.86);--sep:#38383a}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",Roboto,Helvetica,Arial,sans-serif;letter-spacing:-.005em}
+h1{font-size:30px;font-weight:750;letter-spacing:-.025em;line-height:1.15}
+h2{font-size:19px;font-weight:700;letter-spacing:-.015em}
+.phead{margin:6px 0 16px;align-items:flex-end}
+.phead h1{margin:0}.phead p{margin:3px 0 0}
+.wrap{padding:22px 18px 34px}
+.wrap.wide{max-width:1180px}
+
+/* Navigation */
+.tabs{backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-top:.5px solid var(--sep)}
+.tab{font-size:10.5px;font-weight:600}
+@media(min-width:900px){
+  .side{width:250px;background:var(--surf);border-right:.5px solid var(--sep);padding:18px 12px}
+  .side .brand{margin:4px 10px 22px;font-size:19px}
+  .navb{font-weight:500;padding:9px 12px;color:var(--tx)}
+  .navb .ic{color:var(--ac)}
+  .navb.on{background:var(--surf2);color:var(--tx);font-weight:650}
+  .navb:hover{background:var(--surf2)}
+}
+.bar{background:var(--nav);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--sep)}
+
+/* Buttons: Aktionen in Akzentfarbe, sonst zurückhaltend */
+.btn{border:0;background:var(--surf);border-radius:10px;box-shadow:inset 0 0 0 .5px var(--bd),0 1px 1px rgba(0,0,0,.03);font-weight:600}
+.btn:hover{background:var(--surf2)}
+.btn.pri{background:var(--ac);color:#fff;box-shadow:none}.btn.pri:hover{background:var(--ac2)}
+:root[data-theme=dark] .btn.pri{color:#fff}
+.btn.ghost{box-shadow:none;background:transparent;color:var(--ac)}
+.btn.icon{box-shadow:none;background:transparent;color:var(--ac)}
+.btn.icon:hover{background:var(--surf2)}
+.btn.pri.icon{background:var(--ac);color:#fff;border-radius:50%}
+.btn.danger{color:var(--err)}
+.btn.on{box-shadow:inset 0 0 0 1.5px var(--ac)}
+
+/* Karten und gruppierte Listen wie in den iOS-Einstellungen */
+.card{border:0;box-shadow:var(--sh);border-radius:12px}
+.grp{margin:0 0 22px}
+.grp h4{margin:0 16px 7px;font-size:13px;font-weight:500;color:var(--mut);text-transform:uppercase;letter-spacing:.02em}
+.grp .card{padding:14px 16px}
+.grp .card h3{display:none}
+.chip{background:transparent;box-shadow:inset 0 0 0 1px var(--bd);font-weight:550;font-size:11.5px;padding:2px 8px}
+.chip.ac{background:var(--acs);box-shadow:none}.chip.ok{box-shadow:none}.chip.warn{box-shadow:none}
+input[type=text],input[type=search],select,textarea.f{border:0;background:var(--surf);box-shadow:inset 0 0 0 .5px var(--bd);border-radius:10px}
+input[type=search]{background:rgba(118,118,128,.12);box-shadow:none;padding-left:14px}
+:root[data-theme=dark] input[type=search]{background:rgba(118,118,128,.24)}
+.seg{background:rgba(118,118,128,.12);border-radius:9px;padding:2px}
+.seg button{border-radius:7px;padding:6px 14px;color:var(--tx);font-weight:550}
+.seg button.on{box-shadow:0 3px 8px rgba(0,0,0,.12),0 1px 1px rgba(0,0,0,.04)}
+:root[data-theme=dark] .seg button.on{background:#636366}
+.tg,.opt{border:0;box-shadow:inset 0 0 0 1px var(--bd);background:var(--surf);font-weight:550}
+.tg.on,.opt.on{box-shadow:inset 0 0 0 1.5px var(--ac);background:var(--acs);color:var(--ac)}
+.note{border:0;background:var(--surf);border-radius:12px;box-shadow:var(--sh);padding:12px 14px;color:var(--tx)}
+.note b{color:var(--ac)}
+.note.warn b{color:var(--warn)}
+details.faq{border-bottom:.5px solid var(--sep)}details.faq:last-child{border-bottom:0}
+.tog{border-bottom:.5px solid var(--sep)}
+
+/* „Neue Schrift“: ruhige Karte statt Farbverlauf */
+.hero{background:var(--surf);color:var(--tx);border-radius:16px;box-shadow:var(--sh);padding:20px;position:relative;overflow:hidden}
+.hero h2{font-size:21px;margin-bottom:6px}.hero p{color:var(--mut);opacity:1;max-width:560px}
+.hero .btn{background:var(--ac);color:#fff}
+.hero::after{content:"Aa";position:absolute;right:18px;top:6px;font:italic 300 84px/1 "Snell Roundhand","Segoe Script","Brush Script MT",cursive;color:var(--ac);opacity:.12;pointer-events:none}
+.fprev{background:#fff;border:0;box-shadow:inset 0 0 0 .5px var(--bd)}
+
+/* Dokumente: Blätter wie in der GoodNotes-Bibliothek */
+.dgrid{gap:26px 20px}
+@media(min-width:700px){.dgrid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:30px 26px}}
+.dcard{align-items:center;text-align:center;gap:3px}
+.dcard .dprev{border:0;border-radius:6px;box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.08),0 8px 18px rgba(0,0,0,.06);margin-bottom:6px}
+.dcard:hover .dprev{border:0;transform:translateY(-2px);box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 6px 16px rgba(0,0,0,.14)}
+.dcard .dtitle{justify-content:center;width:100%}
+.dcard .dtitle b{flex:0 1 auto;font-weight:600;font-size:13.5px}
+.dcard .dtitle .btn{min-width:24px;min-height:24px;width:24px;color:var(--mut)}
+.dcard>.xs{font-size:11.5px}
+
+/* Schreiben */
+.tb{background:var(--surf);border-bottom:.5px solid var(--sep);gap:4px;padding:7px 10px}
+.tb .btn{box-shadow:none;color:var(--tx);border-radius:9px}
+.tb .btn.on{background:var(--acs);color:var(--ac);box-shadow:none}
+.tb .fontsel{border:0;box-shadow:inset 0 0 0 .5px var(--bd);border-radius:99px;padding:0 12px}
+textarea#txt{font:15.5px/1.65 ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;padding:20px 20px 40px}
+.stat{border-top:.5px solid var(--sep);font-size:12px}
+.preview{background:#e8e8ed;padding:20px}
+:root[data-theme=dark] .preview{background:#0d0d0f}
+.pg .cv{border-radius:3px;box-shadow:0 0 0 .5px rgba(0,0,0,.1),0 4px 14px rgba(0,0,0,.1)}
+.pg .cap{font-weight:500}
+.seg2 .seg{width:100%}.seg2 .seg button{flex:1}
+@media(min-width:900px){.pane.ed{border-right:.5px solid var(--sep)}}
+
+/* Sheets */
+.sheet{border-radius:14px 14px 0 0}
+.sheet .sh h2{font-size:17px}
+@media(min-width:900px){.sheet{border-radius:0;border-left:.5px solid var(--sep);box-shadow:-10px 0 30px rgba(0,0,0,.12)}}
+.scrim{background:rgba(0,0,0,.32)}
+.pack,.dlist .it{border:0;box-shadow:inset 0 0 0 1px var(--bd)}
+.pack.on{box-shadow:inset 0 0 0 1.5px var(--ac)}
+#toast{background:rgba(30,30,32,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:14px;font-weight:500}
+
+/* Schriften: Karten mit dem Namen in der eigenen Schrift */
+.fgrid{display:grid;grid-template-columns:1fr;gap:14px}
+@media(min-width:700px){.fgrid{grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:18px}}
+.fcard2{background:var(--surf);border-radius:16px;box-shadow:var(--sh);padding:16px 16px 8px;cursor:pointer;display:flex;flex-direction:column;gap:8px;position:relative;transition:box-shadow .15s,transform .1s;outline-offset:3px}
+.fcard2:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.fcard2.on{box-shadow:inset 0 0 0 2px var(--ac)}
+.fcard2 .ftop{display:flex;align-items:flex-start;gap:10px;min-height:46px}
+.fname{flex:1;min-width:0}.fname canvas{display:block;max-width:100%;height:auto;max-height:58px}
+.fsamp{min-height:30px}.fsamp canvas{display:block;max-width:100%;height:auto;max-height:36px;opacity:.75}
+:root[data-theme=dark] .fname canvas,:root[data-theme=dark] .fsamp canvas{filter:invert(1)}
+.fon{width:24px;height:24px;border-radius:50%;background:var(--ac);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:800;flex:none}
+.fmeta{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--mut);padding-top:8px;border-top:.5px solid var(--sep)}
+.fmeta>span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.facts{display:flex;align-items:center;gap:2px;margin:0 -6px}
+.facts .btn.icon.sm{width:38px;min-width:38px;min-height:38px;color:var(--ac)}
+.facts .btn.danger{color:var(--err)}
+.fnew{border:1.5px dashed var(--bd);background:transparent;border-radius:16px;min-height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:18px;color:var(--tx);text-align:center}
+.fnew:hover{border-color:var(--ac);background:var(--acs)}
+.fplus{width:44px;height:44px;border-radius:50%;background:var(--ac);color:#fff;display:grid;place-items:center;font-size:26px;font-weight:400;line-height:1;margin-bottom:4px}
+.fgrid{grid-template-columns:minmax(0,1fr)}.fcard2,.fsamp,.fname{min-width:0}.fsamp{overflow:hidden}
+@media(max-width:699px){.fnew{min-height:0;flex-direction:row;justify-content:flex-start;text-align:left;padding:14px 16px}.fnew .fplus{margin:0;width:36px;height:36px;font-size:22px}.fnew .xs{display:none}}
+@media(min-width:700px){.fgrid{grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}}

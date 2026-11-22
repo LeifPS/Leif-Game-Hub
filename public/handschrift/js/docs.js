@@ -49,7 +49,7 @@ export function docsView(app) {
     if (!loaded) return;
     wrap.replaceChildren();
     const imp = h('input', { type: 'file', accept: '.txt,.md,.markdown,.hdf,text/plain', multiple: true, class: 'sr', onchange: async () => { let last; for (const f of imp.files) last = await app.newDoc({ title: f.name.replace(/\.[^.]+$/, ''), text: await f.text() }); imp.value = ''; if (last) { toast('Hochgeladen'); draw(); } } });
-    wrap.append(h('div', { class: 'row', style: { marginBottom: '12px' } }, h('div', { class: 'sp1' }, h('h1', { style: { margin: 0 } }, 'Dokumente'), h('p', { class: 'mut sm', style: { margin: '2px 0 0' } }, `${app.docs.length} ${app.docs.length === 1 ? 'Dokument' : 'Dokumente'} · alles wird auf diesem Gerät gespeichert`)),
+    wrap.append(h('div', { class: 'row phead' }, h('div', { class: 'sp1' }, h('h1', null, 'Dokumente'), h('p', { class: 'mut sm' }, `${app.docs.length} ${app.docs.length === 1 ? 'Dokument' : 'Dokumente'}`)),
       btn('Textdatei hochladen', { icon: 'upload', cls: 'icon', onclick: () => imp.click(), title: 'Textdateien (.txt, .md) hochladen' }), btn('Vorlagen', { icon: 'grid', cls: 'icon', onclick: () => openTemplates(app), title: 'Vorlagen' }), btn('Neues Dokument', { icon: 'plus', cls: 'pri icon', onclick: async () => { const d = await app.newDoc(); app.openDoc(d.id); }, title: 'Neues Dokument' }), imp));
     wrap.append(reminderCard());
     const s = h('input', { type: 'search', placeholder: 'Dokumente durchsuchen …', value: q, 'aria-label': 'Dokumente durchsuchen', oninput: () => { q = s.value; grid(); } });

@@ -507,3 +507,17 @@ export async function samplePreview(font, text = 'Das ist meine Schrift 123') {
   const o = document.createElement('canvas'); o.width = 520; o.height = 150; const g = o.getContext('2d'); g.fillStyle = PAPER_COLORS.creme; g.fillRect(0, 0, 520, 150);
   g.drawImage(c, 0, 0, 520, 150, 0, 0, 520, 150); return o;
 }
+
+/** Text in der Schrift selbst, transparent und auf die Tinte zugeschnitten (für Namen und Beispielzeilen in der Schriftenliste). */
+export async function fontText(font, text, { size = 34, ink = '#1c1c1e', maxW = 1400, seed = 3 } = {}) {
+  const S = { ...DEF, fmt: 'a4', paper: 'blank', scan: false, ml: 20, mr: 20, mt: 10, mb: 10, size, lh: 2.2, jit: .45, seed, ink, rr: null };
+  await font.prepare(text); const L = layout(text, S, font); await ensureImages(L.pages[0]);
+  const c = document.createElement('canvas'); drawPage(c, L.pages[0], L, S, 1, true);
+  const g = c.getContext('2d'), w = Math.min(c.width, maxW + 40), hgt = Math.min(c.height, Math.round(size * 6)), d = g.getImageData(0, 0, w, hgt).data;
+  let x0 = w, y0 = hgt, x1 = -1, y1 = -1;
+  for (let y = 0; y < hgt; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 20) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  const o = document.createElement('canvas'); if (x1 < 0) { o.width = o.height = 1; return o; }
+  const p = 3; o.width = x1 - x0 + 1 + 2 * p; o.height = y1 - y0 + 1 + 2 * p;
+  o.getContext('2d').drawImage(c, x0 - p, y0 - p, o.width, o.height, 0, 0, o.width, o.height);
+  return o;
+}

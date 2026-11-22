@@ -1,7 +1,7 @@
 // Ansicht „Schriften“: Liste, Verwenden, Umbenennen, Erweitern, Export/Import, Zeichen ansehen
-import { h, saveFile, toast, fmtDate } from './util.js';
+import { h, saveFile, toast } from './util.js';
 import { btn, sheet, confirmBox, promptBox } from './ui.js';
-import { samplePreview } from './render.js';
+import { fontText } from './render.js';
 import { openWizard } from './wizard.js';
 import { openTopUp } from './extra.js';
 import { PACKS, PACK_BY_ID } from './packs.js';
@@ -13,24 +13,36 @@ export function fontsView(app) {
   async function draw() {
     wrap.replaceChildren();
     const imp = h('input', { type: 'file', accept: '.hsfont,application/json', class: 'sr', onchange: async () => { try { const rec = await fontFromFile(imp.files[0]); await dbPut('fonts', rec); await app.fontSaved(rec); toast(`„${rec.name}“ importiert`); } catch (e) { toast(e.message, 5000, 'err'); } imp.value = ''; } });
-    wrap.append(h('div', { class: 'row', style: { marginBottom: '14px' } }, h('div', { class: 'sp1' }, h('h1', null, 'Schriften'), h('p', { class: 'mut sm', style: { margin: 0 } }, 'Deine Handschriften, alles bleibt auf diesem Gerät')),
-      btn('Importieren', { icon: 'upload', cls: 'sm', onclick: () => imp.click() }), imp));
-    wrap.append(h('div', { class: 'hero' }, h('h1', null, 'Schreib in deiner eigenen Handschrift'), h('p', null, 'Wähle die Zeichen, die du brauchst, schreib sie einmal auf einen Bogen und lade ihn hoch oder zeichne sie direkt hier in der App. Danach wird jeder Text so, als hättest du ihn selbst geschrieben.'), btn('Neue Schrift erstellen', { icon: 'plus', onclick: () => openWizard(app) })));
+    wrap.append(h('div', { class: 'row phead' }, h('div', { class: 'sp1' }, h('h1', null, 'Schriften'), h('p', { class: 'mut sm' }, `${app.fonts.length} ${app.fonts.length === 1 ? 'Schrift' : 'Schriften'}`)),
+      btn('Schrift importieren', { icon: 'upload', cls: 'icon', title: 'Schrift importieren (.hsfont)', onclick: () => imp.click() }),
+      btn('Neue Schrift', { icon: 'plus', cls: 'pri icon', title: 'Neue Schrift erstellen', onclick: () => openWizard(app) }), imp));
+    const grid = h('div', { class: 'fgrid' }); wrap.append(grid);
+    const ib = (label, icon, onclick, cls = '') => btn(label, { icon, cls: 'icon sm ' + cls, title: label, onclick: (e) => { e.stopPropagation(); onclick(); } });
     for (const f of app.fonts) {
-      const prev = h('div', { class: 'fprev' }), isOn = app.fontId === f.id, n = countGlyphs(f.g), chars = Object.keys(f.g).length;
-      app.getFont(f.id).then(fo => samplePreview(fo)).then(c => prev.append(c)).catch(() => {});
-      const chipsEl = h('div', { class: 'row wrap2', style: { gap: '6px', marginTop: '6px' } }, h('span', { class: 'chip' }, `${chars} Zeichen`), ...(f.packs || []).slice(0, 5).map(id => h('span', { class: 'chip' }, PACK_BY_ID[id] ? PACK_BY_ID[id].name : id)), f.builtin ? h('span', { class: 'chip ac' }, 'Beispiel') : null);
-      wrap.append(h('div', { class: 'card' },
-        h('div', { class: 'fcard' }, prev, h('div', { class: 'sp1', style: { minWidth: 0 } }, h('b', null, f.name), isOn ? h('span', { class: 'chip ok', style: { marginLeft: '8px' } }, 'In Benutzung') : null, chipsEl, f.updated ? h('div', { class: 'xs mut', style: { marginTop: '4px' } }, `${n} Bilder · ${fmtDate(f.updated)}`) : null)),
-        h('div', { class: 'row wrap2', style: { marginTop: '12px', gap: '8px' } },
-          btn(isOn ? 'Aktiv' : 'Verwenden', { cls: 'sm' + (isOn ? '' : ' pri'), disabled: isOn, onclick: () => { app.setFont(f.id); toast(`„${f.name}“ wird jetzt benutzt`); draw(); } }),
-          f.builtin ? btn('Erweitern', { icon: 'plus', cls: 'sm', onclick: () => openWizard(app, { font: null, preselect: ['standard', 'sonder'] }), title: 'Eigene Schrift mit denselben Paketen erstellen' }) : btn('Ergänzen', { icon: 'plus', cls: 'sm', onclick: () => openTopUp(app, f), title: 'Fehlende Zeichen, weitere Varianten oder neue Pakete hinzufügen' }),
-          btn('Zeichen', { icon: 'eye', cls: 'sm', onclick: () => showGlyphs(f) }),
-          f.builtin ? null : btn('Umbenennen', { icon: 'edit', cls: 'sm', onclick: async () => { const nm = await promptBox('Name der Schrift', f.name); if (nm) { f.name = nm; await dbPut('fonts', stripped(f)); draw(); app.refreshFontLabel(); } } }),
-          f.builtin ? null : btn('Exportieren', { icon: 'download', cls: 'sm', onclick: () => saveFile(fontToFile(f), `${fileBase(f.name)}.hsfont`) }),
-          f.builtin ? null : btn('Löschen', { icon: 'trash', cls: 'sm danger', onclick: async () => { if (await confirmBox(`„${f.name}“ wirklich löschen? Das lässt sich nicht rückgängig machen. Exportiere die Schrift vorher, wenn du sie behalten willst.`)) { await dbDel('fonts', f.id); await app.fontsChanged(); draw(); } } }))));
+      const isOn = app.fontId === f.id, chars = Object.keys(f.g).length;
+      const shown = f.builtin ? f.name.replace(/\s*\(Beispiel\)\s*$/, '') : f.name;
+      const nameBox = h('div', { class: 'fname', 'aria-label': shown }, h('span', { class: 'sk', style: { display: 'block', width: '60%', height: '30px' } }));
+      const sampBox = h('div', { class: 'fsamp' });
+      app.getFont(f.id).then(async (fo) => {
+        nameBox.replaceChildren(await fontText(fo, shown, { size: 40, seed: 7 }));
+        sampBox.replaceChildren(await fontText(fo, 'Franz jagt im Taxi quer durch Bayern 123', { size: 24, seed: 11 }));
+      }).catch(() => { nameBox.replaceChildren(h('b', null, shown)); });
+      const packs = (f.packs || []).map((id) => PACK_BY_ID[id] ? PACK_BY_ID[id].name : id);
+      const card = h('div', { class: 'fcard2' + (isOn ? ' on' : ''), role: 'button', tabindex: 0, title: isOn ? 'Wird benutzt' : 'Antippen zum Verwenden',
+        onclick: () => { if (isOn) return; app.setFont(f.id); toast(`„${shown}“ wird jetzt benutzt`); draw(); }, onkeydown: (e) => { if (e.key === 'Enter') e.currentTarget.click(); } },
+        h('div', { class: 'ftop' }, nameBox, isOn ? h('span', { class: 'fon', title: 'Wird benutzt' }, '✓') : null),
+        sampBox,
+        h('div', { class: 'fmeta' }, h('span', null, `${chars} Zeichen`, packs.length ? ' · ' + packs.join(', ') : ''), f.builtin ? h('span', { class: 'chip ac' }, 'Beispiel') : null),
+        h('div', { class: 'facts' },
+          f.builtin ? ib('Eigene Schrift mit denselben Paketen erstellen', 'plus', () => openWizard(app, { font: null, preselect: ['standard', 'sonder'] })) : ib('Ergänzen: fehlende Zeichen, Varianten, Pakete', 'plus', () => openTopUp(app, f)),
+          ib('Zeichen ansehen', 'eye', () => showGlyphs(f)),
+          f.builtin ? null : ib('Umbenennen', 'edit', async () => { const nm = await promptBox('Name der Schrift', f.name); if (nm) { f.name = nm; await dbPut('fonts', stripped(f)); draw(); app.refreshFontLabel(); } }),
+          f.builtin ? null : ib('Exportieren (.hsfont)', 'download', () => saveFile(fontToFile(f), `${fileBase(f.name)}.hsfont`)),
+          h('span', { class: 'sp1' }),
+          f.builtin ? null : ib('Löschen', 'trash', async () => { if (await confirmBox(`„${f.name}“ wirklich löschen? Das lässt sich nicht rückgängig machen. Sichere sie vorher, wenn du sie behalten willst.`)) { await dbDel('fonts', f.id); await app.fontsChanged(); draw(); } }, 'danger')));
+      grid.append(card);
     }
-    wrap.append(h('div', { class: 'note' }, h('b', null, 'Tipp: '), 'Exportiere deine Schrift als Datei (.hsfont). So kannst du sie auf einem anderen Gerät importieren oder sichern.'));
+    grid.append(h('button', { type: 'button', class: 'fnew', onclick: () => openWizard(app) }, h('span', { class: 'fplus' }, '+'), h('b', null, 'Neue Schrift'), h('span', { class: 'xs mut' }, 'Zeichen auf einen Bogen schreiben oder direkt hier zeichnen')));
   }
   const stripped = (f) => { const r = { ...f }; delete r.builtin; return r; };
   function showGlyphs(f) {
