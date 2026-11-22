@@ -521,5 +521,23 @@ label.f{margin:16px 0 7px}
 .gprev canvas{max-width:100%;height:auto}
 .gpair{display:flex;gap:8px;flex-wrap:wrap}.gpair .btn{flex:1;min-width:120px}
 button.chip{border:0;cursor:pointer}
-details.anl ul{margin:6px 0 0;padding-left:20px;color:var(--mut)}details.anl li{margin:3px 0}
-details.anl pre.anl-code{margin:8px 0 0;padding:8px 10px;border-radius:8px;background:var(--surf2);font:12px/1.45 ui-monospace,Menlo,monospace;white-space:pre-wrap;overflow-x:auto}
+/* Was STools kann: Galerie */
+.fx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+@media(min-width:700px){.fx-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:16px}}
+.fx-tile{display:flex;flex-direction:column;align-items:stretch;gap:3px;text-align:left;background:none;border:0;padding:0;min-width:0;border-radius:14px}
+.fx-tile b{font-size:14px;margin-top:4px}.fx-tile>span{font-size:12px;color:var(--mut);line-height:1.35}
+.fx-prev{aspect-ratio:4/3;border-radius:12px;border:1px solid var(--bd);background:#fff;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:transform .12s,box-shadow .12s}
+.fx-tile:hover .fx-prev{border-color:var(--ac);box-shadow:0 4px 14px rgba(0,0,0,.12)}.fx-tile:active .fx-prev{transform:scale(.98)}
+.fx-prev.kar,.fx-big.kar{background-color:#fff;background-image:linear-gradient(#e6e8ee 1px,transparent 1px),linear-gradient(90deg,#e6e8ee 1px,transparent 1px);background-size:12px 12px}
+.fx-prev.lin,.fx-big.lin{background:#fff}
+.fx-cv{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.fx-shim{width:80%;height:50%;border-radius:8px;background:linear-gradient(90deg,#fff 0,#eef0f4 50%,#fff 100%);background-size:800px 100%;animation:shimmer 1.3s linear infinite}
+.fx-icon{width:56px;height:56px;border-radius:16px;background:var(--acs);color:var(--ac);display:flex;align-items:center;justify-content:center}.fx-icon svg.ic{width:28px;height:28px}
+.fx-prev:has(.fx-icon){background:linear-gradient(145deg,var(--surf) 0,var(--surf2) 100%)}
+.fx-lead{color:var(--mut);margin:0 0 12px}
+.fx-big{border:1px solid var(--bd);border-radius:14px;min-height:180px;display:flex;align-items:center;justify-content:center;padding:14px;overflow:hidden}
+.fx-big .fx-cv{max-height:52vh}.fx-bigicon{background:var(--surf2);color:var(--ac);min-height:120px}.fx-bigicon svg.ic{width:48px;height:48px}
+.fx-rng{display:grid;grid-template-columns:1fr auto;gap:2px 10px;margin-top:12px;font-size:14px}.fx-rng output{color:var(--ac);font-variant-numeric:tabular-nums}.fx-rng input{grid-column:1/-1;width:100%}
+.fx-h{font-size:12px;font-weight:650;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);margin:18px 0 6px}
+.fx-code{margin:0 0 8px;padding:10px 12px;border-radius:10px;background:var(--surf2);font:12.5px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;overflow-x:auto}
+.fx-list{margin:0;padding-left:20px}.fx-list li{margin:4px 0}
