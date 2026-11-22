@@ -69,3 +69,15 @@ test('STools-Titel: ohne KI-Anbindung freundliche Fehlermeldung, mit KI kurzer T
   const e2 = { ...env, DB: makeD1(), AI: { run: async () => ({ response: '„Die pq-Formel.“\nmehr' }) } };
   assert.deepEqual(await (await req(e2)).json(), { titel: 'Die pq-Formel' });
 });
+
+test('st.leifps.de/hdf: Format-Beschreibung als reiner Text (für KIs per Link), ohne Auftrag', async () => {
+  for (const u of ['https://st.leifps.de/hdf', 'https://st.leifps.de/hdf.txt', 'https://st.leifps.de/ki-hdf', 'https://handschrift.leifps.de/HDF']) {
+    const a = await handschriftWeiche(r(u), env);
+    assert.equal(a.status, 200, u);
+    assert.match(a.headers.get('content-type'), /^text\/plain; charset=utf-8/);
+    const t = await a.text();
+    assert.match(t, /^# HDF/);
+    assert.doesNotMatch(t, /Antworte NUR|Qualitätsregeln|Erstelle für mich/);
+  }
+  assert.equal(handschriftWeiche(r('https://hub.leifps.de/hdf'), env), null);   // nur auf der App-Adresse
+});

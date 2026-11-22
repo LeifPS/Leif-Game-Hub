@@ -1,7 +1,10 @@
-// Dokumentation des HDF-Formats für KIs + Beispiel-Arbeitsblatt
+// Dokumentation des HDF-Formats (neutral: beschreibt nur, was es gibt – kein Auftrag) + Beispiel-Arbeitsblatt
+// Dieselbe Beschreibung liefert der Worker als Text unter https://st.leifps.de/hdf aus (src/handschrift.js)
 export const HDF_DOC = `# HDF – Handwritten Document Format (STools)
 
-Du schreibst ein Dokument als reinen Text. Die App STools setzt es in echter Handschrift (Text, Zahlen, Formeln) und zeichnet Linien, Achsen, Kurven und Rahmen als perfekte Striche, wie auf einem Arbeitsblatt in GoodNotes. Das Layout macht die App automatisch. Antworte NUR mit dem Dokument (in einem Codeblock), ohne Erklärungen.
+Ein HDF-Dokument ist reiner Text. Die App STools setzt ihn in der Handschrift des Nutzers (Text, Zahlen, Formeln) und zeichnet Linien, Achsen, Kurven und Rahmen als saubere Striche, wie auf einem Blatt in GoodNotes. Das Layout macht die App automatisch.
+
+Diese Beschreibung listet alles auf, was das Format kann. Alle Elemente sind optional: Ein Dokument kann auch nur aus normalem Text bestehen. Die Elemente sind Werkzeuge für Inhalte, die sie brauchen (eine Formel für eine Formel, ein Graph für einen Graphen).
 
 ## Grundregeln
 - Normaler Text steht einfach als Zeilen. Markdown geht: # Überschrift, ## Unter-Überschrift, **fett**, __unterstrichen__, ==markiert==, ~~durchgestrichen~~, Listen mit "- " oder "1. ". Leerzeile = Absatz.
@@ -71,7 +74,7 @@ schnittpunkte: ja
 legende: ja
 [/graph]
 Eigenschaften: xbereich/ybereich (oder xmin xmax ymin ymax), einheit (Kästchen pro Einheit; Standard 2, bei großen Bereichen automatisch 1 oder 0,5), xbeschriftung/ybeschriftung (Standard x, y), zahlen: ja|nein, achsen: ja|nein, raster: ja (eigenes Gitter, auf kariertem Papier nicht nötig), skala (Abstand der Teilstriche), nullstellen/extrema/schnittpunkte: ja (werden berechnet und mit Koordinaten beschriftet), breite, titel.
-Funktion: "funktion: Term | Farbe | Linienart | name=… | bereich=a..b" (Reihenfolge der Zusatzangaben egal; Linienart gestrichelt|gepunktet). Alternativ als Unterelement [funktion] ausdruck: … | farbe: … | name: … | bereich: -2..2 [/funktion]. Der Term enthält nur x, z. B. x^2-4, sin(x), 1/x, sqrt(x). Polstellen und Definitionslücken werden erkannt. Punkte: punkt: x | y | Name | kreuz|punkt|kreis | Farbe. Strecken/Pfeile: strecke: x1,y1 | x2,y2 | pfeil | Farbe | Name. Tipp: Pro Graph höchstens 15 Einheiten je Achse (passt auf eine GoodNotes-Seite).
+Funktion: "funktion: Term | Farbe | Linienart | name=… | bereich=a..b" (Reihenfolge der Zusatzangaben egal; Linienart gestrichelt|gepunktet). Alternativ als Unterelement [funktion] ausdruck: … | farbe: … | name: … | bereich: -2..2 [/funktion]. Der Term enthält nur x, z. B. x^2-4, sin(x), 1/x, sqrt(x). Polstellen und Definitionslücken werden erkannt. Punkte: punkt: x | y | Name | kreuz|punkt|kreis | Farbe. Strecken/Pfeile: strecke: x1,y1 | x2,y2 | pfeil | Farbe | Name. Auf eine GoodNotes-Seite passen etwa 15 Einheiten je Achse.
 ### Geometrie (Element [geometrie] = Koordinatensystem mit gleichem Maßstab auf x und y)
 [geometrie titel="Zentrische Streckung"]
 xbereich: -1..9
@@ -97,16 +100,16 @@ Mehrere Reihen (gruppierte Balken oder mehrere Linien): kategorien: Mo, Di, Mi  
 [pyramide]: stufe: Text | Farbe (von oben nach unten).   [kreislauf]: stufe: Text | Farbe (im Kreis mit Pfeilen).
 ### Chemie
 [reaktion]  gleichung: 2 H2 + O2 -> 2 H2O | Hinweis. Indexzahlen werden automatisch tiefgestellt, <-> wird ⇌. Ladungen mit ^: Na^+ , SO4^2- .
-### Noch nicht umgesetzt (werden als roter Platzhalter angezeigt)
-Streudiagramm, Physik-Schaltbilder, Karten, Bilder, Strukturformeln. Nutze dafür vorerst Text, Tabellen und Graphen.
+### Gibt es (noch) nicht
+Streudiagramm, Physik-Schaltbilder, Karten, Bilder, Strukturformeln. Unbekannte Elemente erscheinen als roter Platzhalter.
 
-## Qualitätsregeln für dich
-- Ein Arbeitsblatt: Titel, kurze Erklärung/Merkkasten, Beispiel mit Rechenweg, Aufgaben (aufgabe) mit Antwortfeldern (antwort).
-- Rechne selbst nach: Ergebnisse in Tabellen und Rechenwegen müssen stimmen (Wertetabellen berechnet die App).
-- Keine Elemente erfinden. Nur die oben genannten benutzen.
-- Text in Handschrift ist breit: kurze Sätze, nicht zu viele Wörter pro Zeile.
+## Gut zu wissen
+- Nur die oben genannten Elemente gibt es.
+- Handschrift ist breiter als gedruckter Text: Pro Zeile passen weniger Wörter.
+- Wertetabellen berechnet die App selbst, Tabellen und Rechenwege zeigt sie so, wie sie geschrieben sind.
 `;
-export const HDF_PROMPT = `Erstelle für mich ein Arbeitsblatt im Format HDF. Thema: [HIER DAS THEMA, KLASSE UND UMFANG EINTRAGEN]\n\nHalte dich genau an die folgende Format-Beschreibung und antworte nur mit dem fertigen Dokument in einem Codeblock.\n\n` + HDF_DOC;
+export const HDF_URL = 'https://st.leifps.de/hdf';
+export const HDF_LINK = `Das Textformat HDF der Handschrift-App STools ist hier beschrieben: ${HDF_URL} – bitte lies die Seite, bevor du ein HDF-Dokument schreibst.`;
 export const HDF_EXAMPLE = `[titel]STools-Tour: alle Features[/titel]
 
 Dieses Blatt zeigt jedes Element des Formats. Alles hier ist **Handschrift** (Text, Zahlen, Formeln) oder ein *perfekter Strich* (Linien, Achsen, Rahmen).

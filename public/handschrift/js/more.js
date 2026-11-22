@@ -6,7 +6,7 @@ import { doBackup, restoreButton } from './backup.js';
 import { syncStatus, syncNow, newCode, setCode, fmtCode, normCode, validCode } from './sync.js';
 import { promptBox } from './ui.js';
 import { lastSync, daysLeft, checkNow, SYNC_DAYS } from './session.js';
-import { HDF_DOC, HDF_PROMPT, HDF_EXAMPLE } from './hdfdoc.js';
+import { HDF_DOC, HDF_LINK, HDF_EXAMPLE } from './hdfdoc.js';
 
 export const VERSION = '1.0';
 export function moreView(app) {
@@ -56,13 +56,13 @@ export function moreView(app) {
       h('p', { class: 'mut sm', style: { margin: '8px 0' } }, 'Speichert alle eigenen Schriften und Dokumente in einer Datei (.stools). Lege sie am besten in iCloud Drive ab. Damit kannst du alles auf einem neuen Gerät oder nach dem Löschen der Browserdaten wiederherstellen. Die App erinnert dich, wenn sich deine Schrift geändert hat.'),
       h('div', { class: 'row wrap2' }, btn('Alles sichern', { icon: 'download', cls: 'pri', onclick: async () => { try { await doBackup(); } catch (e) { toast('Sicherung fehlgeschlagen: ' + e.message, 4000, 'err'); } } }), restoreButton(app, draw))));
     // Visuals (HDF)
-    wrap.append(grp('Visuals und KI (HDF-Format)',
-      h('p', { class: 'mut sm', style: { margin: '8px 0' } }, 'Eine KI kann ein komplettes Arbeitsblatt mit Formeln, Rechenwegen, Koordinatensystemen und Tabellen als Text schreiben. Füge ihn in ein Dokument ein, dann setzt STools alles in deiner Handschrift. Mathe ist auf GoodNotes „kariert“ ausgelegt.'),
+    wrap.append(grp('Textformat für KIs (HDF)',
+      h('p', { class: 'mut sm', style: { margin: '8px 0' } }, 'STools versteht ein Textformat (HDF) mit Formeln, Rechenwegen, Koordinatensystemen, Tabellen, Noten und mehr. Die Beschreibung erklärt nur, was es gibt – was du haben willst, sagst du der KI selbst. Die Antwort fügst du in ein Dokument ein, dann setzt STools alles in deiner Handschrift.'),
       h('div', { class: 'row wrap2' },
-        btn('Auftrag für die KI kopieren', { icon: 'copy', cls: 'pri', onclick: async () => { try { await navigator.clipboard.writeText(HDF_PROMPT); toast('Kopiert – in die KI einfügen und das Thema eintragen'); } catch (e) { toast('Kopieren nicht möglich', 3000, 'err'); } } }),
-        btn('Nur die Format-Beschreibung', { icon: 'copy', cls: 'sm', onclick: async () => { try { await navigator.clipboard.writeText(HDF_DOC); toast('Beschreibung kopiert'); } catch (e) { toast('Kopieren nicht möglich', 3000, 'err'); } } }),
+        btn('Format-Beschreibung kopieren', { icon: 'copy', cls: 'pri', onclick: async () => { try { await navigator.clipboard.writeText(HDF_DOC); toast('Beschreibung kopiert'); } catch (e) { toast('Kopieren nicht möglich', 3000, 'err'); } } }),
+        btn('Nur den Link kopieren', { icon: 'copy', cls: 'sm', title: 'Kurzer Satz mit Link zur Beschreibung (für KIs, die Webseiten lesen können)', onclick: async () => { try { await navigator.clipboard.writeText(HDF_LINK); toast('Link kopiert'); } catch (e) { toast('Kopieren nicht möglich', 3000, 'err'); } } }),
         btn('Beispiel-Arbeitsblatt öffnen', { cls: 'sm', onclick: async () => { const d = await app.newDoc({ title: 'Beispiel: Quadratische Funktionen', text: HDF_EXAMPLE, fontId: app.fontId, s: { paper: 'gnkar', fmt: 'gn', paperColor: 'weiss', scan: false, size: 18, ml: 110, mr: 70, mt: 60, mb: 50 } }); await app.openDoc(d.id); } })),
-      h('p', { class: 'mut sm', style: { margin: '10px 0 0' } }, 'Ablauf: „Auftrag für die KI kopieren“, in ChatGPT/Claude einfügen, Thema eintragen, die Antwort kopieren und in einem neuen Dokument einfügen (oder als .hdf-Datei hochladen).')));
+      h('p', { class: 'mut sm', style: { margin: '10px 0 0' } }, 'Der Link (st.leifps.de/hdf) führt immer zur aktuellen Beschreibung. Manche KIs öffnen Links nicht zuverlässig, dann die ganze Beschreibung kopieren.')));
     // Hilfe
     wrap.append(grp('Hilfe',
       faq('Wie entsteht meine Schrift?', 'Unter „Schriften“ wählst du Pakete (z. B. Standard, Mathe, Französisch). Du bekommst einen Bogen, schreibst jedes Zeichen in sein Kästchen und lädst den Bogen wieder hoch. Die App schneidet die Zeichen aus und baut daraus deine Schrift.'),

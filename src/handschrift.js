@@ -1,4 +1,5 @@
 import { hsApi } from './hsapi.js';
+import { HDF_DOC } from '../public/handschrift/js/hdfdoc.js';
 // st.leifps.de (früher handschrift.leifps.de, bleibt weiter erreichbar): STools, die Handschrift-App (Text in eigene Handschrift umwandeln, installierbar, offline nutzbar).
 // Sie läuft im selben Worker, ist aber nirgends verlinkt und nur über diese Adressen erreichbar:
 //  - auf st.leifps.de und handschrift.leifps.de kommt die App aus public/handschrift/ (die Startseite unter "/", alles Weitere unter /handschrift/...)
@@ -17,6 +18,8 @@ export function handschriftWeiche(request, env) {
   if (pfad === '/api/titel' || pfad.startsWith('/api/sync/')) return hsApi(request, env);   // nur diese beiden Schnittstellen, siehe hsapi.js
   if (request.method !== 'GET' && request.method !== 'HEAD') return Promise.resolve(new Response('Nicht erlaubt', { status: 405, headers: { allow: 'GET, HEAD' } }));
   if (pfad.startsWith('/api/') || pfad === '/api') return Promise.resolve(NICHT_GEFUNDEN());
+  // Beschreibung des Textformats HDF als reiner Text, damit eine KI sie per Link lesen kann (gleiche Quelle wie in der App)
+  if (/^\/(hdf|hdf\.txt|ki-hdf)\/?$/i.test(pfad)) return Promise.resolve(new Response(request.method === 'HEAD' ? null : HDF_DOC, { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=300', 'access-control-allow-origin': '*' } }));
   let ziel = pfad;
   if (pfad === '/' || pfad === '/index.html') ziel = '/handschrift/';
   else if (!pfad.startsWith('/handschrift/')) ziel = '/handschrift' + pfad;
