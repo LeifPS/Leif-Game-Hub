@@ -1,7 +1,7 @@
 // Ansicht „Dokumente“ (Startseite): Blätter als Kacheln mit Vorschau der ersten Seite, sortier- und durchsuchbar
 import { reminderCard } from './backup.js';
 import { h, saveFile, toast, fmtTime } from './util.js';
-import { btn, sheet, confirmBox, promptBox, chips } from './ui.js';
+import { btn, sheet, confirmBox, promptBox, chips, ic } from './ui.js';
 import { dbDel, dbPut, kvGet, kvSet, merkeLoeschung } from './store.js';
 import { fileBase } from './exporter.js';
 import { layout, drawPage, ensureImages, PAPERS, PAPER_COLORS, PENS, GNPAPER, DEF } from './render.js';
@@ -59,8 +59,11 @@ export function docsView(app) {
       btn('Textdatei hochladen', { icon: 'upload', cls: 'icon', onclick: () => imp.click(), title: 'Textdateien (.txt, .md) hochladen' }), btn('Vorlagen', { icon: 'grid', cls: 'icon', onclick: () => openTemplates(app), title: 'Vorlagen' }), btn('Neues Dokument', { icon: 'plus', cls: 'pri icon', onclick: async () => { const d = await app.newDoc(); app.openDoc(d.id); }, title: 'Neues Dokument' }), imp));
     wrap.append(reminderCard());
     const s = h('input', { type: 'search', placeholder: 'Dokumente durchsuchen …', value: q, 'aria-label': 'Dokumente durchsuchen', oninput: () => { q = s.value; grid(); } });
-    wrap.append(s, h('div', { class: 'dsort' }, chips(SORTS, () => sort, (v) => { sort = v; kvSet('docSort', v); grid(); hint(); })));
-    const hintEl = h('p', { class: 'xs mut', style: { margin: '-12px 2px 18px' } }); wrap.append(hintEl);
+    // Sortieren: Knopf neben der Suche (dahinter liegt eine unsichtbare Auswahlliste, so kommt auf dem iPhone die normale Auswahl)
+    const sel = h('select', { 'aria-label': 'Sortieren', onchange: () => { sort = sel.value; kvSet('docSort', sort); sortLbl.textContent = SORTS.find(([k]) => k === sort)[1]; grid(); hint(); } }, ...SORTS.map(([k, t]) => h('option', { value: k, selected: k === sort }, t)));
+    const sortLbl = h('span', { class: 'slbl' }, SORTS.find(([k]) => k === sort)?.[1] || '');
+    wrap.append(h('div', { class: 'srow' }, s, h('label', { class: 'sortbtn', title: 'Sortieren' }, ic('sort'), sortLbl, sel)));
+    const hintEl = h('p', { class: 'xs mut', style: { margin: '-14px 2px 20px' } }); wrap.append(hintEl);
     const hint = () => { hintEl.textContent = sort === 'custom' ? 'Zum Sortieren eine Kachel gedrückt halten und verschieben.' : ''; hintEl.hidden = sort !== 'custom'; }; hint();
     const box = h('div', { class: 'dgrid' }); wrap.append(box);
     function grid() {
