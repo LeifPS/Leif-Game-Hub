@@ -28,6 +28,27 @@ function parse(src, err, line) {
   return out;
 }
 
+// Wo liegt die Tinte im Bild eines gezeichneten Zeichens? Bounding-Box und der Punkt ganz rechts/links (dort setzt der Notenhals an).
+// Einmal je Variante berechnet; ohne Bild (z. B. in Tests) gilt das ganze Bild.
+const INK = new WeakMap();
+function inkOf(v) {
+  let r = INK.get(v); if (r) return r;
+  const img = v.img, W = (img && (img.naturalWidth || img.width)) || 100, H = (img && (img.naturalHeight || img.height)) || Math.round(100 * v.ih / v.iw);
+  r = { W, H, x0: 0, x1: W, y0: 0, y1: H, r: [W, H / 2], l: [0, H / 2] };
+  try {
+    if (!img || !W || typeof document === 'undefined') throw 0;
+    const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0);
+    const d = g.getImageData(0, 0, W, H).data, on = (x, y) => d[(y * W + x) * 4 + 3] > 90;
+    let x0 = W, x1 = -1, y0 = H, y1 = -1;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (on(x, y)) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    if (x1 >= 0) {
+      const side = (from, step) => { for (let x = from; x >= x0 && x <= x1; x += step) { let n = 0, sy = 0; for (let y = y0; y <= y1; y++) if (on(x, y)) { n++; sy += y; } if (n) return [x + (step < 0 ? 1 : 0), sy / n]; } return null; };
+      r = { W, H, x0, x1: x1 + 1, y0, y1: y1 + 1, r: side(x1, -1) || [x1 + 1, (y0 + y1) / 2], l: side(x0, 1) || [x0, (y0 + y1) / 2] };
+    }
+  } catch (_) { /* kein Bild/Canvas: ganzes Bild */ }
+  INK.set(v, r); return r;
+}
+
 export function musicBlock(el, ctx) {
   const PX = ctx.px || 150 / 72, onPaper = !!ctx.notenPapier, W = ctx.W, u = ctx.u, k = ctx.k, lineH = ctx.lineH;
   const sp = onPaper ? 8 * PX : Math.max(lineH * .24, u * .5);                 // Abstand zweier Notenlinien
@@ -42,14 +63,19 @@ export function musicBlock(el, ctx) {
   const items = [], wid = .9;   // Strichstärke wie die Schrift
   const bottomD = clef === 'bass' ? 2 * 7 + 4 : 4 * 7 + 2;                         // unterste Linie: G2 bzw. E4
   const baseOct = clef === 'bass' ? 3 : 4;
-  // Zeichen aus der Schrift auf eine Höhe skalieren und mittig an (cx, cy) setzen; false, wenn es das Zeichen nicht gibt
+  // Zeichen aus der Schrift so skalieren, dass die TINTE (nicht das Bild mit Rand) die Höhe hgt hat, und mittig an (cx, cy) setzen.
+  // Gibt die Breite zurück (false, wenn es das Zeichen nicht gibt); in last steht, wo die Tinte wirklich liegt (für Notenhälse)
+  let last = null;
   const glyph = (ch, cx, cy, hgt, alignLeft = false) => {
-    if (!ctx.has(ch)) return false;
-    const g1 = ctx.run(ch, 1).run[0]; if (!g1 || !g1.v) return false;
-    const v = g1.v, s1 = k * g1.sc, scl = hgt / Math.max(1, v.ih * s1);
-    const g = ctx.run(ch, scl).run[0], s = k * g.sc;
-    const x = alignLeft ? cx - v.ox * s : cx - (v.ox + v.iw / 2) * s, y = cy - (v.oy + v.ih / 2) * s;
-    items.push({ g, m: 1, x, y, rot: 0 }); return (v.iw * s);
+    last = null; if (!ctx.has(ch)) return false;
+    const g = ctx.run(ch, 1).run[0]; if (!g || !g.v) return false;
+    const v = g.v, ib = inkOf(v), U = v.iw / ib.W;   // U: Bildpixel → Schrift-Einheiten
+    g.sc = hgt / Math.max(.01, (ib.y1 - ib.y0) * U * k); const s = k * g.sc;
+    const ix0 = v.ox + ib.x0 * U, ix1 = v.ox + ib.x1 * U, iy0 = v.oy + ib.y0 * U, iy1 = v.oy + ib.y1 * U;
+    const x = alignLeft ? cx - ix0 * s : cx - (ix0 + ix1) / 2 * s, y = cy - (iy0 + iy1) / 2 * s;
+    const pt = (q) => [x + (v.ox + q[0] * U) * s, y + (v.oy + q[1] * U) * s];
+    last = { right: pt(ib.r), left: pt(ib.l), x0: x + ix0 * s, x1: x + ix1 * s };
+    items.push({ g, m: 1, x, y, rot: 0 }); return (ix1 - ix0) * s;
   };
   let sys = 0, x = 0, top = top0, ni = 0, li = 0;
   const yOf = (d) => top + 4 * sp - (d - bottomD) * sp / 2;
@@ -109,14 +135,18 @@ export function musicBlock(el, ctx) {
     for (let dd = bottomD + 10; dd <= d; dd += 2) items.push(P([[cx - rx * 1.7, yOf(dd)], [cx + rx * 1.7, yOf(dd)]], wid));
     // Kopf
     const head = n.dur === 1 ? NOTE_CHARS.ganz : n.dur === 2 ? NOTE_CHARS.hohl : NOTE_CHARS.kopf;
-    if (!glyph(head, cx, cy, sp * 1.05)) {
+    let hr = [cx + rx * .97, cy - .12 * sp], hl = [cx - rx * .97, cy + .12 * sp];   // Ansatzpunkte des Halses (Ersatzkopf)
+    if (glyph(head, cx, cy, sp * .95) && last) {
+      // gezeichneter Kopf: Hals genau an der Tinte ansetzen (rechts bei Hals nach oben, links bei Hals nach unten)
+      hr = [last.right[0] - wid * .35, last.right[1]]; hl = [last.left[0] + wid * .35, last.left[1]];
+    } else {
       if (n.dur <= 2) items.push(P(ell(cx, cy, rx, ry), wid));
       else for (let f = 1; f > .1; f -= .22) items.push(P(ell(cx, cy, rx * f, ry * f), wid * 1.2));
     }
     // Hals und Fähnchen
     if (n.dur >= 2) {
-      const up = d < bottomD + 4, sx = up ? cx + rx * .92 : cx - rx * .92, y1 = up ? cy - 3.4 * sp : cy + 3.4 * sp;
-      items.push(P([[sx, cy + (up ? -.15 : .15) * sp], [sx, y1]], wid));
+      const up = d < bottomD + 4, [sx, sy] = up ? hr : hl, y1 = up ? cy - 3.4 * sp : cy + 3.4 * sp;
+      items.push(P([[sx, sy], [sx, y1]], wid));
       const flags = n.dur >= 16 ? 2 : n.dur >= 8 ? 1 : 0;
       for (let f = 0; f < flags; f++) { const fy = y1 + (up ? 1 : -1) * f * .8 * sp; items.push(P([[sx, fy], [sx + .5 * sp, fy + (up ? .7 : -.7) * sp], [sx + .9 * sp, fy + (up ? 1.6 : -1.6) * sp], [sx + .6 * sp, fy + (up ? 2.4 : -2.4) * sp]], wid)); }
     }
