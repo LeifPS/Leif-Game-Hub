@@ -1,7 +1,7 @@
 // Zeichen direkt in der App zeichnen. Jeder Strich wird als Strich gespeichert (für GoodNotes)
 // und zusätzlich als Bild gerendert (für Vorschau, PDF und PNG).
 import { h, toast } from './util.js';
-import { btn, confirmBox } from './ui.js';
+import { btn, confirmBox, sheet } from './ui.js';
 import { SC, PAD, XH } from './imgops.js';
 import { smooth, simplify } from './vec.js';
 import { describeChar } from './chardesc.js';
@@ -48,7 +48,7 @@ export function glyphFromStrokes(ch, strokes, pen = PEN) {
 // cells: [{ch, v, pack, grp}], onDone(g) mit g = { zeichen: [Zeichen-Objekte] }
 // Mehrere Wiederholungen desselben Zeichens stehen nebeneinander (Feld je Variante); automatisch weiter geht es erst, wenn alle Felder gefüllt sind.
 export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra: nachträglich ergänzte Varianten/Zeichen (kein „Nur 1×“)
-  const modal = h('div', { class: 'modal on nosel', role: 'dialog', 'aria-label': 'Zeichen zeichnen' }); document.body.append(modal);
+  const modal = h('div', { class: 'modal on nosel drawmod', role: 'dialog', 'aria-label': 'Zeichen zeichnen' }); document.body.append(modal);
   // Mit Stift/Finger nichts markieren (iPad wählte sonst beim Schreiben Kasten und Text aus)
   for (const ev of ['selectstart', 'dragstart']) modal.addEventListener(ev, (e) => e.preventDefault());
   const head = h('div', { class: 'bar' }), mb = h('div', { class: 'mb', style: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 12px', gap: '8px', overflow: 'auto' } }), mf = h('div', { class: 'mf' });
@@ -58,8 +58,8 @@ export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra
   const done = new Map(); let idx = 0, once = false, ghost = flag('hs:ghost2', false), multi = flag('hs:multi', true), sawPen = false, ppu = 4;
   let fields = [], act = 0;   // fields: { c, cv, ctx, base, bg, strokes, cur } – ein Feld je Variante der aktuellen Gruppe
   const key = (c) => c.ch + '|' + c.v;
-  const label = h('div', { style: { fontSize: '17px', lineHeight: 1.25, fontWeight: 600, textAlign: 'center', maxWidth: '100%' } });
-  const grp = h('span', { class: 'chip', style: { alignSelf: 'center' } }), prog = h('span', { class: 'chip ac' }), cnt = h('span', { class: 'chip' });
+  const label = h('div', { class: 'drlabel' });
+  const grp = h('span', { class: 'xs mut drgrp' }), prog = h('b'), cnt = h('span', { class: 'xs mut' }), pbar = h('div', { class: 'wzprog drprog' }, h('i', { class: 'on' }));
   const fieldsEl = h('div', { style: { display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'flex-start', width: '100%' } });
   const hint = h('p', { class: 'xs mut', style: { margin: 0, textAlign: 'center' } }, 'Schreibe auf die dicke Linie. Kleine Buchstaben reichen bis zur ersten gestrichelten Linie, Großbuchstaben, Ziffern und lange Buchstaben (b, d, h, k, l) bis zur oberen. Stehen mehrere Felder nebeneinander, zeichnest du dasselbe Zeichen mehrmals; erst wenn alle gefüllt sind, geht es von selbst weiter.');
   // Auto-Weiter: nach dem letzten Strich kurz warten und zur nächsten Gruppe springen (Zeichen mit mehreren Strichen bekommen mehr Zeit)
@@ -186,18 +186,32 @@ export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra
   const anyStrokes = () => fields.some(f => f.strokes.length);
   const actF = () => fields[act] || fields[0];
   function refresh() {
-    const { p, n } = posOf(); prog.textContent = `${p + 1} von ${n}`; cnt.textContent = `${done.size + fields.filter(f => f.strokes.length && !done.has(key(f.c))).length} gezeichnet`;
+    const { p, n } = posOf(); prog.textContent = `Zeichen ${p + 1} von ${n}`; cnt.textContent = `${done.size + fields.filter(f => f.strokes.length && !done.has(key(f.c))).length} gezeichnet`; pbar.firstChild.style.width = ((p + 1) / n * 100) + '%';
     const last = p >= n - 1; mf.replaceChildren(
-      btn('Zurück', { disabled: p <= 0, onclick: () => move(-1) }), h('span', { class: 'sp1' }),
+      btn('Zurück', { cls: 'ghost', disabled: p <= 0, onclick: () => move(-1) }), h('span', { class: 'sp1' }),
       btn(anyStrokes() ? (last ? 'Fertig' : 'Weiter') : (last ? 'Fertig' : 'Überspringen'), { cls: 'pri', onclick: () => last ? finish() : move(1) }));
     const a = actF();
-    tools.replaceChildren(...[btn('Rückgängig', { cls: 'sm', disabled: !a || !a.strokes.length, onclick: () => { cancelAuto(); a.strokes.pop(); refresh(); paint(a, false); } }), btn('Löschen', { cls: 'sm', disabled: !a || !a.strokes.length, onclick: () => { cancelAuto(); a.strokes = []; refresh(); paint(a, false); } }),
-      btn(AUTO[auto][0], { cls: 'sm' + (auto === 'off' ? '' : ' on'), onclick: () => { const k = Object.keys(AUTO); auto = k[(k.indexOf(auto) + 1) % k.length]; try { localStorage.setItem('hs:autoadv', auto); } catch (_) { /* egal */ } cancelAuto(); refresh(); } }),
-      btn(ghost ? 'Vorlage zum Nachzeichnen: an' : 'Vorlage zum Nachzeichnen: aus', { cls: 'sm', onclick: () => { ghost = !ghost; setFlag('hs:ghost2', ghost); refresh(); fields.forEach(paint); } }),
-      btn(multi ? 'Wiederholungen nebeneinander: an' : 'Wiederholungen nebeneinander: aus', { cls: 'sm', onclick: () => { save(); multi = !multi; setFlag('hs:multi', multi); regroup(); } }),
-      extra ? null : btn(once ? 'Alle Varianten' : 'Nur 1×', { cls: 'sm', onclick: () => { save(); once = !once; regroup(); } })].filter(Boolean));
+    const ib = (label, icon, on, dis, fn) => { const x = btn(label, { icon, cls: 'icon drtool' + (on ? ' on' : ''), title: label, disabled: dis, onclick: fn }); return x; };
+    tools.replaceChildren(
+      ib('Letzten Strich zurücknehmen', 'undo', false, !a || !a.strokes.length, () => { cancelAuto(); a.strokes.pop(); refresh(); paint(a, false); }),
+      ib('Feld leeren', 'trash', false, !a || !a.strokes.length, () => { cancelAuto(); a.strokes = []; refresh(); paint(a, false); }),
+      h('span', { class: 'drsep' }),
+      ib(ghost ? 'Vorlage zum Nachzeichnen ausblenden' : 'Vorlage zum Nachzeichnen einblenden', 'eye', ghost, false, () => { ghost = !ghost; setFlag('hs:ghost2', ghost); refresh(); fields.forEach(paint); }),
+      h('button', { type: 'button', class: 'btn sm drauto' + (auto === 'off' ? '' : ' on'), title: 'Automatisch weiter, wenn du kurz nicht zeichnest', onclick: () => { const k = Object.keys(AUTO); auto = k[(k.indexOf(auto) + 1) % k.length]; try { localStorage.setItem('hs:autoadv', auto); } catch (_) { /* egal */ } cancelAuto(); refresh(); } }, AUTO[auto][0].replace('Auto-Weiter', 'Auto-Weiter:')),
+      ib('Weitere Einstellungen', 'sliders', false, false, () => moreSheet()));
   }
-  const tools = h('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap', justifyContent: 'center' } });
+  // Selten gebrauchte Einstellungen gebündelt
+  function moreSheet() {
+    const back = fieldRow.parentNode; fieldRow.style.display = '';
+    sheet('Einstellungen zum Zeichnen', (b2, api) => {
+      const tg = (t, d, get, set) => { const i = h('input', { type: 'checkbox', class: 'sw2', checked: get(), onchange: () => { set(i.checked); } }); return h('label', { class: 'tog' }, h('span', null, t, h('small', null, d)), i); };
+      b2.append(tg('Wiederholungen nebeneinander', 'Mehrere Varianten eines Zeichens stehen in Feldern nebeneinander', () => multi, (v) => { save(); multi = v; setFlag('hs:multi', multi); regroup(); }),
+        ...(extra ? [] : [tg('Nur eine Variante je Zeichen', 'Schneller fertig, die Schrift wirkt aber gleichmäßiger', () => once, (v) => { save(); once = v; regroup(); })]),
+        h('div', { style: { margin: '14px 0 4px' } }, fieldRow),
+        h('p', { class: 'xs mut', style: { margin: '14px 0 0' } }, 'Schreibe auf die dicke Linie. Kleine Buchstaben reichen bis zur ersten gestrichelten Linie, Großbuchstaben, Ziffern und lange Buchstaben (b, d, h, k, l) bis zur oberen.'));
+    }, { onclose: () => { fieldRow.style.display = 'none'; back && back.append(fieldRow); } });
+  }
+  const tools = h('div', { class: 'drtools' });
   // Nach Umschalten von „nebeneinander“ / „Nur 1×“: zur Gruppe springen, die das aktuelle Zeichen enthält
   function regroup() {
     const st = starts(); let n = st.filter(s => s <= idx).pop(); if (n == null) n = st[0];
@@ -219,9 +233,10 @@ export function openDraw({ cells, onDone, onClose, extra = false }) {   // extra
     if (done.size || anyStrokes()) { if (!(await confirmBox('Alles Gezeichnete verwerfen?', 'Verwerfen'))) return; }
     cancelAuto(); window.removeEventListener('resize', size); modal.remove(); if (onClose) onClose();
   }
-  head.append(btn('Abbrechen', { cls: 'ghost icon', icon: 'x', onclick: close }), h('div', { class: 't', style: { display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' } }, prog, cnt),
-    btn('Speichern', { cls: 'sm', onclick: finish }));
-  mb.append(h('div', { class: 'row', style: { gap: '10px', alignItems: 'center', justifyContent: 'center' } }, label, grp), fieldsEl, bar, tools, fieldRow, hint);
+  head.append(h('button', { type: 'button', class: 'wzx', onclick: close }, 'Abbrechen'), h('div', { class: 'wzhead' }, prog, cnt, pbar),
+    h('button', { type: 'button', class: 'wzx wzok', onclick: finish }, 'Speichern'));
+  hint.classList.add('drhint'); fieldRow.style.display = 'none';
+  mb.append(h('div', { class: 'drtitle' }, label, grp), fieldsEl, bar, tools, hint, fieldRow);
   window.addEventListener('resize', size);
   load();
   return { close };

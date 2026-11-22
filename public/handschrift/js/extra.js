@@ -56,11 +56,11 @@ export function openTopUp(app, font, { chars = '' } = {}) {
       if (missing.length) {
         const cells = [];
         for (const ch of missing) for (let v = 0; v < rep; v++) cells.push(cellOf(ch, v));   // Wiederholungen eines Zeichens direkt hintereinander, damit sie nebeneinander gezeichnet werden können
-        body.append(h('h3', { style: { margin: '4px 0 6px' } }, 'Fehlende Zeichen'),
+        body.append(h('h4', { class: 'tuh' }, 'Fehlende Zeichen'),
           h('p', { class: 'sm mut', style: { margin: '0 0 8px' } }, 'Diese Zeichen gehören zu deinen Paketen, sind aber noch nicht gezeichnet:'),
           h('div', { class: 'row', style: { margin: '0 0 8px' } }, h('span', { class: 'sm sp1' }, 'Zeichnen pro Zeichen'), h('div', { class: 'seg' }, ...[1, 2, 3].map(n => h('button', { type: 'button', class: n === rep ? 'on' : '', onclick: () => { rep = n; S.extra = n; try { localStorage.setItem(REPK, String(n)); } catch {} draw(); } }, n + '×')))),
           h('div', { class: 'pal' }, ...missing.slice(0, 120).map(c => h('button', { type: 'button', style: { cursor: 'default' } }, c))),
-          missing.length > 120 ? h('p', { class: 'xs mut' }, `… und ${missing.length - 120} weitere`) : null,
+          ...(missing.length > 120 ? [h('p', { class: 'xs mut' }, `… und ${missing.length - 120} weitere`)] : []),
           btn(`Fehlende zeichnen (${missing.length} Zeichen)`, { cls: 'pri', onclick: () => start(cells) }));
       }
       // 2. Weitere Varianten (oder neue Zeichen) – Auswahl nach Gruppen und eigene Zeichen
@@ -75,7 +75,7 @@ export function openTopUp(app, font, { chars = '' } = {}) {
         cells.length = 0; for (const ch of ch2) for (let r = 0; r < S.extra; r++) cells.push(cellOf(ch, S.replace ? r : count(ch) + r));
         startBtn.textContent = cells.length ? (S.replace ? `${ch2.length} ${ch2.length === 1 ? 'Zeichen' : 'Zeichen'} neu zeichnen und ersetzen` : `${cells.length} Zeichen zeichnen`) : 'Zeichen auswählen'; startBtn.disabled = !cells.length;
       };
-      body.append(h('h3', { style: { margin: '20px 0 6px' } }, S.replace ? 'Zeichen ersetzen' : 'Weitere Varianten zeichnen'),
+      body.append(h('h4', { class: 'tuh' }, S.replace ? 'Zeichen ersetzen' : 'Weitere Varianten zeichnen'),
         h('div', { class: 'row', style: { marginBottom: '8px' } }, h('div', { class: 'seg' }, h('button', { type: 'button', class: S.replace ? '' : 'on', onclick: () => { S.replace = false; draw(); } }, 'Varianten hinzufügen'), h('button', { type: 'button', class: S.replace ? 'on' : '', onclick: () => { S.replace = true; draw(); } }, 'Zeichen ersetzen'))),
         h('p', { class: 'sm mut', style: { margin: '0 0 8px' } }, S.replace ? 'Die gewählten Zeichen werden neu gezeichnet. Die alten Versionen dieser Zeichen werden dabei gelöscht, alle anderen Zeichen bleiben unverändert.' : 'Mehr Varianten pro Zeichen lassen die Schrift natürlicher wirken, weil sich gleiche Buchstaben nicht so oft wiederholen. Die neuen Varianten kommen zu den vorhandenen dazu.'),
         h('div', { class: 'row', style: { marginBottom: '10px' } }, h('span', { class: 'sm' }, S.replace ? 'Neue Zeichnungen pro Zeichen:' : 'Neue Varianten pro Zeichen:'),
@@ -88,7 +88,7 @@ export function openTopUp(app, font, { chars = '' } = {}) {
         h('label', { class: 'f' }, 'Bestimmte Zeichen (auch ganz neue)'), ta, h('div', { style: { marginTop: '12px' } }, startBtn));
       refreshBtn();
       // 3. Ganze Pakete
-      body.append(h('h3', { style: { margin: '22px 0 6px' } }, 'Ganzes Paket hinzufügen'), h('p', { class: 'sm mut', style: { margin: '0 0 8px' } }, 'Mathe, Griechisch, Akzente, Kana und mehr, direkt zeichnen oder als Bogen ausfüllen.'),
+      body.append(h('h4', { class: 'tuh' }, 'Ganzes Paket hinzufügen'), h('p', { class: 'sm mut', style: { margin: '0 0 8px' } }, 'Mathe, Griechisch, Akzente, Kana und mehr, direkt zeichnen oder als Bogen ausfüllen.'),
         btn('Pakete wählen …', { cls: 'sm', onclick: async () => { api.close(); const { openWizard } = await import('./wizard.js'); openWizard(app, { font }); } }));
     };
     b.append(body); draw();

@@ -2,6 +2,7 @@
 import { h, saveFile, toast } from './util.js';
 import { btn, sheet, confirmBox, promptBox } from './ui.js';
 import { fontText } from './render.js';
+import { openGlyphs, checkFont } from './glyphs.js';
 import { openWizard } from './wizard.js';
 import { openTopUp } from './extra.js';
 import { PACKS, PACK_BY_ID } from './packs.js';
@@ -32,10 +33,10 @@ export function fontsView(app) {
         onclick: () => { if (isOn) return; app.setFont(f.id); toast(`„${shown}“ wird jetzt benutzt`); draw(); }, onkeydown: (e) => { if (e.key === 'Enter') e.currentTarget.click(); } },
         h('div', { class: 'ftop' }, nameBox, isOn ? h('span', { class: 'fon', title: 'Wird benutzt' }, '✓') : null),
         sampBox,
-        h('div', { class: 'fmeta' }, h('span', null, `${chars} Zeichen`, packs.length ? ' · ' + packs.join(', ') : ''), f.builtin ? h('span', { class: 'chip ac' }, 'Beispiel') : null),
+        h('div', { class: 'fmeta' }, h('span', null, `${chars} Zeichen`, packs.length ? ' · ' + packs.join(', ') : ''), (() => { const n = f.builtin ? 0 : checkFont(f).length; return n ? h('button', { type: 'button', class: 'chip warn', title: 'Zeichen, die aus der Reihe fallen', onclick: (e) => { e.stopPropagation(); openGlyphs(app, f); } }, `${n} auffällig`) : null; })(), f.builtin ? h('span', { class: 'chip ac' }, 'Beispiel') : null),
         h('div', { class: 'facts' },
           f.builtin ? ib('Eigene Schrift mit denselben Paketen erstellen', 'plus', () => openWizard(app, { font: null, preselect: ['standard', 'sonder'] })) : ib('Ergänzen: fehlende Zeichen, Varianten, Pakete', 'plus', () => openTopUp(app, f)),
-          ib('Zeichen ansehen', 'eye', () => showGlyphs(f)),
+          ib('Zeichen ansehen und nachjustieren', 'eye', () => openGlyphs(app, f)),
           f.builtin ? null : ib('Umbenennen', 'edit', async () => { const nm = await promptBox('Name der Schrift', f.name); if (nm) { f.name = nm; await dbPut('fonts', stripped(f)); draw(); app.refreshFontLabel(); } }),
           f.builtin ? null : ib('Exportieren (.hsfont)', 'download', () => saveFile(fontToFile(f), `${fileBase(f.name)}.hsfont`)),
           h('span', { class: 'sp1' }),
