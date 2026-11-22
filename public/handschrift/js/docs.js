@@ -110,17 +110,19 @@ export function docsView(app) {
   // ---------- Ordner (z. B. Fächer) ----------
   function folderTile(f) {
     const n = app.docs.filter((d) => d.folder === f.id).length;
-    const svg = `<svg viewBox="0 0 120 92" aria-hidden="true"><path d="M8 14a8 8 0 0 1 8-8h28l10 10h50a8 8 0 0 1 8 8v4H8z" fill="${f.color}" opacity=".7"/><rect x="8" y="22" width="104" height="64" rx="8" fill="${f.color}"/><path d="M8 30h104" stroke="#fff" stroke-opacity=".18" stroke-width="2"/></svg>`;
+    // Wie ein GoodNotes-Heft: Deckblatt in der Ordnerfarbe mit hellem Streifen kurz vor dem rechten Rand (Maße aus der GoodNotes-Vorlage)
+    const white = /^#f{3,6}$/i.test(f.color || '');
+    const svg = `<svg viewBox="0 0 455 588" preserveAspectRatio="none" aria-hidden="true"><defs><clipPath id="c${f.id}"><path d="M8 0H425a30 30 0 0 1 30 30V558a30 30 0 0 1-30 30H8a8 8 0 0 1-8-8V8a8 8 0 0 1 8-8z"/></clipPath></defs><g clip-path="url(#c${f.id})"><rect width="455" height="588" fill="${f.color || '#fff'}"/><rect x="386.8" width="22.75" height="588" fill="${white ? '#f3f3f3' : 'rgba(0,0,0,.09)'}"/><rect width="455" height="588" fill="url(#g${f.id})"/></g><linearGradient id="g${f.id}" x1="0" x2="1"><stop offset="0" stop-color="#000" stop-opacity=".06"/><stop offset=".04" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient></svg>`;
     const ic = h('div', { class: 'ficon' }); ic.innerHTML = svg;
     const pp = f.s && f.s.paper ? PAPERS[f.s.paper] : null;
     return h('div', { class: 'dcard folder', role: 'button', tabindex: 0, onclick: () => { app.folder = f.id; q = ''; draw(); root.scrollTop = 0; }, onkeydown: (e) => { if (e.key === 'Enter') e.currentTarget.click(); } },
       ic, h('div', { class: 'dtitle' }, h('b', null, f.name), btn('Ordner-Einstellungen', { icon: 'more', cls: 'ghost icon sm', onclick: (e) => { e.stopPropagation(); folderSheet(f); } })),
       h('span', { class: 'xs mut' }, `${n} ${n === 1 ? 'Dokument' : 'Dokumente'}` + (pp ? ' · ' + pp : '')));
   }
-  const FCOLORS = ['#4f7cff', '#ff6b5e', '#34c38f', '#ffb020', '#a66cff', '#ff7ab6', '#3fc1d9', '#8e8e93'];
+  const FCOLORS = ['#ffffff', '#4f7cff', '#ff6b5e', '#34c38f', '#ffb020', '#a66cff', '#ff7ab6', '#2c2c2e'];
   async function newFolder() {
     const nm = await promptBox('Name des Ordners (z. B. Mathe)', ''); if (!nm) return;
-    const f = { id: uid(), name: nm, color: FCOLORS[app.folders.length % FCOLORS.length], s: {}, updated: Date.now() };
+    const f = { id: uid(), name: nm, color: FCOLORS[0], s: {}, updated: Date.now() };
     app.folders.push(f); await app.saveFolders(); draw(); folderSheet(f, true);
   }
   // Vorgaben eines Ordners: gelten für neue Dokumente darin (alles andere wie bei allen Dokumenten)
@@ -153,7 +155,7 @@ export function docsView(app) {
       const go = async (id) => { api.close(); d.folder = id; d.updated = Date.now(); await dbPut('docs', d); app.docSaved(d); toast(id ? `In „${app.folderOf(id).name}“ verschoben` : 'Nach „Dokumente“ verschoben'); draw(); };
       b.append(h('div', { class: 'dlist' },
         ...[[null, 'Dokumente (kein Ordner)', '#8e8e93'], ...app.folders.map((f) => [f.id, f.name, f.color])].map(([id, nm, c]) => h('button', { type: 'button', class: 'it', onclick: () => go(id) }, h('span', { style: { width: '14px', height: '14px', borderRadius: '4px', background: c, flex: 'none' } }), h('span', { class: 'ti' }, h('b', null, nm)), (d.folder || null) === id ? h('span', { class: 'chip ac' }, 'Hier') : null)),
-        h('button', { type: 'button', class: 'it', onclick: async () => { api.close(); const nm = await promptBox('Name des neuen Ordners', ''); if (!nm) return; const f = { id: uid(), name: nm, color: FCOLORS[app.folders.length % FCOLORS.length], s: {}, updated: Date.now() }; app.folders.push(f); await app.saveFolders(); go(f.id); } }, h('span', { class: 'ti' }, h('b', { style: { color: 'var(--ac)' } }, '+ Neuer Ordner')))));
+        h('button', { type: 'button', class: 'it', onclick: async () => { api.close(); const nm = await promptBox('Name des neuen Ordners', ''); if (!nm) return; const f = { id: uid(), name: nm, color: FCOLORS[0], s: {}, updated: Date.now() }; app.folders.push(f); await app.saveFolders(); go(f.id); } }, h('span', { class: 'ti' }, h('b', { style: { color: 'var(--ac)' } }, '+ Neuer Ordner')))));
     });
   }
 

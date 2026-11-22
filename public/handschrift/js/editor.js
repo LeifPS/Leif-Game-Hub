@@ -34,7 +34,7 @@ export function editorView(app) {
     aiBtn.disabled = false;
   } });
   const bar = h('div', { class: 'bar' }, btn('Zurück zu den Dokumenten', { icon: 'cl', cls: 'icon', onclick: async () => { await saveNow(); app.show('docs'); } }), h('div', { class: 't' }, title), aiBtn,
-    btn('Einstellungen', { icon: 'sliders', cls: 'icon', onclick: () => openSettings() }), btn('Exportieren', { icon: 'download', cls: 'pri', onclick: () => openExport() }));
+    btn('Einstellungen', { icon: 'sliders', cls: 'icon', onclick: () => openSettings() }), btn(h('span', { class: 'lbl' }, 'Exportieren'), { icon: 'download', cls: 'pri expbtn', title: 'Exportieren', onclick: () => openExport() }));
   const segEl = h('div', { class: 'seg2' }, seg([['ed', 'Schreiben'], ['pv', 'Vorschau']], () => pane, v => { pane = v; showPane(); }));
   // ---------- Werkzeugleiste ----------
   const fontBtn = h('button', { type: 'button', class: 'btn fontsel', onclick: () => pickFont(), title: 'Schrift wechseln' }, ic('type'), h('span'));

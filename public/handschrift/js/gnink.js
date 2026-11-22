@@ -124,12 +124,12 @@ function rep(b, from, to) {
   return o;
 }
 export async function makeGoodNotesInk({ pages, title, thumb, paper }) {
-  // Hintergrund: leere Standardseite oder echte GoodNotes-Vorlage (paper = 'gnlin' | 'gnkar')
+  // Hintergrund: leere Standardseite oder echte GoodNotes-Vorlage (paper = 'gnlin' | 'gnkar' | 'gnlin2' | 'gndot' | 'gncornell')
   const PP = paper && PAP[paper], AID = PP ? PP.id : ATT_ID;
   let attRec = TPL.att, linkTpl = TPL.link, pageTpl = TPL.page, searchTpl = TPL.search, attsTpl = TPL.attachments, pdfBytes = TPL.pdf;
   if (PP) {
     attRec = rep(TPL.att, ATT_ID, AID); { const A = parse(attRec); setIn(A, [6, 5], 'v', PP.pdf.length); attRec = encode(A); }
-    linkTpl = rep(TPL.link, ATT_ID, AID); pageTpl = rep(PP.page, SRC_DOC, DOC_ID);
+    linkTpl = rep(TPL.link, ATT_ID, AID); pageTpl = rep(PP.page, PP.src || SRC_DOC, DOC_ID);
     searchTpl = rep(TPL.search, ATT_ID, AID); attsTpl = rep(TPL.attachments, ATT_ID, AID); pdfBytes = PP.pdf;
   }
   const now = Date.now(); let tick = 0, clock = 1789663489500, seq = 188700 + Math.floor(Math.random() * 5000);

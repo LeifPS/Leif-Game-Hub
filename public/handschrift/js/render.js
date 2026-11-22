@@ -17,7 +17,7 @@ export const FORMATS = {
 };
 export const PAPERS = {
   lined: 'Liniert', grid: 'Kariert', dots: 'Punkte', blank: 'Leer', college: 'Schulheft (eng)', legal: 'Gelbes Blatt',
-  gnlin: 'GoodNotes liniert', gnkar: 'GoodNotes kariert',
+  gnlin: 'GoodNotes liniert', gnlin2: 'GoodNotes liniert schmal', gnkar: 'GoodNotes kariert', gndot: 'GoodNotes gepunktet', gncornell: 'GoodNotes Cornell',
 };
 // Eingebaute GoodNotes-Vorlagen (Standardseite 455,04 x 588,45 pt = 948 x 1226 px bei 150 dpi).
 // h0/hp: erste Linie und Abstand (pt, Mitte der 0,5 pt dicken Linie); v0/vp: senkrechte Linien; every: Schreibzeile = jede n-te Linie
@@ -25,6 +25,10 @@ const PXPT = 150 / 72;
 export const GNPAPER = {
   gnlin: { h0: 49.75, hp: 25, every: 1, size: 18, ml: 110, mr: 70, mt: 60, mb: 50 },
   gnkar: { h0: 15.75, hp: 16, v0: 15.75, vp: 16, every: 2, size: 18, ml: 110, mr: 70, mt: 60, mb: 50 },
+  // aus GoodNotes-Vorlagen (2026-11-22): liniert schmal (17,5 pt, Linien 50 … 557,5), gepunktet (Punkte r = 0,5 pt alle 16 pt ab 0), Cornell (16 pt, Linien 50 … 562; dunkle Linien bei 82 und 498, Randspalte bis 91,26)
+  gnlin2: { h0: 50.25, hp: 17.5, y1: 557.75, every: 1, size: 13, ml: 110, mr: 70, mt: 60, mb: 50 },
+  gndot: { h0: 0, hp: 16, v0: 0, vp: 16, every: 2, dots: true, size: 18, ml: 110, mr: 70, mt: 60, mb: 50 },
+  gncornell: { h0: 50.25, hp: 16, y1: 562.25, every: 1, size: 12, ml: 203, mr: 30, mt: 170, mb: 200, dark: [[0, 82.25, 455.04, 82.25], [0, 498.25, 455.04, 498.25], [91.258, 82, 91.258, 498.5]] },
 };
 export const fmtOf = (S) => GNPAPER[S.paper] ? 'gn' : S.fmt;
 // Grundlinien (px) der Schreibzeilen auf einer GoodNotes-Vorlage
@@ -424,9 +428,13 @@ export function drawPaper(ctx, S, lineH, PW, PH) {
   ctx.strokeStyle = line; ctx.lineWidth = 1.6;
   const y0 = S.mt + lineH + 3;
   if (GNPAPER[S.paper]) {
-    const gp = GNPAPER[S.paper]; ctx.fillStyle = 'rgb(208,210,211)'; const t = .5 * PXPT;
-    for (let y = gp.h0 * PXPT; y < PH + 2; y += gp.hp * PXPT) ctx.fillRect(0, y - t / 2, PW, t);
-    if (gp.vp) for (let x = gp.v0 * PXPT; x < PW + 2; x += gp.vp * PXPT) ctx.fillRect(x - t / 2, 0, t, PH);
+    const gp = GNPAPER[S.paper]; ctx.fillStyle = 'rgb(208,210,211)'; const t = .5 * PXPT, yEnd = gp.y1 ? gp.y1 * PXPT + 1 : PH + 2;
+    if (gp.dots) { for (let y = gp.h0 * PXPT; y < PH + 2; y += gp.hp * PXPT) for (let x = gp.v0 * PXPT; x < PW + 2; x += gp.vp * PXPT) { ctx.beginPath(); ctx.arc(x, y, .5 * PXPT, 0, 6.3); ctx.fill(); } }
+    else {
+      for (let y = gp.h0 * PXPT; y < yEnd; y += gp.hp * PXPT) ctx.fillRect(0, y - t / 2, PW, t);
+      if (gp.vp) for (let x = gp.v0 * PXPT; x < PW + 2; x += gp.vp * PXPT) ctx.fillRect(x - t / 2, 0, t, PH);
+    }
+    if (gp.dark) { ctx.fillStyle = 'rgb(51,51,51)'; for (const [x1, y1, x2, y2] of gp.dark) { if (y1 === y2) ctx.fillRect(x1 * PXPT, y1 * PXPT - t / 2, (x2 - x1) * PXPT, t); else ctx.fillRect(x1 * PXPT - t / 2, y1 * PXPT, t, (y2 - y1) * PXPT); } }
   } else if (S.paper === 'lined' || S.paper === 'legal' || S.paper === 'college') {
     const st = S.paper === 'college' ? lineH * .72 : lineH; ctx.beginPath();
     const ys = S.paper === 'college' ? y0 - Math.floor(y0 / st) * st : y0;
