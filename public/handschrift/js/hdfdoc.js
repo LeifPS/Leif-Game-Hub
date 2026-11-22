@@ -6,6 +6,9 @@ Ein HDF-Dokument ist reiner Text. Die App STools setzt ihn in der Handschrift de
 
 Diese Beschreibung listet alles auf, was das Format kann. Alle Elemente sind optional: Ein Dokument kann auch nur aus normalem Text bestehen. Die Elemente sind Werkzeuge für Inhalte, die sie brauchen (eine Formel für eine Formel, ein Graph für einen Graphen).
 
+## Ausgabe
+Das HDF-Dokument wird in einem Codeblock ausgegeben (\`\`\` … \`\`\`), ohne Text davor oder danach im Codeblock. Nur so bleiben eckige Klammern und Zeilenumbrüche beim Kopieren erhalten.
+
 ## Das Wichtigste zuerst
 - Normaler Text mit Markdown ist die Grundlage: # Überschrift, ## Unter-Überschrift, **fett**, Listen mit "- " oder "1. ".
 - Formeln schreibt man mit $…$ – mitten im Satz oder allein in einer Zeile. Das ist der normale Weg für jede Formel und jede Rechnung, auch für mehrere Rechenschritte (einfach jede Zeile als $…$).
@@ -32,6 +35,14 @@ formel, gleichung, rechenweg (mit schritt), bruch, wurzel, tabelle, wertetabelle
 graph (mit funktion, punkt, strecke), geometrie, diagramm (balkendiagramm, kreisdiagramm, liniendiagramm), ablauf, baum, mindmap, mengen, zeitstrahl, pyramide, kreislauf, reaktion.
 Ein unbekannter Name (z. B. [box], [calculation-step], [loesung]) erscheint als roter Platzhalter.
 
+## Häufige Verwechslungen (gibt es nicht – so geht es stattdessen)
+- [rechnung], [loesung], [schritte] → Rechenschritte als einzelne Zeilen mit $…$
+- [ergebnis], [box], [kasten] → **Ergebnis:** $…$
+- [zeichnung], [skizze] → [graph] oder [geometrie] (siehe unten) oder normaler Text
+- [tabelle] mit "Name: Wert"-Zeilen → [tabelle] mit kopf: … und zeile: … (siehe unten)
+- Formeln ohne $ im Text → immer $…$
+- ≤ ≥ ≠ ⁵√ → <= >= != root(x, 5) (Wurzel: sqrt(x), √x geht auch)
+
 ## Grundregeln
 - Normaler Text steht einfach als Zeilen. Markdown geht: # Überschrift, ## Unter-Überschrift, **fett**, __unterstrichen__, ==markiert==, ~~durchgestrichen~~, Listen mit "- " oder "1. ". Leerzeile = Absatz.
 - Ein Element beginnt mit [name] allein in einer Zeile und endet mit [/name] allein in einer Zeile. Dazwischen stehen Eigenschaften "schluessel: wert" (eine pro Zeile) und/oder Text. Ausnahme Einzeiler: [titel]Mein Titel[/titel] (Öffnen, Text und Schließen in genau einer Zeile).
@@ -42,7 +53,6 @@ Ein unbekannter Name (z. B. [box], [calculation-step], [loesung]) erscheint als 
 - Zahlen mit Punkt oder Komma. Angezeigt wird mit Komma. Maße: 5mm, 2cm, 40pt, 50% (ohne Einheit = Prozent).
 - Farben: rot, blau, gruen, schwarz, orange, lila, gelb, grau, braun, rosa, tuerkis, hellblau oder #rrggbb.
 - Formeln stehen zwischen $…$ (auch in [aufgabe], [beispiel], Listen, Tabellenzellen). Ohne $ erscheinen sie als gewöhnlicher Text.
-- Eckige Klammern und Zeilenumbrüche bleiben beim Kopieren aus einem Chat nur erhalten, wenn das Dokument in einem Codeblock steht.
 - Fehler zerstören nie das ganze Blatt: Ein kaputtes Element wird rot markiert oder als Platzhalter gezeigt, der Rest wird gezeichnet.
 - Das Blatt ist für GoodNotes-Papier "kariert" ausgelegt: Koordinatensysteme und Tabellen liegen auf den Kästchen.
 
