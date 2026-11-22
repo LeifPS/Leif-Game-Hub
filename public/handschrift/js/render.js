@@ -1,4 +1,5 @@
 // Text -> Seitenlayout -> Zeichnen (Handschrift-Motor)
+import { GNV } from './gnvorlagen.js';
 import { components, bboxOf } from './imgops.js';
 import { parseHdf, getP } from './hdf.js';
 import { renderBlock, mathBox, shiftItems } from './blocks.js';
@@ -14,6 +15,7 @@ export const FORMATS = {
   ipad: { name: 'iPad (4:3)', w: 1240, h: 1653 },
   quad: { name: 'Quadrat', w: 1400, h: 1400 },
   gn:   { name: 'GoodNotes Standard', w: 948, h: 1226 },
+  gnq:  { name: 'GoodNotes Standard quer', w: 1356, h: 848 },
 };
 // Zur Auswahl stehen nur noch echte GoodNotes-Vorlagen (Standardseite). Die alten Papiere (lined, grid, dots, blank, …) gibt es intern weiter
 // (Vorschaubilder), alte Dokumente werden mit migrateS umgestellt.
@@ -24,7 +26,8 @@ const ALT_PAPIER = { lined: 'gnlin', legal: 'gnlin', college: 'gnlin2', grid: 'g
 /** Einstellungen eines (alten) Dokuments auf GoodNotes-Papier umstellen. Gibt true zurück, wenn sich etwas geändert hat. */
 export function migrateS(s) {
   if (!s) return false;
-  if (GNPAPER[s.paper]) { if (s.paperColor && s.paperColor !== 'weiss') { s.paperColor = 'weiss'; return true; } return false; }   // Papierfarben gibt es nicht mehr
+  if (PAPERS[s.paper] && !gnOf(s)) { s.fmt = 'gn'; const gp = GNPAPER[s.paper]; Object.assign(s, { size: gp.size, ml: gp.ml, mr: gp.mr, mt: gp.mt, mb: gp.mb }); return true; }   // Kombination gibt es nicht
+  if (gnOf(s)) { if (s.paperColor && s.paperColor !== 'weiss') { s.paperColor = 'weiss'; return true; } return false; }   // Papierfarben gibt es nicht mehr
   const gp = GNPAPER[ALT_PAPIER[s.paper] || 'gnlin'];
   s.paper = ALT_PAPIER[s.paper] || 'gnlin';
   Object.assign(s, { fmt: 'gn', paperColor: 'weiss', size: gp.size, ml: gp.ml, mr: gp.mr, mt: gp.mt, mb: gp.mb });
@@ -44,10 +47,22 @@ export const GNPAPER = {
   gnnoten: { h0: 127.25, hp: 68, every: 1, noLines: true, staff: { x0: 22, x1: 433.04, y0: 75, step: 68, lines: [0, 8, 16, 24, 32], clip: 550 }, size: 15, ml: 50, mr: 46, mt: 60, mb: 60 },
   gncornell: { h0: 50.25, hp: 16, y1: 562.25, every: 1, size: 12, ml: 203, mr: 30, mt: 170, mb: 200, dark: [[0, 82.25, 455.04, 82.25], [0, 498.25, 455.04, 498.25], [91.258, 82, 91.258, 498.5]] },
 };
-export const fmtOf = (S) => GNPAPER[S.paper] ? 'gn' : S.fmt;
+for (const [k, v] of Object.entries(GNV)) GNPAPER[k] = v;
+// Vorlage = Art (s.paper, z. B. gnlin) × Format (s.fmt: gn = GoodNotes Standard hoch, gnq = quer, a4 = A4 hoch, a4q = A4 quer)
+export const GN_FORMATE = { gn: '', gnq: '_q', a4: '_a4', a4q: '_a4q' };
+export const gnKey = (S) => (S.paper || '') + (GN_FORMATE[S.fmt] ?? '');
+export const gnOf = (S) => (S && PAPERS[S.paper] && GNPAPER[gnKey(S)]) || null;
+export const gnHas = (paper, fmt) => !!GNPAPER[paper + (GN_FORMATE[fmt] ?? '')];
+export const fmtOf = (S) => gnOf(S) ? (S.fmt in GN_FORMATE ? S.fmt : 'gn') : PAPERS[S.paper] ? 'gn' : S.fmt;
+/** Art und/oder Format setzen und die festen Werte der Vorlage übernehmen (Größe, Ränder). false, wenn es die Kombination nicht gibt. */
+export function gnApply(s, paper, fmt) {
+  if (!gnHas(paper, fmt)) return false;
+  const gp = GNPAPER[paper + GN_FORMATE[fmt]]; s.paper = paper; s.fmt = fmt;
+  Object.assign(s, { paperColor: 'weiss', size: gp.size, ml: gp.ml, mr: gp.mr, mt: gp.mt, mb: gp.mb }); return true;
+}
 // Grundlinien (px) der Schreibzeilen auf einer GoodNotes-Vorlage
 function gnRuler(S, MT) {
-  const gp = GNPAPER[S.paper]; if (!gp) return null;
+  const gp = gnOf(S); if (!gp) return null;
   const y0 = gp.h0 * PXPT, step = gp.hp * gp.every * PXPT;
   const snapY = (y) => y0 + Math.ceil((y - y0) / step - 1e-6) * step - 1;
   const snapX = (x) => gp.vp ? gp.v0 * PXPT + Math.ceil((x - gp.v0 * PXPT) / (gp.vp * PXPT) - 1e-6) * gp.vp * PXPT + 3 : x;
@@ -338,7 +353,7 @@ export function layout(text, S, font) {
   }
   };
   // ---- HDF: Blöcke einsortieren ----
-  const gst = S.paper === 'grid' || S.paper === 'dots' ? lineH / 2 : 0, gpp = GNPAPER[S.paper];
+  const gst = S.paper === 'grid' || S.paper === 'dots' ? lineH / 2 : 0, gpp = gnOf(S);
   const grid = gpp && gpp.vp ? { cell: gpp.hp * PXPT, gx0: gpp.v0 * PXPT, gy0: gpp.h0 * PXPT } : gst ? { cell: gst, gx0: S.ml - Math.floor(S.ml / gst) * gst, gy0: (S.mt + lineH + 3) - Math.floor((S.mt + lineH + 3) / gst) * gst } : null;
   const bctx = {
     grid, get gridOk() { return !!grid && !inSub; },
@@ -441,8 +456,12 @@ export function drawPaper(ctx, S, lineH, PW, PH) {
   const line = dark ? 'rgba(200,210,230,.22)' : 'rgba(120,150,190,.45)';
   ctx.strokeStyle = line; ctx.lineWidth = 1.6;
   const y0 = S.mt + lineH + 3;
-  if (GNPAPER[S.paper]) {
-    const gp = GNPAPER[S.paper]; ctx.fillStyle = 'rgb(208,210,211)'; const t = .5 * PXPT, yEnd = gp.y1 ? gp.y1 * PXPT + 1 : PH + 2;
+  if (gnOf(S) && (gnOf(S).r || gnOf(S).d)) {   // aus der echten Vorlage übernommene Linien und Punkte
+    const gp = gnOf(S), t = PXPT; ctx.fillStyle = 'rgb(208,210,211)';
+    if (gp.d) { const [x0, dx, nx, y0, dy, ny, r] = gp.d; for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { ctx.beginPath(); ctx.arc((x0 + i * dx) * t, (y0 + j * dy) * t, r * t, 0, 6.3); ctx.fill(); } }
+    for (const [x, y, w, hh, dk] of gp.r || []) { ctx.fillStyle = dk ? 'rgb(51,51,51)' : 'rgb(208,210,211)'; ctx.fillRect(x * t, y * t, w * t, hh * t); }
+  } else if (gnOf(S)) {
+    const gp = gnOf(S); ctx.fillStyle = 'rgb(208,210,211)'; const t = .5 * PXPT, yEnd = gp.y1 ? gp.y1 * PXPT + 1 : PH + 2;
     if (gp.staff) { const st = gp.staff; for (let y = st.y0; y < st.clip; y += st.step) for (const d of st.lines) if (y + d < st.clip) ctx.fillRect(st.x0 * PXPT, (y + d + .25) * PXPT - t / 2, (st.x1 - st.x0) * PXPT, t); }
     if (gp.noLines) { /* nur Leer bzw. eigene Zeichnung (Notenlinien) */ }
     else if (gp.dots) { for (let y = gp.h0 * PXPT; y < PH + 2; y += gp.hp * PXPT) for (let x = gp.v0 * PXPT; x < PW + 2; x += gp.vp * PXPT) { ctx.beginPath(); ctx.arc(x, y, .5 * PXPT, 0, 6.3); ctx.fill(); } }

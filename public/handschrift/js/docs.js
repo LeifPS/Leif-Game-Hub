@@ -4,7 +4,8 @@ import { h, saveFile, toast, fmtTime } from './util.js';
 import { btn, sheet, confirmBox, promptBox, chips, ic } from './ui.js';
 import { dbDel, dbPut, kvGet, kvSet, merkeLoeschung } from './store.js';
 import { fileBase } from './exporter.js';
-import { layout, drawPage, ensureImages, PAPERS, PAPER_COLORS, PENS, GNPAPER, DEF } from './render.js';
+import { layout, drawPage, ensureImages, PAPERS, PAPER_COLORS, PENS, GNPAPER, DEF, gnApply, FORMATS, fmtOf } from './render.js';
+import { gnPicker } from './papier.js';
 import { uid } from './util.js';
 import { openTemplates } from './vorlagen.js';
 
@@ -74,7 +75,7 @@ export function docsView(app) {
     grid();
     // ---- Kachel ----
     function card(d) {
-      const ratio = (d.s && d.s.fmt === 'gn') || (d.s && /^gn/.test(d.s.paper || '')) ? '948 / 1226' : '1240 / 1754';
+      const F = FORMATS[fmtOf(d.s || {})] || FORMATS.gn, ratio = `${F.w} / ${F.h}`;
       const prev = h('div', { class: 'dprev', dataset: { id: d.id }, style: { aspectRatio: ratio } });
       const cached = thumbs.get(d.id); if (cached) prev.append(cached); else { prev.append(h('span', { class: 'dtxt' }, (d.text || '').replace(/\s+/g, ' ').slice(0, 80))); io.observe(prev); }
       const el = h('div', { class: 'dcard', role: 'button', tabindex: 0, dataset: { id: d.id }, onkeydown: (e) => { if (e.key === 'Enter') app.openDoc(d.id); } }, prev,
@@ -117,7 +118,7 @@ export function docsView(app) {
     const white = /^#f{3,6}$/i.test(f.color || '');
     const svg = `<svg viewBox="0 0 455 588" preserveAspectRatio="none" aria-hidden="true"><defs><clipPath id="c${f.id}"><path d="M8 0H425a30 30 0 0 1 30 30V558a30 30 0 0 1-30 30H8a8 8 0 0 1-8-8V8a8 8 0 0 1 8-8z"/></clipPath></defs><g clip-path="url(#c${f.id})"><rect width="455" height="588" fill="${f.color || '#fff'}"/><rect x="386.8" width="22.75" height="588" fill="${white ? '#f3f3f3' : 'rgba(0,0,0,.09)'}"/><rect width="455" height="588" fill="url(#g${f.id})"/></g><linearGradient id="g${f.id}" x1="0" x2="1"><stop offset="0" stop-color="#000" stop-opacity=".06"/><stop offset=".04" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient></svg>`;
     const ic = h('div', { class: 'ficon' }); ic.innerHTML = svg;
-    const pp = f.s && f.s.paper ? PAPERS[f.s.paper] : null;
+    const pp = f.s && f.s.paper ? PAPERS[f.s.paper] + ({ gnq: ' quer', a4: ' A4', a4q: ' A4 quer' }[f.s.fmt] || '') : null;
     return h('div', { class: 'dcard folder', role: 'button', tabindex: 0, onclick: () => { app.folder = f.id; q = ''; draw(); root.scrollTop = 0; }, onkeydown: (e) => { if (e.key === 'Enter') e.currentTarget.click(); } },
       ic, h('div', { class: 'dtitle' }, h('b', null, f.name), btn('Ordner-Einstellungen', { icon: 'more', cls: 'ghost icon sm', onclick: (e) => { e.stopPropagation(); folderSheet(f); } })),
       h('span', { class: 'xs mut' }, `${n} ${n === 1 ? 'Dokument' : 'Dokumente'}` + (pp ? ' · ' + pp : '')));
@@ -132,20 +133,19 @@ export function docsView(app) {
   function folderSheet(f, neu) {
     sheet(neu ? `Ordner „${f.name}“` : f.name, (b, api) => {
       const fs = f.s || (f.s = {}), save = async () => { f.updated = Date.now(); await app.saveFolders(); draw(); };
-      const pickPaper = (v) => {
-        if (v === '') { for (const k of ['paper', 'fmt', 'paperColor', 'size', 'ml', 'mr', 'mt', 'mb']) delete fs[k]; save(); return; }
-        const gp = GNPAPER[v]; fs.paper = v;
-        if (gp) Object.assign(fs, { fmt: 'gn', paperColor: 'weiss', size: gp.size, ml: gp.ml, mr: gp.mr, mt: gp.mt, mb: gp.mb });
-        else { if (GNPAPER[fs.paper] === undefined && fs.fmt === 'gn') delete fs.fmt; Object.assign(fs, { ml: 90, mr: 70, mt: 90, mb: 70, size: 18 }); }
-        save();
-      };
+      const clearPaper = () => { for (const k of ['paper', 'fmt', 'paperColor', 'size', 'ml', 'mr', 'mt', 'mb']) delete fs[k]; save(); };
+      const papBox = h('div');
+      const drawPap = () => papBox.replaceChildren(
+        h('div', { class: 'chips', style: { marginTop: '8px' } }, h('button', { type: 'button', class: 'opt' + (fs.paper ? '' : ' on'), onclick: () => { clearPaper(); drawPap(); } }, 'Wie immer'), h('button', { type: 'button', class: 'opt' + (fs.paper ? ' on' : ''), onclick: () => { if (!fs.paper) { gnApply(fs, 'gnlin', 'gn'); save(); drawPap(); } } }, 'Eigene Vorlage')),
+        ...(fs.paper ? [gnPicker(() => ({ paper: fs.paper, fmt: fs.fmt || 'gn' }), (p, fm) => { gnApply(fs, p, fm); save(); })] : []));
+      drawPap();
       const colors = h('div', { class: 'chips' }), drawC = () => colors.replaceChildren(...FCOLORS.map((c) => h('button', { type: 'button', class: 'sw' + (f.color === c ? ' on' : ''), style: { background: c }, 'aria-label': 'Farbe', onclick: () => { f.color = c; drawC(); save(); } }))); drawC();
       b.append(
         h('label', { class: 'f' }, 'Name'), h('input', { type: 'text', value: f.name, maxlength: 40, oninput: (e) => { f.name = e.target.value.trim() || f.name; save(); } }),
         h('label', { class: 'f' }, 'Farbe'), colors,
         h('h3', { style: { margin: '22px 0 2px' } }, 'Für neue Dokumente in diesem Ordner'),
         h('p', { class: 'mut xs', style: { margin: '0 0 6px' } }, 'Alles, was du hier nicht festlegst, ist wie bei deinen anderen Dokumenten (Einstellungen → „Als Standard merken“).'),
-        h('label', { class: 'f' }, 'GoodNotes-Vorlage'), chips([['', 'Wie immer'], ...Object.entries(PAPERS)], () => fs.paper || '', pickPaper),
+        h('label', { class: 'f' }, 'Papier'), papBox,
         h('label', { class: 'f' }, 'Stift'), chips([['', 'Wie immer'], ...Object.entries(PENS).map(([k, p]) => [k, p.name])], () => fs.pen || '', (k) => { if (!k) { for (const x of ['pen', 'ink', 'weight', 'inkAlpha']) delete fs[x]; } else { const p = PENS[k]; Object.assign(fs, { pen: k, ink: p.ink, weight: p.weight, inkAlpha: p.alpha }); } save(); }),
         h('div', { style: { display: 'grid', gap: '8px', marginTop: '22px' } },
           btn('Auf vorhandene Dokumente im Ordner anwenden', { icon: 'refresh', onclick: async () => { const ds = app.docs.filter((d) => d.folder === f.id); for (const d of ds) { d.s = { ...d.s, ...fs }; d.updated = Date.now(); await dbPut('docs', d); app.docSaved(d); } toast(`${ds.length} ${ds.length === 1 ? 'Dokument' : 'Dokumente'} angepasst`); draw(); } }),

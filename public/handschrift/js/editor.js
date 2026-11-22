@@ -2,7 +2,8 @@
 import { h, debounce, toast, saveFile, fmtSize, autoName } from './util.js';
 import { ic, btn, sheet, range, toggle, seg, chips, confirmBox } from './ui.js';
 import { exportVideo, videoSupported } from './video.js';
-import { layout, drawPage, ensureImages, FORMATS, PAPERS, PAPER_COLORS, PENS, DEF, GNPAPER, fmtOf } from './render.js';
+import { layout, drawPage, ensureImages, FORMATS, PAPERS, PAPER_COLORS, PENS, DEF, GNPAPER, fmtOf, gnOf, gnApply } from './render.js';
+import { gnPicker } from './papier.js';
 import { exportPdf, exportGoodNotes, exportGoodNotesInk, exportPngs, zipOf, fileBase } from './exporter.js';
 import { PACKS } from './packs.js';
 import { openWizard } from './wizard.js';
@@ -131,9 +132,11 @@ export function editorView(app) {
         item('Alles löschen', 'Den ganzen Text entfernen (mit Rückgängig)', 'trash', async () => { if (!ta.value) return; if (await confirmBox('Den ganzen Text löschen? Mit „Rückgängig“ holst du ihn zurück.', 'Löschen')) { hPush(); ta.value = ''; fire(); } }));
     });
   }
+  // Formatierknöpfe als Schriftzeichen (wie in Notiz-Apps): B, U, S und „ab“ mit Textmarker
+  const fb = (title, txt, cls, onclick) => h('button', { type: 'button', class: 'btn icon fbtn', title, 'aria-label': title, onclick }, h('span', { class: 'fb ' + cls }, txt));
   const tb = h('div', { class: 'tb', role: 'toolbar', 'aria-label': 'Formatierung' }, fontBtn, h('i', { class: 'vs' }),
-    btn('Fett', { icon: 'bold', cls: 'icon', onclick: wrap('**'), title: 'Fett (**Text**)' }), btn('Unterstrichen', { icon: 'underline', cls: 'icon', onclick: wrap('__'), title: 'Unterstrichen (__Text__)' }),
-    btn('Durchgestrichen', { icon: 'strike', cls: 'icon', onclick: wrap('~~'), title: 'Durchgestrichen (~~Text~~)' }), btn('Markiert', { icon: 'hl', cls: 'icon', onclick: wrap('=='), title: 'Textmarker (==Text==)' }),
+    fb('Fett (**Text**)', 'B', 'fb-b', wrap('**')), fb('Unterstrichen (__Text__)', 'U', 'fb-u', wrap('__')),
+    fb('Durchgestrichen (~~Text~~)', 'S', 'fb-s', wrap('~~')), fb('Textmarker (==Text==)', 'ab', 'fb-h', wrap('==')),
     btn('Farbe', { icon: 'palette', cls: 'icon', onclick: colorMenu }), h('i', { class: 'vs' }),
     btn('Überschrift', { icon: 'head', cls: 'icon', onclick: linePre('# '), title: 'Überschrift (# am Zeilenanfang)' }), btn('Liste', { icon: 'list', cls: 'icon', onclick: linePre('- '), title: 'Aufzählung (- am Zeilenanfang)' }), btn('Nummerierung', { icon: 'numlist', cls: 'icon', onclick: linePre('1. '), title: 'Nummerierte Liste (1. am Zeilenanfang)' }),
     h('i', { class: 'vs' }), (undoB = btn('Rückgängig', { icon: 'undo', cls: 'icon', onclick: () => hGo(-1), title: 'Rückgängig (Strg/Cmd+Z)', disabled: true })), (redoB = btn('Wiederholen', { icon: 'redo', cls: 'icon', onclick: () => hGo(1), title: 'Wiederholen (Strg/Cmd+Umschalt+Z)', disabled: true })),
@@ -277,18 +280,12 @@ export function editorView(app) {
   function openSettings() {
     sheet('Einstellungen', (b, api) => {
       const s = S(), ch = () => { saveSoon(); renderSoon(); }, setK = (k) => (v) => { s[k] = v; ch(); };
-      // GoodNotes-Vorlagen haben feste Linien: Format, Größe und Ränder werden passend gesetzt; danach Ansicht neu aufbauen
-      const pickPaper = (v) => {
-        const was = GNPAPER[s.paper], gp = GNPAPER[v]; s.paper = v;
-        if (gp) Object.assign(s, { fmt: 'gn', paperColor: 'weiss', scan: false, size: gp.size, ml: gp.ml, mr: gp.mr, mt: gp.mt, mb: gp.mb });
-        else if (was) Object.assign(s, { ml: 90, mr: 70, mt: 90, mb: 70, size: 18 });
-        ch(); if (gp || was) { api.close(); setTimeout(openSettings, 280); }
-      };
-      const pickFmt = (v) => { const was = GNPAPER[s.paper]; s.fmt = v; if (was && v !== 'gn') s.paper = 'lined'; ch(); if (was && v !== 'gn') { api.close(); setTimeout(openSettings, 280); } };
+      // GoodNotes-Vorlagen haben feste Linien: Größe und Ränder kommen aus der Vorlage
+      const pickGn = (paper, fmt) => { gnApply(s, paper, fmt); ch(); setTimeout(() => { api.close(); setTimeout(openSettings, 280); }, 150); };
       const sec = (t) => h('h3', { style: { margin: '20px 0 4px' } }, t);
       b.append(h('div', { class: 'row wrap2', style: { gap: '8px', marginBottom: '4px' } }, btn('Neu würfeln', { icon: 'dice', cls: 'sm', onclick: () => { s.seed = (Math.random() * 1e6) | 0; ch(); } }), btn('Als Standard merken', { cls: 'sm', onclick: () => { const v = { ...s }; delete v.rr; delete v.seed; kvSet('lastS', v); toast('Das gilt jetzt für neue Dokumente'); } }), ...(app.folderOf(doc.folder) ? [btn(`Für „${app.folderOf(doc.folder).name}“ merken`, { cls: 'sm', title: 'Gilt dann für neue Dokumente in diesem Ordner', onclick: async () => { const f = app.folderOf(doc.folder), v = { ...s }; delete v.rr; delete v.seed; f.s = v; f.updated = Date.now(); await app.saveFolders(); toast(`Gilt jetzt für neue Dokumente in „${f.name}“`); } })] : []), btn('Zurücksetzen', { cls: 'sm', onclick: () => { Object.assign(s, { ...DEF }); ch(); b.parentNode.parentNode && b.replaceChildren(); openSettings(); } })));
-      b.append(sec('Papier'), h('label', { class: 'f' }, 'GoodNotes-Vorlage'), chips(Object.entries(PAPERS), () => s.paper, pickPaper),
-        h('p', { class: 'xs mut' }, 'Die Schrift sitzt genau auf den Linien der eingebauten GoodNotes-Vorlage' + (GNPAPER[s.paper] && GNPAPER[s.paper].vp ? ' (auf jeder zweiten Reihe)' : '') + '. Im GoodNotes-Export mit echten Strichen wird diese Vorlage als Hintergrund verwendet.'),
+      b.append(sec('Papier'), gnPicker(() => ({ paper: s.paper, fmt: s.fmt }), pickGn),
+        h('p', { class: 'xs mut' }, 'Die Schrift sitzt genau auf den Linien der eingebauten GoodNotes-Vorlage' + (gnOf(s) && gnOf(s).vp ? ' (auf jeder zweiten Reihe)' : '') + '. Im GoodNotes-Export mit echten Strichen wird diese Vorlage als Hintergrund verwendet.'),
         ...(s.paper === 'gncornell' || s.paper === 'gnnoten' ? [] : [h('label', { class: 'f' }, 'Ränder'), chips([['schmal', 'Schmal'], ['normal', 'Normal'], ['breit', 'Breit']], () => Object.entries(MARGINS).find(([, v]) => v[0] === s.ml && v[1] === s.mr)?.[0] || '', (v) => { const m = MARGINS[v]; [s.ml, s.mr, s.mt, s.mb] = m; ch(); })]),
         toggle('Scan-Effekt', 'Leichte Körnung und Schatten wie bei einem Scan (nur PDF und Bilder)', () => s.scan, setK('scan')));
       b.append(sec('Stift'), chips(Object.entries(PENS).map(([k, p]) => [k, p.name]), () => s.pen, (k) => { const p = PENS[k]; Object.assign(s, { pen: k, ink: p.ink, weight: p.weight, inkAlpha: p.alpha }); ch(); }),
@@ -330,7 +327,7 @@ export function editorView(app) {
       const canShareGn = !!(navigator.canShare && navigator.canShare({ files: [new File([''], 'a.goodnotes', { type: 'application/octet-stream' })] }));
       const gink = (share) => run(async () => { const blob = await exportGoodNotesInk(LX(), S(), doc.title, prog); const r = await saveFile(blob, fileBase(doc.title) + '.goodnotes', { share }); msg.textContent = r === 'abgebrochen' ? '' : `GoodNotes-Datei mit echten Strichen ${r === 'geteilt' ? 'geteilt' : 'gespeichert'} (${fmtSize(blob.size)}, ${L.pages.length} ${L.pages.length === 1 ? 'Seite' : 'Seiten'}).`; });
       const png = (transparent) => run(async () => { const files = await exportPngs(LX(), S(), doc.title, dpi, transparent, prog); if (files.length === 1) { await saveFile(files[0].blob, files[0].name); } else await saveFile(zipOf(files), fileBase(doc.title) + (transparent ? '-transparent' : '') + '-PNG.zip'); msg.textContent = 'Bilder gespeichert.'; });
-      const gnPaper = GNPAPER[S().paper];
+      const gnPaper = gnOf(S());
       const selIn = h('input', { type: 'text', placeholder: `Alle ${L.pages.length} Seiten (z. B. 2-3, 5)`, inputmode: 'numeric', oninput: () => { sel = selIn.value; const ps = sel.trim() ? pagesOf(sel) : null; selHint.textContent = !sel.trim() ? '' : ps && ps.length ? `${ps.length} von ${L.pages.length} ${L.pages.length === 1 ? 'Seite' : 'Seiten'}: ${ps.map((i) => i + 1).join(', ')}` : 'Beispiel: 2-3, 5'; } }), selHint = h('p', { class: 'xs mut', style: { margin: '4px 2px 0' } });
       if (L.pages.length > 1) b.append(h('label', { class: 'f' }, 'Seiten'), selIn, selHint);
       b.append(h('label', { class: 'f' }, 'Qualität'), chips([[150, 'Standard'], [200, 'Hoch (empfohlen)'], [300, 'Sehr hoch']], () => dpi, v => { dpi = v; }),

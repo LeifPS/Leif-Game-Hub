@@ -1,5 +1,5 @@
 // Export: PDF (A4 für GoodNotes), PNG je Seite, PNG-ZIP, transparente PNG
-import { drawPage, ensureImages, FORMATS, SC, fmtOf, GNPAPER } from './render.js';
+import { drawPage, ensureImages, FORMATS, SC, fmtOf, GNPAPER, gnOf, gnKey } from './render.js';
 import { makePdf, makeZip } from './pdfw.js';
 import { blobOf, tick } from './util.js';
 import { vectorize } from './vec.js';
@@ -40,7 +40,8 @@ export async function exportGoodNotes(L, S, title, dpi = 200, onProgress = () =>
 // GoodNotes mit leerer Standardseite und echten Strichen (radier- und bearbeitbar)
 const cssRgba = (() => { const c = document.createElement('canvas'); c.width = c.height = 1; const g = c.getContext('2d', { willReadFrequently: true }), memo = new Map(); return (col) => { if (memo.has(col)) return memo.get(col); g.clearRect(0, 0, 1, 1); g.fillStyle = '#000'; g.fillStyle = col; g.fillRect(0, 0, 1, 1); const d = g.getImageData(0, 0, 1, 1).data; const r = [d[0] / 255, d[1] / 255, d[2] / 255]; memo.set(col, r); return r; }; })();
 export async function exportGoodNotesInk(L, S, title, onProgress = () => {}) {
-  const UW = 834.24, UH = 1078.82, fit = Math.min(UW / L.PW, UH / L.PH), ox = (UW - L.PW * fit) / 2, oy = (UH - L.PH * fit) / 2;
+  const PT = { gn: [455.04, 588.45], gnq: [650.88, 406.8], a4: [595.28, 841.89] }[fmtOf(S)] || [455.04, 588.45];   // Seitengröße der GoodNotes-Vorlage (pt)
+  const UW = PT[0] * 834.24 / 455.04, UH = PT[1] * 834.24 / 455.04, fit = Math.min(UW / L.PW, UH / L.PH), ox = (UW - L.PW * fit) / 2, oy = (UH - L.PH * fit) / 2;
   const tan = Math.tan(S.slant * Math.PI / 180), wgt = S.weight * .55, T = (x, y) => [x * fit + ox, y * fit + oy];
   const quad = (x1, y1, cx, cy, x2, y2, n = 12) => { const o = []; for (let i = 0; i <= n; i++) { const t = i / n, a = (1 - t) * (1 - t), b = 2 * t * (1 - t), c = t * t; o.push(T(a * x1 + b * cx + c * x2, a * y1 + b * cy + c * y2)); } return o; };
   const pages = [];
@@ -69,7 +70,7 @@ export async function exportGoodNotesInk(L, S, title, onProgress = () => {}) {
     }
     pages.push(hl.concat(ink)); onProgress((pi + 1) / L.pages.length * .8); await tick();
   }
-  const gnp = GNPAPER[S.paper] ? S.paper : null, t = document.createElement('canvas'), pc = await pageCanvas(L, 0, { ...S, paper: gnp || 'blank', paperColor: 'weiss', scan: false }, 100, false);
+  const gnp = gnOf(S) ? gnKey(S) : null, t = document.createElement('canvas'), pc = await pageCanvas(L, 0, { ...S, paper: gnp || 'blank', paperColor: 'weiss', scan: false }, 100, false);
   t.width = 360; t.height = Math.round(pc.height * 360 / pc.width); const tg = t.getContext('2d'); tg.fillStyle = '#fff'; tg.fillRect(0, 0, t.width, t.height); tg.drawImage(pc, 0, 0, t.width, t.height);
   const thumb = new Uint8Array(await (await blobOf(t, 'image/jpeg', .85)).arrayBuffer());
   const { makeGoodNotesInk } = await import('./gnink.js');
