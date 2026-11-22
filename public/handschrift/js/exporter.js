@@ -40,7 +40,7 @@ export async function exportGoodNotes(L, S, title, dpi = 200, onProgress = () =>
 // GoodNotes mit leerer Standardseite und echten Strichen (radier- und bearbeitbar)
 const cssRgba = (() => { const c = document.createElement('canvas'); c.width = c.height = 1; const g = c.getContext('2d', { willReadFrequently: true }), memo = new Map(); return (col) => { if (memo.has(col)) return memo.get(col); g.clearRect(0, 0, 1, 1); g.fillStyle = '#000'; g.fillStyle = col; g.fillRect(0, 0, 1, 1); const d = g.getImageData(0, 0, 1, 1).data; const r = [d[0] / 255, d[1] / 255, d[2] / 255]; memo.set(col, r); return r; }; })();
 export async function exportGoodNotesInk(L, S, title, onProgress = () => {}) {
-  const PT = { gn: [455.04, 588.45], gnq: [650.88, 406.8], a4: [595.28, 841.89] }[fmtOf(S)] || [455.04, 588.45];   // Seitengröße der GoodNotes-Vorlage (pt)
+  const PT = { gn: [455.04, 588.45], gnq: [650.88, 406.8], a4: [595.28, 841.89], a4q: [841.89, 595.28] }[fmtOf(S)] || [455.04, 588.45];   // Seitengröße der GoodNotes-Vorlage (pt)
   const UW = PT[0] * 834.24 / 455.04, UH = PT[1] * 834.24 / 455.04, fit = Math.min(UW / L.PW, UH / L.PH), ox = (UW - L.PW * fit) / 2, oy = (UH - L.PH * fit) / 2;
   const tan = Math.tan(S.slant * Math.PI / 180), wgt = S.weight * .55, T = (x, y) => [x * fit + ox, y * fit + oy];
   const quad = (x1, y1, cx, cy, x2, y2, n = 12) => { const o = []; for (let i = 0; i <= n; i++) { const t = i / n, a = (1 - t) * (1 - t), b = 2 * t * (1 - t), c = t * t; o.push(T(a * x1 + b * cx + c * x2, a * y1 + b * cy + c * y2)); } return o; };

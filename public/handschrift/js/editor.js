@@ -132,11 +132,11 @@ export function editorView(app) {
         item('Alles löschen', 'Den ganzen Text entfernen (mit Rückgängig)', 'trash', async () => { if (!ta.value) return; if (await confirmBox('Den ganzen Text löschen? Mit „Rückgängig“ holst du ihn zurück.', 'Löschen')) { hPush(); ta.value = ''; fire(); } }));
     });
   }
-  // Formatierknöpfe als Schriftzeichen (wie in Notiz-Apps): B, U, S und „ab“ mit Textmarker
-  const fb = (title, txt, cls, onclick) => h('button', { type: 'button', class: 'btn icon fbtn', title, 'aria-label': title, onclick }, h('span', { class: 'fb ' + cls }, txt));
+  // Textmarker: Linien-Symbol wie die übrigen, mit kleinem gelbem Strich (so sieht der Marker auch auf dem Blatt aus)
+  const hlBtn = () => { const b = btn('Textmarker', { icon: 'highlighter', cls: 'icon hlbtn', onclick: wrap('=='), title: 'Textmarker (==Text==)' }); const sv = b.querySelector('svg'), r = document.createElementNS('http://www.w3.org/2000/svg', 'rect'); r.setAttribute('x', '13'); r.setAttribute('y', '18.6'); r.setAttribute('width', '9'); r.setAttribute('height', '3.4'); r.setAttribute('rx', '1.7'); r.setAttribute('class', 'hlbar'); sv.append(r); return b; };
   const tb = h('div', { class: 'tb', role: 'toolbar', 'aria-label': 'Formatierung' }, fontBtn, h('i', { class: 'vs' }),
-    fb('Fett (**Text**)', 'B', 'fb-b', wrap('**')), fb('Unterstrichen (__Text__)', 'U', 'fb-u', wrap('__')),
-    fb('Durchgestrichen (~~Text~~)', 'S', 'fb-s', wrap('~~')), fb('Textmarker (==Text==)', 'ab', 'fb-h', wrap('==')),
+    btn('Fett', { icon: 'bold', cls: 'icon', onclick: wrap('**'), title: 'Fett (**Text**)' }), btn('Unterstrichen', { icon: 'underline', cls: 'icon', onclick: wrap('__'), title: 'Unterstrichen (__Text__)' }),
+    btn('Durchgestrichen', { icon: 'strike', cls: 'icon', onclick: wrap('~~'), title: 'Durchgestrichen (~~Text~~)' }), hlBtn(),
     btn('Farbe', { icon: 'palette', cls: 'icon', onclick: colorMenu }), h('i', { class: 'vs' }),
     btn('Überschrift', { icon: 'head', cls: 'icon', onclick: linePre('# '), title: 'Überschrift (# am Zeilenanfang)' }), btn('Liste', { icon: 'list', cls: 'icon', onclick: linePre('- '), title: 'Aufzählung (- am Zeilenanfang)' }), btn('Nummerierung', { icon: 'numlist', cls: 'icon', onclick: linePre('1. '), title: 'Nummerierte Liste (1. am Zeilenanfang)' }),
     h('i', { class: 'vs' }), (undoB = btn('Rückgängig', { icon: 'undo', cls: 'icon', onclick: () => hGo(-1), title: 'Rückgängig (Strg/Cmd+Z)', disabled: true })), (redoB = btn('Wiederholen', { icon: 'redo', cls: 'icon', onclick: () => hGo(1), title: 'Wiederholen (Strg/Cmd+Umschalt+Z)', disabled: true })),

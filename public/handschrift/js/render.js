@@ -20,7 +20,7 @@ export const FORMATS = {
 // Zur Auswahl stehen nur noch echte GoodNotes-Vorlagen (Standardseite). Die alten Papiere (lined, grid, dots, blank, …) gibt es intern weiter
 // (Vorschaubilder), alte Dokumente werden mit migrateS umgestellt.
 export const PAPERS = {
-  gnleer: 'Leer', gnlin: 'Liniert', gnlin2: 'Liniert schmal', gnkar: 'Kariert', gndot: 'Gepunktet', gncornell: 'Cornell', gnnoten: 'Notenlinien',
+  gnleer: 'Leer', gnlin: 'Liniert', gnlin2: 'Liniert schmal', gnkar: 'Kariert', gndot: 'Gepunktet', gncornell: 'Cornell', gnnoten: 'Notenlinien', gntom: 'Kariert perfekte Kästchen (Tom)',
 };
 const ALT_PAPIER = { lined: 'gnlin', legal: 'gnlin', college: 'gnlin2', grid: 'gnkar', dots: 'gndot', blank: 'gnleer' };
 /** Einstellungen eines (alten) Dokuments auf GoodNotes-Papier umstellen. Gibt true zurück, wenn sich etwas geändert hat. */
@@ -540,7 +540,7 @@ export function drawPage(canvas, entries, L, S, scale, transparent) {
   }
   if (transparent) { ctx.globalAlpha = S.inkAlpha; ctx.drawImage(fin, 0, 0); ctx.globalAlpha = 1; return; }
   ctx.setTransform(scale, 0, 0, scale, 0, 0); drawPaper(ctx, S, lineH, PW, PH);
-  for (const e of entries) if (e.hl) { ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(255,226,70,.55)'; const h = e.hl; ctx.fillRect(h.x1, h.y1, h.x2 - h.x1, h.y2 - h.y1); }
+  for (const e of entries) if (e.hl) { ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(255,228,110,.6)'; const h = e.hl, hh = h.y2 - h.y1; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(h.x1 - hh * .08, h.y1, h.x2 - h.x1 + hh * .16, hh, hh / 2); else ctx.rect(h.x1, h.y1, h.x2 - h.x1, hh); ctx.fill(); }   // wie der GoodNotes-Textmarker: runde Enden
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = S.paperColor === 'dunkel' ? 'source-over' : 'multiply'; ctx.globalAlpha = S.inkAlpha;
   if (S.paperColor === 'dunkel') { ctx.drawImage(fin, 0, 0); } else ctx.drawImage(fin, 0, 0);
