@@ -121,15 +121,13 @@ function umzug(root) {
   const fonts = app.fonts.filter((f) => !f.builtin).length, docs = app.docs.length, has = fonts + docs > 0;
   const n = (k, a, b) => `${k} ${k === 1 ? a : b}`;
   root.append(h('div', { class: 'umzug' }, h('div', { class: 'umzug-card' },
-    mark(56), h('h1', null, 'STools heißt jetzt Tippschrift'),
-    h('p', { class: 'mut' }, 'Die App ist umgezogen nach ', h('b', null, 'tippschrift.de'), '. Unter dieser alten Adresse kannst du nur noch deine Daten mitnehmen.'),
-    has ? h('div', { class: 'umzug-steps' },
-      h('div', { class: 'umzug-step' }, h('span', { class: 'num' }, '1'), h('div', null, h('b', null, 'Alles sichern'), h('p', { class: 'mut sm' }, `Hier ${fonts + docs === 1 ? 'liegt' : 'liegen'} ${[fonts && n(fonts, 'eigene Schrift', 'eigene Schriften'), docs && n(docs, 'Dokument', 'Dokumente')].filter(Boolean).join(' und ')}. Speichere alles als Datei, z. B. in iCloud Drive.`),
-        h('button', { type: 'button', class: 'btn pri', onclick: async () => { try { const { doBackup } = await import('./backup.js'); await doBackup(); } catch (e) { alert('Sicherung fehlgeschlagen: ' + e.message); } } }, ic('download'), 'Sicherung speichern'))),
-      h('div', { class: 'umzug-step' }, h('span', { class: 'num' }, '2'), h('div', null, h('b', null, 'Tippschrift öffnen und einspielen'), h('p', { class: 'mut sm' }, 'Auf tippschrift.de unter „Mehr“ → „Sicherung einspielen“ die Datei auswählen. Fertig – alles ist wieder da.'),
-        h('a', { class: 'btn', href: NEW_URL, target: '_blank', rel: 'noopener' }, 'Zu tippschrift.de')))) :
-      h('a', { class: 'btn pri', href: NEW_URL }, 'Zu tippschrift.de'),
-    h('p', { class: 'xs mut', style: { marginTop: '18px' } }, 'Hast du die App auf dem Home-Bildschirm? Dann füge tippschrift.de neu hinzu und lösche die alte App, wenn alles übertragen ist.'))));
+    mark(56), h('h1', null, 'Neue Adresse'),
+    h('p', { class: 'mut' }, 'Die App findest du jetzt unter ', h('b', null, 'tippschrift.de'), '.'),
+    h('a', { class: 'btn pri umzug-go', href: NEW_URL }, 'Zu tippschrift.de'),
+    has ? h('div', { class: 'umzug-data' },
+      h('b', null, 'Deine Schriften und Dokumente mitnehmen'),
+      h('p', { class: 'mut sm' }, `Hier ${fonts + docs === 1 ? 'liegt' : 'liegen'} noch ${[fonts && n(fonts, 'eigene Schrift', 'eigene Schriften'), docs && n(docs, 'Dokument', 'Dokumente')].filter(Boolean).join(' und ')}. Speichere alles und spiel es auf tippschrift.de unter „Mehr“ → „Sicherung einspielen“ wieder ein.`),
+      h('button', { type: 'button', class: 'btn', onclick: async () => { try { const { doBackup } = await import('./backup.js'); await doBackup(); } catch (e) { alert('Sicherung fehlgeschlagen: ' + e.message); } } }, ic('download'), 'Sicherung speichern')) : null)));
   const bt = document.getElementById('boot'); if (bt) bt.remove();
 }
 function registerSw() {

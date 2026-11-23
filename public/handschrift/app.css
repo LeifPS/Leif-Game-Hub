@@ -550,3 +550,6 @@ button.chip{border:0;cursor:pointer}
 .umzug-step{display:flex;gap:14px}.umzug-step .num{flex:0 0 30px;height:30px;border-radius:50%;background:var(--acs);color:var(--ac);font-weight:700;display:flex;align-items:center;justify-content:center}
 .umzug-step p{margin:4px 0 10px}
 .umzug a.btn{text-decoration:none}
+.umzug-card{text-align:center}.umzug-card .mut{font-size:17px}.umzug-go{display:inline-flex;margin-top:8px;font-size:17px;padding:12px 26px}
+.umzug-data{margin-top:26px;padding-top:20px;border-top:1px solid var(--bd)}.umzug-data p{margin:6px 0 12px}
+.umzug-data p.mut{font-size:14px}
