@@ -17,7 +17,7 @@ export function restoreButton(app, onDone) {
   const inp = h('input', { type: 'file', accept: '.tippschrift,.stools,application/json', class: 'sr', onchange: async () => {
     const f = inp.files[0]; inp.value = ''; if (!f) return;
     if (!(await confirmBox('Sicherung einspielen? Schriften und Dokumente aus der Datei kommen dazu; gleiche Einträge werden durch den Stand aus der Sicherung ersetzt.', 'Einspielen'))) return;
-    try { const n = await restoreBackup(f); app.folders = await (await import('./store.js')).kvGet('folders', []); await app.fontsChanged(); await app.loadDocs(); app.views.docs.refresh(); app.views.fonts.refresh(); toast(`Eingespielt: ${n.fonts} ${n.fonts === 1 ? 'Schrift' : 'Schriften'}, ${n.docs} ${n.docs === 1 ? 'Dokument' : 'Dokumente'}`, 3600); onDone && onDone(); }
+    try { const n = await restoreBackup(f); const { kvGet } = await import('./store.js'); app.folders = await kvGet('folders', []); app.fontId = await kvGet('fontId', app.fontId); const th = await kvGet('theme', null); if (th && app.setTheme) app.setTheme(th); await app.fontsChanged(); await app.loadDocs(); app.views.docs.refresh(); app.views.fonts.refresh(); toast(`Eingespielt: ${n.fonts} ${n.fonts === 1 ? 'Schrift' : 'Schriften'}, ${n.docs} ${n.docs === 1 ? 'Dokument' : 'Dokumente'}`, 3600); onDone && onDone(); }
     catch (e) { toast(e.message, 5000, 'err'); }
   } });
   return h('span', null, inp, btn('Sicherung einspielen', { icon: 'upload', cls: 'sm', onclick: () => inp.click() }));
