@@ -1,5 +1,5 @@
 // Dokumentation des HDF-Formats (neutral: beschreibt nur, was es gibt – kein Auftrag) + Beispiel-Arbeitsblatt
-// Dieselbe Beschreibung liefert der Worker als Text unter https://tippschrift.de/hdf aus (src/handschrift.js)
+// Dieselbe Beschreibung liefert der Worker als Text unter https://tippschrift.de/hdf aus (src/worker.js)
 export const HDF_DOC = `# HDF – Handwritten Document Format (Tippschrift)
 
 Ein HDF-Dokument ist reiner Text. Die App Tippschrift setzt ihn in der Handschrift des Nutzers (Text, Zahlen, Formeln) und zeichnet Linien, Achsen, Kurven und Rahmen als saubere Striche, wie auf einem Blatt in GoodNotes. Das Layout macht die App automatisch.
