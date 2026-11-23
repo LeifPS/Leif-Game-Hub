@@ -1,21 +1,29 @@
 import { hsApi } from './hsapi.js';
 import { HDF_DOC } from '../public/handschrift/js/hdfdoc.js';
-// st.leifps.de (früher handschrift.leifps.de, bleibt weiter erreichbar): STools, die Handschrift-App (Text in eigene Handschrift umwandeln, installierbar, offline nutzbar).
-// Sie läuft im selben Worker, ist aber nirgends verlinkt und nur über diese Adressen erreichbar:
-//  - auf st.leifps.de und handschrift.leifps.de kommt die App aus public/handschrift/ (die Startseite unter "/", alles Weitere unter /handschrift/...)
-//  - auf allen anderen Adressen (hub.leifps.de, dev.leifps.de, *.workers.dev ...) gibt es /handschrift/... nicht (404)
-//  - die App hat kein Konto: alle Daten bleiben im Browser; einzige Ausnahmen (beide freiwillig): /api/titel (Titelvorschlag) und /api/sync/ (verschlüsselter Abgleich), siehe hsapi.js
-export const HS_HOSTS = ['st.leifps.de', 'handschrift.leifps.de'];
+// tippschrift.de: Tippschrift (früher STools), die Handschrift-App (Text in eigene Handschrift umwandeln, installierbar, offline nutzbar).
+// Sie läuft im selben Worker, ist aber nur über ihre eigenen Adressen erreichbar:
+//  - tippschrift.de: die App aus public/handschrift/ (Startseite unter "/", alles Weitere unter /handschrift/...) plus /api/titel, /api/sync/, /hdf
+//  - www.tippschrift.de, tippschrift.com/.info/.store (auch mit www): dauerhafte Weiterleitung auf tippschrift.de
+//  - alte Adressen st.leifps.de und handschrift.leifps.de: liefern die App nur noch im Umzugsmodus (die alten Daten liegen im Browser
+//    unter dieser Adresse – die App zeigt dort nur „Alles sichern“ und den Weg zu tippschrift.de); keine API mehr, /hdf leitet weiter
+//  - auf allen anderen Adressen (hub.leifps.de, *.workers.dev ...) gibt es /handschrift/... nicht (404)
+//  - die App hat kein Konto: alle Daten bleiben im Browser; einzige Ausnahmen (beide freiwillig): /api/titel und /api/sync/, siehe hsapi.js
+export const TS_HOST = 'tippschrift.de';
+export const TS_ALIAS = ['www.tippschrift.de', 'tippschrift.com', 'www.tippschrift.com', 'tippschrift.info', 'www.tippschrift.info', 'tippschrift.store', 'www.tippschrift.store'];
+export const OLD_HOSTS = ['st.leifps.de', 'handschrift.leifps.de'];
+export const HS_HOSTS = [TS_HOST, ...OLD_HOSTS];
 const NICHT_GEFUNDEN = () => new Response('Nicht gefunden', { status: 404, headers: { 'x-robots-tag': 'noindex, nofollow, noarchive' } });
 
 // Gibt null zurück, wenn die Anfrage nichts mit der App zu tun hat (dann geht es normal im Hub weiter).
 export function handschriftWeiche(request, env) {
   const url = new URL(request.url);
   const pfad = url.pathname;
-  const hier = HS_HOSTS.includes(url.hostname.toLowerCase());
-  if (!hier) return pfad === '/handschrift' || pfad.startsWith('/handschrift/') ? Promise.resolve(NICHT_GEFUNDEN()) : null;
+  const host = url.hostname.toLowerCase(), alt = OLD_HOSTS.includes(host);
+  if (TS_ALIAS.includes(host)) return Promise.resolve(Response.redirect('https://' + TS_HOST + pfad + url.search, 301));
+  if (!HS_HOSTS.includes(host)) return pfad === '/handschrift' || pfad.startsWith('/handschrift/') ? Promise.resolve(NICHT_GEFUNDEN()) : null;
   if (!env.ASSETS) return Promise.resolve(NICHT_GEFUNDEN());
-  if (pfad === '/api/titel' || pfad.startsWith('/api/sync/')) return hsApi(request, env);   // nur diese beiden Schnittstellen, siehe hsapi.js
+  if (alt && /^\/(hdf|hdf\.txt|ki-hdf)\/?$/i.test(pfad)) return Promise.resolve(Response.redirect('https://' + TS_HOST + '/hdf', 301));   // alte KI-Links funktionieren weiter
+  if (!alt && (pfad === '/api/titel' || pfad.startsWith('/api/sync/'))) return hsApi(request, env);   // nur diese beiden Schnittstellen, siehe hsapi.js
   if (request.method !== 'GET' && request.method !== 'HEAD') return Promise.resolve(new Response('Nicht erlaubt', { status: 405, headers: { allow: 'GET, HEAD' } }));
   if (pfad.startsWith('/api/') || pfad === '/api') return Promise.resolve(NICHT_GEFUNDEN());
   // Beschreibung des Textformats HDF als reiner Text, damit eine KI sie per Link lesen kann (gleiche Quelle wie in der App)
@@ -25,7 +33,7 @@ export function handschriftWeiche(request, env) {
   else if (!pfad.startsWith('/handschrift/')) ziel = '/handschrift' + pfad;
   return env.ASSETS.fetch(new Request(new URL(ziel, request.url), request)).then((r) => {
     const h = new Headers(r.headers);
-    h.set('x-robots-tag', 'noindex, nofollow, noarchive');
+    if (alt) h.set('x-robots-tag', 'noindex, nofollow, noarchive');   // alte Adressen nicht mehr in Suchmaschinen
     h.set('referrer-policy', 'no-referrer');
     h.set('x-content-type-options', 'nosniff');
     if (ziel.endsWith('/sw.js')) h.set('service-worker-allowed', '/');

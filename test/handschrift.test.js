@@ -47,8 +47,8 @@ test('handschrift.leifps.de: kein Konto-Server, nur Lesen', async () => {
 });
 
 import { makeD1 } from './helpers/d1.js';
-test('STools-Abgleich: Stücke hochladen, festschreiben, wieder holen; alte Fassung verschwindet', async () => {
-  const env2 = { ...env, DB: makeD1() }, B = 'https://st.leifps.de/api/sync/abcd1234';
+test('Tippschrift-Abgleich: Stücke hochladen, festschreiben, wieder holen; alte Fassung verschwindet', async () => {
+  const env2 = { ...env, DB: makeD1() }, B = 'https://tippschrift.de/api/sync/abcd1234';
   const call = (u, method = 'GET', body) => handschriftWeiche(new Request(B + u, { method, body: body == null ? undefined : typeof body === 'string' ? body : JSON.stringify(body) }), env2);
   assert.equal((await call('')).status, 404);
   assert.equal((await call('/v00001/0', 'PUT', 'QUJD')).status, 200);
@@ -60,18 +60,18 @@ test('STools-Abgleich: Stücke hochladen, festschreiben, wieder holen; alte Fass
   await call('/v00002/0', 'PUT', 'WFla'); await call('/commit', 'POST', { v: 'v00002', parts: 1, updated: 9 });
   assert.equal((await call('/v00001/0')).status, 404, 'alte Fassung gelöscht');
   assert.equal((await call('/v00002/0', 'PUT', '<script>')).status, 413, 'nur Base64');
-  assert.equal((await handschriftWeiche(new Request('https://st.leifps.de/api/sync/../x'), env2)).status, 404);
-  assert.equal((await handschriftWeiche(new Request('https://st.leifps.de/api/ich'), env2)).status, 404, 'sonst keine API');
+  assert.equal((await handschriftWeiche(new Request('https://tippschrift.de/api/sync/../x'), env2)).status, 404);
+  assert.equal((await handschriftWeiche(new Request('https://tippschrift.de/api/ich'), env2)).status, 404, 'sonst keine API');
 });
-test('STools-Titel: ohne KI-Anbindung freundliche Fehlermeldung, mit KI kurzer Titel', async () => {
-  const req = (e) => handschriftWeiche(new Request('https://st.leifps.de/api/titel', { method: 'POST', body: JSON.stringify({ text: 'Die pq-Formel löst quadratische Gleichungen' }) }), e);
+test('Tippschrift-Titel: ohne KI-Anbindung freundliche Fehlermeldung, mit KI kurzer Titel', async () => {
+  const req = (e) => handschriftWeiche(new Request('https://tippschrift.de/api/titel', { method: 'POST', body: JSON.stringify({ text: 'Die pq-Formel löst quadratische Gleichungen' }) }), e);
   assert.equal((await req({ ...env })).status, 503);
   const e2 = { ...env, DB: makeD1(), AI: { run: async () => ({ response: '„Die pq-Formel.“\nmehr' }) } };
   assert.deepEqual(await (await req(e2)).json(), { titel: 'Die pq-Formel' });
 });
 
-test('st.leifps.de/hdf: Format-Beschreibung als reiner Text (für KIs per Link), ohne Auftrag', async () => {
-  for (const u of ['https://st.leifps.de/hdf', 'https://st.leifps.de/hdf.txt', 'https://st.leifps.de/ki-hdf', 'https://handschrift.leifps.de/HDF']) {
+test('tippschrift.de/hdf: Format-Beschreibung als reiner Text (für KIs per Link), ohne Auftrag', async () => {
+  for (const u of ['https://tippschrift.de/hdf', 'https://tippschrift.de/hdf.txt', 'https://tippschrift.de/ki-hdf', 'https://tippschrift.de/HDF']) {
     const a = await handschriftWeiche(r(u), env);
     assert.equal(a.status, 200, u);
     assert.match(a.headers.get('content-type'), /^text\/plain; charset=utf-8/);
@@ -80,4 +80,16 @@ test('st.leifps.de/hdf: Format-Beschreibung als reiner Text (für KIs per Link),
     assert.doesNotMatch(t, /Antworte NUR|Qualitätsregeln|Erstelle für mich/);
   }
   assert.equal(handschriftWeiche(r('https://hub.leifps.de/hdf'), env), null);   // nur auf der App-Adresse
+});
+
+test('Umzug: Zweit-Domains leiten auf tippschrift.de, alte Adresse nur noch Umzug (keine API, /hdf weiter, noindex)', async () => {
+  for (const h of ['www.tippschrift.de', 'tippschrift.com', 'www.tippschrift.info', 'tippschrift.store']) {
+    const a = await handschriftWeiche(r(`https://${h}/hdf?x=1`), env);
+    assert.equal(a.status, 301, h); assert.equal(a.headers.get('location'), 'https://tippschrift.de/hdf?x=1');
+  }
+  const k = await handschriftWeiche(r('https://st.leifps.de/hdf'), env); assert.equal(k.status, 301); assert.equal(k.headers.get('location'), 'https://tippschrift.de/hdf');
+  assert.equal((await handschriftWeiche(new Request('https://st.leifps.de/api/titel', { method: 'POST', body: '{}' }), { ...env, DB: makeD1() })).status, 405, 'alte Adresse: keine API mehr');
+  assert.equal((await handschriftWeiche(r('https://st.leifps.de/api/sync/abcd1234'), env)).status, 404);
+  const alt = await handschriftWeiche(r('https://st.leifps.de/'), env); assert.equal(alt.status, 200); assert.match(alt.headers.get('x-robots-tag') || '', /noindex/);
+  const neu = await handschriftWeiche(r('https://tippschrift.de/'), env); assert.equal(neu.status, 200); assert.equal(neu.headers.get('x-robots-tag'), null);
 });

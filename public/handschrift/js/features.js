@@ -1,4 +1,4 @@
-// „Was STools kann“: Galerie aller Funktionen mit Vorschau in der eigenen Handschrift.
+// „Was Tippschrift kann“: Galerie aller Funktionen mit Vorschau in der eigenen Handschrift.
 // Kachel = Vorschau + Titel + ein Satz. Antippen = Detail mit großer Vorschau, Reglern zum Ausprobieren, „So schreibst du es“ und „Als Dokument öffnen“.
 import { h, toast } from './util.js';
 import { sheet, chips, btn, ic } from './ui.js';
@@ -72,7 +72,7 @@ export const FEATURES = [
   { id: 'export', cat: 'app', title: 'Ab nach GoodNotes', short: 'Als PDF, Bild oder echte Stiftstriche exportieren.', icon: 'download',
     steps: ['Im Dokument „Exportieren“, Seiten auswählen.', 'Echte Striche (.goodnotes): in GoodNotes radier- und bearbeitbar.', 'Oder PDF, PNG je Seite, transparentes PNG.'] },
   { id: 'video', cat: 'app', title: 'Schreib-Video', short: 'Ein Video, in dem die Seite Strich für Strich entsteht.', icon: 'pen', steps: ['Exportieren → „Schreib-Video“.'] },
-  { id: 'ki', cat: 'app', title: 'Blatt von der KI', short: 'Eine KI schreibt Lösung oder Arbeitsblatt, STools setzt es.', icon: 'wand',
+  { id: 'ki', cat: 'app', title: 'Blatt von der KI', short: 'Eine KI schreibt Lösung oder Arbeitsblatt, Tippschrift setzt es.', icon: 'wand',
     steps: ['Mehr → „Format-Beschreibung kopieren“ und in ChatGPT/Claude einfügen.', 'Darunter schreiben, was du willst.', 'Antwort aus dem Codeblock kopieren und in ein Dokument einfügen.'] },
   { id: 'ordner', cat: 'app', title: 'Ordner & Vorlagen', short: 'Hefte für jedes Fach, fertige Vorlagen, Papierkorb.', icon: 'folder',
     steps: ['Ordner-Knopf oben: neues Heft mit Farbe und eigenem Papier.', 'Vorlagen-Knopf: fertige Blätter als Start.', 'Gelöschtes landet erst im Papierkorb.'] },
@@ -155,7 +155,7 @@ export function featureTiles(app, ids, root) {   // kleine Auswahl (z. B. auf de
 export function openFeatures(app) {
   let cat = 'alle';
   if (curGallery) curGallery.close();
-  const me = curGallery = sheet('Was STools alles kann', (body) => {
+  const me = curGallery = sheet('Was Tippschrift alles kann', (body) => {
     const grid = h('div', { class: 'fx-grid' }), q = makeQueue(app, body);
     const draw = () => grid.replaceChildren(...FEATURES.filter((f) => cat === 'alle' || f.cat === cat).map((f) => tile(app, f, (x) => detail(app, x), q)));
     body.append(h('p', { class: 'mut sm', style: { margin: '0 0 10px' } }, 'Alle Vorschauen sind in deiner Schrift. Tippe eine Kachel an, um sie auszuprobieren.'),

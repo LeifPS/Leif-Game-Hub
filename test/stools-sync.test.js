@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { handschriftWeiche } from '../src/handschrift.js';
 import { makeD1 } from './helpers/d1.js';
 
-test('STools-Abgleich: verschlüsselt hoch- und wieder herunterladen, Zusammenführen nach Zeit und Grabsteinen', async () => {
+test('Tippschrift-Abgleich: verschlüsselt hoch- und wieder herunterladen, Zusammenführen nach Zeit und Grabsteinen', async () => {
   const env = { DB: makeD1(), ASSETS: { fetch: async () => new Response('x') } };
-  globalThis.fetch = async (u, o = {}) => handschriftWeiche(new Request(new URL(u, 'https://st.leifps.de'), o), env);
+  globalThis.fetch = async (u, o = {}) => handschriftWeiche(new Request(new URL(u, 'https://tippschrift.de'), o), env);
   const { _intern, merge, newCode, validCode } = await import('../public/handschrift/js/sync.js');
   const code = newCode(); assert.ok(validCode(code));
   const big = 'x'.repeat(2_500_000);   // groß genug für mehrere Stücke trotz Kompression? -> Zufallsdaten

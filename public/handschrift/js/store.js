@@ -52,7 +52,7 @@ export async function markBackedUp() { await merkt; await kvSet('backupAt', Date
 export async function restoreBackup(file) {
   let o; try { o = JSON.parse(await file.text()); } catch { throw new Error('Die Datei lässt sich nicht lesen.'); }
   if (o.format === 'hsfont') throw new Error('Das ist eine einzelne Schrift. Importiere sie unter „Schriften“.');
-  if (o.format !== 'stools-backup' || !Array.isArray(o.fonts) || !Array.isArray(o.docs)) throw new Error('Das ist keine Sicherung von STools.');
+  if (o.format !== 'stools-backup' || !Array.isArray(o.fonts) || !Array.isArray(o.docs)) throw new Error('Das ist keine Sicherung von Tippschrift.');
   for (const f of o.fonts) { if (!f || !f.id || !f.g) throw new Error('Die Sicherung ist beschädigt.'); for (const a of Object.values(f.g)) for (const v of a) if (typeof v.src !== 'string' || !v.src.startsWith('data:image/')) throw new Error('Die Sicherung ist beschädigt.'); }
   for (const d of o.docs) if (!d || !d.id || typeof d.text !== 'string') throw new Error('Die Sicherung ist beschädigt.');
   for (const f of o.fonts) await run('fonts', 'readwrite', (st) => st.put(f));

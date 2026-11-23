@@ -23,11 +23,11 @@ const PAGES = {
   impressum: ['Impressum', () => [
     H('Angaben gemäß § 5 DDG'), addr(),
     H('Verantwortlich für den Inhalt'), P('Verantwortlich nach § 18 Abs. 2 MStV: ', OWNER.name, ', Anschrift wie oben.'),
-    H('Hinweis'), P('STools ist ein privates, nicht-kommerzielles Projekt. Es gibt keine Werbung und nichts zu kaufen.'),
+    H('Hinweis'), P('Tippschrift ist ein privates, nicht-kommerzielles Projekt. Es gibt keine Werbung und nichts zu kaufen.'),
     H('Haftung'), P('Die Inhalte wurden mit Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität kann ich jedoch keine Gewähr übernehmen. Für Inhalte verlinkter fremder Seiten sind ausschließlich deren Betreiber verantwortlich.'),
   ]],
   datenschutz: ['Datenschutz', () => [
-    P(h('b', null, 'Kurz gesagt: '), 'STools braucht kein Konto, setzt keine Cookies, hat kein Tracking und keine Werbung. Deine Schriften und Dokumente bleiben auf deinem Gerät. Daten verlassen dein Gerät nur, wenn du eine der unten genannten Zusatzfunktionen selbst benutzt.'),
+    P(h('b', null, 'Kurz gesagt: '), 'Tippschrift braucht kein Konto, setzt keine Cookies, hat kein Tracking und keine Werbung. Deine Schriften und Dokumente bleiben auf deinem Gerät. Daten verlassen dein Gerät nur, wenn du eine der unten genannten Zusatzfunktionen selbst benutzt.'),
     H('1. Verantwortlicher'), addr(),
     H('2. Speicherung auf deinem Gerät'), P('Schriften, Dokumente und Einstellungen speichert die App im Speicher deines Browsers (IndexedDB und localStorage) auf deinem Gerät. Sie werden nicht an mich übertragen. Die App-Dateien werden für die Offline-Nutzung ebenfalls auf deinem Gerät zwischengespeichert. Löschen kannst du alles unter Mehr → „Alle Daten löschen“ oder über die Einstellungen deines Browsers.'),
     H('3. Aufruf der Website (Hosting)'), P('Die Website wird über Cloudflare, Inc. (101 Townsend St, San Francisco, CA 94107, USA) bereitgestellt. Beim Aufruf werden technisch notwendige Daten verarbeitet, damit die Seite ausgeliefert und vor Angriffen geschützt werden kann: IP-Adresse, Zeitpunkt, aufgerufene Datei, Browser- und Geräteangaben. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einem sicheren, funktionierenden Angebot). Cloudflare ist nach dem EU-US Data Privacy Framework zertifiziert. Mehr: ', A('https://www.cloudflare.com/de-de/privacypolicy/'), '.'),
@@ -41,8 +41,8 @@ const PAGES = {
     H('Papier „Kariert perfekte Kästchen“'), P('Vorlage von Tom Behrens (', A('https://codebytom.de', 'codebytom.de'), '), veröffentlicht unter der MIT-Lizenz. Danke, Tom!'),
     h('details', { class: 'faq' }, h('summary', null, 'MIT-Lizenz (Tom Behrens)'), h('pre', { class: 'lic' }, MIT('Tom Behrens'))),
     H('Notenschrift'), P('Die Vorlage beim Zeichnen von Noten nutzt Noto Music von Google, lizenziert unter der ', A('https://openfontlicense.org', 'SIL Open Font License 1.1'), '.'),
-    H('Marken'), P('GoodNotes ist eine Marke der Goodnotes Limited. STools ist ein unabhängiges Projekt und steht in keiner Verbindung zu Goodnotes.'),
-    H('STools'), P('Ein Projekt von Leif Schmale.'),
+    H('Marken'), P('GoodNotes ist eine Marke der Goodnotes Limited. Tippschrift ist ein unabhängiges Projekt und steht in keiner Verbindung zu Goodnotes.'),
+    H('Tippschrift'), P('Ein Projekt von Leif Schmale (früher „STools“).'),
   ]],
 };
 

@@ -55,19 +55,19 @@ export function moreView(app) {
     }
     // Sicherung
     wrap.append(grp('Sicherung',
-      h('p', { class: 'mut sm', style: { margin: '8px 0' } }, 'Speichert alle eigenen Schriften und Dokumente in einer Datei (.stools). Lege sie am besten in iCloud Drive ab. Damit kannst du alles auf einem neuen Gerät oder nach dem Löschen der Browserdaten wiederherstellen. Die App erinnert dich, wenn sich deine Schrift geändert hat.'),
+      h('p', { class: 'mut sm', style: { margin: '8px 0' } }, 'Speichert alle eigenen Schriften und Dokumente in einer Datei (.tippschrift). Lege sie am besten in iCloud Drive ab. Damit kannst du alles auf einem neuen Gerät oder nach dem Löschen der Browserdaten wiederherstellen. Die App erinnert dich, wenn sich deine Schrift geändert hat.'),
       h('div', { class: 'row wrap2' }, btn('Alles sichern', { icon: 'download', cls: 'pri', onclick: async () => { try { await doBackup(); } catch (e) { toast('Sicherung fehlgeschlagen: ' + e.message, 4000, 'err'); } } }), restoreButton(app, draw))));
     // Visuals (HDF)
     wrap.append(grp('Textformat für KIs (HDF)',
-      h('p', { class: 'mut sm', style: { margin: '8px 0' } }, 'STools versteht ein Textformat (HDF) mit Formeln, Rechenwegen, Koordinatensystemen, Tabellen, Noten und mehr. Die Beschreibung erklärt nur, was es gibt – was du haben willst, sagst du der KI selbst. Die Antwort fügst du in ein Dokument ein, dann setzt STools alles in deiner Handschrift.'),
+      h('p', { class: 'mut sm', style: { margin: '8px 0' } }, 'Tippschrift versteht ein Textformat (HDF) mit Formeln, Rechenwegen, Koordinatensystemen, Tabellen, Noten und mehr. Die Beschreibung erklärt nur, was es gibt – was du haben willst, sagst du der KI selbst. Die Antwort fügst du in ein Dokument ein, dann setzt Tippschrift alles in deiner Handschrift.'),
       h('div', { class: 'row wrap2' },
         btn('Format-Beschreibung kopieren', { icon: 'copy', cls: 'pri', onclick: async () => { try { await navigator.clipboard.writeText(HDF_DOC); toast('Beschreibung kopiert'); } catch (e) { toast('Kopieren nicht möglich', 3000, 'err'); } } }),
         btn('Prompt kopieren', { icon: 'copy', cls: 'sm', title: 'Fertiger Auftrag mit Link: einfügen, deine Aufgabe dahinterschreiben', onclick: async () => { try { await navigator.clipboard.writeText(HDF_PROMPT); toast('Prompt kopiert – in die KI einfügen und deine Aufgabe dahinterschreiben', 3500); } catch (e) { toast('Kopieren nicht möglich', 3000, 'err'); } } }),
         btn('Nur den Link kopieren', { icon: 'copy', cls: 'sm', onclick: async () => { try { await navigator.clipboard.writeText(HDF_URL); toast('Link kopiert'); } catch (e) { toast('Kopieren nicht möglich', 3000, 'err'); } } }),
         btn('Beispiel-Arbeitsblatt öffnen', { cls: 'sm', onclick: async () => { const d = await app.newDoc({ title: 'Beispiel: Quadratische Funktionen', text: HDF_EXAMPLE, fontId: app.fontId, s: { paper: 'gnkar', fmt: 'gn', paperColor: 'weiss', scan: false, size: 18, ml: 110, mr: 70, mt: 60, mb: 50 } }); await app.openDoc(d.id); } })),
-      h('p', { class: 'mut sm', style: { margin: '10px 0 0' } }, '„Prompt kopieren“ ist ein fertiger Auftrag mit Link (st.leifps.de/hdf): einfügen und deine Aufgabe dahinterschreiben. Manche KIs öffnen Links nicht zuverlässig (bei ChatGPT die Websuche einschalten), dann die ganze Beschreibung kopieren.')));
-    // Was STools kann: Galerie mit Vorschauen in der eigenen Schrift
-    wrap.append(grp('Was STools alles kann',
+      h('p', { class: 'mut sm', style: { margin: '10px 0 0' } }, '„Prompt kopieren“ ist ein fertiger Auftrag mit Link (tippschrift.de/hdf): einfügen und deine Aufgabe dahinterschreiben. Manche KIs öffnen Links nicht zuverlässig (bei ChatGPT die Websuche einschalten), dann die ganze Beschreibung kopieren.')));
+    // Was Tippschrift kann: Galerie mit Vorschauen in der eigenen Schrift
+    wrap.append(grp('Was Tippschrift alles kann',
       h('p', { class: 'mut sm', style: { margin: '4px 0 12px' } }, 'Formeln, Graphen, Noten, Diagramme und mehr – in deiner Handschrift. Tippe an, um es auszuprobieren.'),
       featureTiles(app, ['formeln', 'graph', 'noten', 'aussehen']),
       h('div', { class: 'row', style: { marginTop: '12px' } }, btn('Alle Funktionen ansehen', { icon: 'grid', cls: 'pri', onclick: () => openFeatures(app) }))));
@@ -83,7 +83,7 @@ export function moreView(app) {
       faq('Wo liegen meine Daten?', 'Auf diesem Gerät, in diesem Browser. Es gibt kein Konto. Nur wenn du den Abgleich einschaltest, liegt zusätzlich ein verschlüsselter Stand auf dem Server, den nur Geräte mit deinem Code lesen können. Mit „Alles sichern“ (oben) nimmst du alle Schriften und Dokumente auf ein anderes Gerät mit; eine einzelne Schrift geht auch als .hsfont.')));
     // Rechtliches
     wrap.append(grp('Rechtliches', h('div', { class: 'row wrap2' }, btn('Impressum', { cls: 'sm', onclick: () => openLegal('impressum') }), btn('Datenschutz', { cls: 'sm', onclick: () => openLegal('datenschutz') }), btn('Credits & Lizenzen', { cls: 'sm', onclick: () => openLegal('credits') }))));
-    wrap.append(h('p', { class: 'xs mut', style: { textAlign: 'center', margin: '18px 0 0' } }, `STools Beta ${VERSION} · läuft komplett auf deinem Gerät · Beispielschrift „always * forever“ © Brittney Murphy (privat/nicht-kommerziell)`));
+    wrap.append(h('p', { class: 'xs mut', style: { textAlign: 'center', margin: '18px 0 0' } }, `Tippschrift ${VERSION} · läuft komplett auf deinem Gerät · Beispielschrift „always * forever“ © Brittney Murphy (privat/nicht-kommerziell)`));
   }
   draw();
   return { el: root, refresh: draw };

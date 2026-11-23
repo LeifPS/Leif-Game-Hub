@@ -47,7 +47,7 @@ function refreshBar() {
   } });
   const x = h('button', { class: 'btn sm', 'aria-label': 'Schließen', title: 'Später erinnern', onclick: () => { try { localStorage.setItem(SNOOZE, String(Date.now())); } catch (_) { /* egal */ } hideBar(); } }, '×');
   bar = h('div', { role: 'status', style: { position: 'fixed', left: '10px', right: '10px', top: 'calc(env(safe-area-inset-top, 0px) + 8px)', zIndex: 150, maxWidth: '620px', margin: '0 auto', background: 'var(--surf)', color: 'var(--tx)', border: '1px solid var(--warn)', borderLeftWidth: '5px', borderRadius: '12px', boxShadow: 'var(--sh)', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', fontSize: '14px', lineHeight: 1.35 } },
-    h('div', { style: { flex: '1 1 220px' } }, h('b', null, 'Bitte bald online gehen: '), msg, ' bis STools gesperrt wird. Öffne die App einmal mit Internet, dann zählt es wieder von vorn.'), go, x);
+    h('div', { style: { flex: '1 1 220px' } }, h('b', null, 'Bitte bald online gehen: '), msg, ' bis Tippschrift gesperrt wird. Öffne die App einmal mit Internet, dann zählt es wieder von vorn.'), go, x);
   document.body.append(bar);
 }
 
@@ -63,7 +63,7 @@ function showLock() {
   } });
   lock = h('div', { role: 'alertdialog', 'aria-modal': 'true', 'aria-label': 'Sitzung abgelaufen', style: { position: 'fixed', inset: 0, zIndex: 200, background: 'var(--bg)', color: 'var(--tx)', display: 'grid', placeContent: 'center', justifyItems: 'center', gap: '14px', padding: '28px', textAlign: 'center' } },
     h('h1', { style: { margin: 0, fontSize: '24px' } }, 'Sitzung abgelaufen'),
-    h('p', { style: { margin: 0, maxWidth: '420px', lineHeight: 1.5 } }, `STools war seit mehr als ${SYNC_DAYS} Tagen nicht online. Verbinde dich mit dem Internet, damit die App Updates laden kann. Deine Schriften und Dokumente bleiben gespeichert.`),
+    h('p', { style: { margin: 0, maxWidth: '420px', lineHeight: 1.5 } }, `Tippschrift war seit mehr als ${SYNC_DAYS} Tagen nicht online. Verbinde dich mit dem Internet, damit die App Updates laden kann. Deine Schriften und Dokumente bleiben gespeichert.`),
     go, msg);
   hideBar(); document.body.append(lock); go.focus();
 }

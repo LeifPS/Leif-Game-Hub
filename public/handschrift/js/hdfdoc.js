@@ -1,8 +1,8 @@
 // Dokumentation des HDF-Formats (neutral: beschreibt nur, was es gibt – kein Auftrag) + Beispiel-Arbeitsblatt
-// Dieselbe Beschreibung liefert der Worker als Text unter https://st.leifps.de/hdf aus (src/handschrift.js)
-export const HDF_DOC = `# HDF – Handwritten Document Format (STools)
+// Dieselbe Beschreibung liefert der Worker als Text unter https://tippschrift.de/hdf aus (src/handschrift.js)
+export const HDF_DOC = `# HDF – Handwritten Document Format (Tippschrift)
 
-Ein HDF-Dokument ist reiner Text. Die App STools setzt ihn in der Handschrift des Nutzers (Text, Zahlen, Formeln) und zeichnet Linien, Achsen, Kurven und Rahmen als saubere Striche, wie auf einem Blatt in GoodNotes. Das Layout macht die App automatisch.
+Ein HDF-Dokument ist reiner Text. Die App Tippschrift setzt ihn in der Handschrift des Nutzers (Text, Zahlen, Formeln) und zeichnet Linien, Achsen, Kurven und Rahmen als saubere Striche, wie auf einem Blatt in GoodNotes. Das Layout macht die App automatisch.
 
 Diese Beschreibung listet alles auf, was das Format kann. Alle Elemente sind optional: Ein Dokument kann auch nur aus normalem Text bestehen. Die Elemente sind Werkzeuge für Inhalte, die sie brauchen (eine Formel für eine Formel, ein Graph für einen Graphen).
 
@@ -173,11 +173,11 @@ Karten und Bilder. Unbekannte Elemente erscheinen als roter Platzhalter.
 - Handschrift ist breiter als gedruckter Text: Pro Zeile passen weniger Wörter.
 - Wertetabellen berechnet die App selbst, Tabellen und Rechenwege zeigt sie so, wie sie geschrieben sind.
 `;
-export const HDF_URL = 'https://st.leifps.de/hdf';
-export const HDF_PROMPT = `Öffne ${HDF_URL} und lies die Beschreibung des Textformats HDF (für die Handschrift-App STools) vollständig. Erledige dann meine Aufgabe unten und gib das Ergebnis genau nach dieser Beschreibung aus: nur die Elemente und Schreibweisen, die dort stehen, Formeln in $…$, und das fertige Dokument in einem einzigen Codeblock.
+export const HDF_URL = 'https://tippschrift.de/hdf';
+export const HDF_PROMPT = `Öffne ${HDF_URL} und lies die Beschreibung des Textformats HDF (für die Handschrift-App Tippschrift) vollständig. Erledige dann meine Aufgabe unten und gib das Ergebnis genau nach dieser Beschreibung aus: nur die Elemente und Schreibweisen, die dort stehen, Formeln in $…$, und das fertige Dokument in einem einzigen Codeblock.
 
 Meine Aufgabe: `;
-export const HDF_EXAMPLE = `[titel]STools-Tour: alle Features[/titel]
+export const HDF_EXAMPLE = `[titel]Tippschrift-Tour: alle Features[/titel]
 
 Dieses Blatt zeigt jedes Element des Formats. Alles hier ist **Handschrift** (Text, Zahlen, Formeln) oder ein *perfekter Strich* (Linien, Achsen, Rahmen).
 

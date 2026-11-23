@@ -1,4 +1,4 @@
-// STools-API (nur auf st.leifps.de / handschrift.leifps.de):
+// Tippschrift-API (nur auf tippschrift.de):
 //  POST /api/titel            { text }  -> { titel }   Titelvorschlag per Workers AI (nur auf Knopfdruck, Text wird nicht gespeichert)
 //  Abgleich zwischen Geräten (Ende-zu-Ende verschlüsselt: der Server sieht nur eine Kennung und verschlüsselte Stücke):
 //  GET  /api/sync/:id               -> { v, parts, updated } oder 404
