@@ -544,3 +544,4 @@ button.chip{border:0;cursor:pointer}
 .beta{display:inline-block;margin-left:0;padding:2px 7px;border-radius:6px;background:#ffd60a;color:#3d3200;font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;vertical-align:middle;line-height:1.4}
 .legal-links{margin:0 8px 6px;color:var(--mut)}.legal-links a{color:var(--mut);text-decoration:none}.legal-links a:hover{color:var(--ac);text-decoration:underline}
 .legal h3{font-size:15px;margin:18px 0 4px}.legal p{margin:0 0 8px;line-height:1.5}.legal a{color:var(--ac);word-break:break-word}
+.legal pre.lic{white-space:pre-wrap;font:11.5px/1.45 ui-monospace,Menlo,monospace;background:var(--surf2);padding:10px;border-radius:8px;margin:6px 0 0}

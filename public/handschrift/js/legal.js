@@ -9,6 +9,16 @@ const P = (...c) => h('p', null, ...c), H = (t) => h('h3', null, t), A = (href, 
 const UL = (...li) => h('ul', null, ...li.map((t) => h('li', null, t)));
 const addr = () => h('p', null, OWNER.name, h('br'), OWNER.street, ...(OWNER.city ? [h('br'), OWNER.city] : []), h('br'), 'E-Mail: ', A('mailto:' + OWNER.mail, OWNER.mail));
 
+const MIT = (who) => `MIT License
+
+Copyright (c) ${who}
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.`;
+
 const PAGES = {
   impressum: ['Impressum', () => [
     H('Angaben gemäß § 5 DDG'), addr(),
@@ -28,7 +38,8 @@ const PAGES = {
     P(h('small', { class: 'mut' }, 'Stand: ' + STAND)),
   ]],
   credits: ['Credits & Lizenzen', () => [
-    H('Papier „Kariert perfekte Kästchen“'), P('Vorlage von Tom Behrens (', A('https://codebytom.de', 'codebytom.de'), '), lizenziert unter Creative Commons Namensnennung – Nicht kommerziell (', A('https://creativecommons.org/licenses/by-nc/4.0/deed.de', 'CC BY-NC'), '). Danke, Tom!'),
+    H('Papier „Kariert perfekte Kästchen“'), P('Vorlage von Tom Behrens (', A('https://codebytom.de', 'codebytom.de'), '), veröffentlicht unter der MIT-Lizenz. Danke, Tom!'),
+    h('details', { class: 'faq' }, h('summary', null, 'MIT-Lizenz (Tom Behrens)'), h('pre', { class: 'lic' }, MIT('Tom Behrens'))),
     H('Notenschrift'), P('Die Vorlage beim Zeichnen von Noten nutzt Noto Music von Google, lizenziert unter der ', A('https://openfontlicense.org', 'SIL Open Font License 1.1'), '.'),
     H('Marken'), P('GoodNotes ist eine Marke der Goodnotes Limited. STools ist ein unabhängiges Projekt und steht in keiner Verbindung zu Goodnotes.'),
     H('STools'), P('Ein Projekt von Leif Schmale.'),
