@@ -19,12 +19,14 @@ async function schema(db) {
   schemaOk.add(db);
 }
 async function limit(db, k, max, ms) {
-  const now = Date.now(), r = await db.prepare('SELECT n, until FROM hs_limit WHERE k = ?').bind(k).first();
+  const now = Date.now(); await db.prepare('DELETE FROM hs_limit WHERE until < ?').bind(now).run();   // abgelaufene Einträge sofort weg
+  const r = await db.prepare('SELECT n, until FROM hs_limit WHERE k = ?').bind(k).first();
   if (r && r.until > now) { if (r.n >= max) return false; await db.prepare('UPDATE hs_limit SET n = n + 1 WHERE k = ?').bind(k).run(); return true; }
   await db.prepare('INSERT INTO hs_limit (k, n, until) VALUES (?, 1, ?) ON CONFLICT(k) DO UPDATE SET n = 1, until = excluded.until').bind(k, now + ms).run();
   return true;
 }
-const ip = (req) => req.headers.get('cf-connecting-ip') || 'x';
+// Für die Missbrauchs-Bremse wird nie die IP selbst gespeichert, nur ein gekürzter, nicht umkehrbarer Prüfwert
+const ip = async (req) => { const d = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('stools:' + (req.headers.get('cf-connecting-ip') || 'x')))); return [...d.slice(0, 6)].map((b) => b.toString(16).padStart(2, '0')).join(''); };
 
 export async function hsApi(request, env) {
   const url = new URL(request.url), p = url.pathname.split('/').filter(Boolean), m = request.method;
@@ -32,7 +34,7 @@ export async function hsApi(request, env) {
     if (p[1] === 'titel' && p.length === 2) {
       if (m !== 'POST') return J({ error: 'Nicht erlaubt' }, 405);
       if (!env.AI) return J({ error: 'Titelvorschläge sind auf dem Server nicht eingerichtet.' }, 503);
-      if (env.DB) { await schema(env.DB); if (!(await limit(env.DB, 'titel:' + ip(request), 40, 3600e3))) return J({ error: 'Zu viele Vorschläge in kurzer Zeit. Bitte später nochmal.' }, 429); }
+      if (env.DB) { await schema(env.DB); if (!(await limit(env.DB, 'titel:' + (await ip(request)), 40, 3600e3))) return J({ error: 'Zu viele Vorschläge in kurzer Zeit. Bitte später nochmal.' }, 429); }
       const b = await request.json().catch(() => ({})), text = String(b.text || '').replace(/\[[^\]\n]{0,40}\]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 2500);
       if (text.length < 3) return J({ error: 'Zu wenig Text für einen Titel.' }, 400);
       let r; try { r = await env.AI.run('@cf/meta/llama-3.1-8b-instruct-fast', { max_tokens: 30, temperature: .7, messages: [
@@ -70,7 +72,7 @@ export async function hsApi(request, env) {
           return d == null ? J({ error: 'Fehlt' }, 404) : new Response(d, { headers: { 'content-type': 'text/plain', 'cache-control': 'no-store' } });
         }
         if (m === 'PUT') {
-          if (!(await limit(db, 'sync:' + ip(request), 600, 3600e3))) return J({ error: 'Zu viele Anfragen' }, 429);
+          if (!(await limit(db, 'sync:' + (await ip(request)), 600, 3600e3))) return J({ error: 'Zu viele Anfragen' }, 429);
           const data = await request.text();
           if (data.length > MAX_PART || !/^[A-Za-z0-9+/=]*$/.test(data)) return J({ error: 'Stück ungültig oder zu groß' }, 413);
           await db.prepare('INSERT INTO hs_sync_part (id, v, i, data, t) VALUES (?, ?, ?, ?, ?) ON CONFLICT(id, v, i) DO UPDATE SET data = excluded.data, t = excluded.t').bind(id, v, i, data, Date.now()).run();

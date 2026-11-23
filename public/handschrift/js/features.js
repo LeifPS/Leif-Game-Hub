@@ -117,8 +117,10 @@ function makeQueue(app, root) {
 }
 const copyCanvas = (c) => { const n = document.createElement('canvas'); n.width = c.width; n.height = c.height; n.className = c.className; n.getContext('2d').drawImage(c, 0, 0); return n; };
 
+let curDetail = null, curGallery = null;   // es ist immer nur eine Detailansicht offen
 function detail(app, f) {
-  sheet(f.title, (body, api) => {
+  if (curDetail) curDetail.close();
+  const me = curDetail = sheet(f.title, (body, api) => {
     body.append(h('p', { class: 'fx-lead' }, f.short));
     const over = {}; let seed = 7;
     if (f.text) {
@@ -137,12 +139,12 @@ function detail(app, f) {
         body.append(h('div', { class: 'fx-h' }, 'So schreibst du es'), h('pre', { class: 'fx-code' }, f.text),
           h('div', { class: 'row wrap2', style: { gap: '8px' } },
             btn('Kopieren', { icon: 'copy', cls: 'sm', onclick: async () => { try { await navigator.clipboard.writeText(f.text); toast('Kopiert'); } catch (_) { toast('Kopieren nicht möglich', 3000, 'err'); } } }),
-            btn('Als Dokument öffnen', { icon: 'plus', cls: 'sm pri', onclick: async () => { const s = { ...DEF }; gnApply(s, f.paper || 'gnlin', 'gn'); const d = await app.newDoc({ title: f.title, text: f.text, fontId: app.fontId, s }); api.close(); document.querySelectorAll('.sheet.on').forEach((x) => x.querySelector('.sh .btn')?.click()); await app.openDoc(d.id); } })));
+            btn('Als Dokument öffnen', { icon: 'plus', cls: 'sm pri', onclick: async () => { const s = { ...DEF }; gnApply(s, f.paper || 'gnlin', 'gn'); const d = await app.newDoc({ title: f.title, text: f.text, fontId: app.fontId, s }); api.close(); curGallery?.close(); await app.openDoc(d.id); } })));
       }
     } else body.append(h('div', { class: 'fx-big fx-bigicon' }, ic(f.icon || 'info')));
     const list = f.steps || f.tips;
     if (list) body.append(h('div', { class: 'fx-h' }, f.steps ? 'So geht’s' : 'Gut zu wissen'), h(f.steps ? 'ol' : 'ul', { class: 'fx-list' }, ...list.map((t) => h('li', null, t))));
-  });
+  }, { onclose: () => { if (curDetail === me) curDetail = null; } });
 }
 
 export function featureTiles(app, ids, root) {   // kleine Auswahl (z. B. auf der Seite „Mehr“)
@@ -152,11 +154,12 @@ export function featureTiles(app, ids, root) {   // kleine Auswahl (z. B. auf de
 
 export function openFeatures(app) {
   let cat = 'alle';
-  sheet('Was STools alles kann', (body) => {
+  if (curGallery) curGallery.close();
+  const me = curGallery = sheet('Was STools alles kann', (body) => {
     const grid = h('div', { class: 'fx-grid' }), q = makeQueue(app, body);
     const draw = () => grid.replaceChildren(...FEATURES.filter((f) => cat === 'alle' || f.cat === cat).map((f) => tile(app, f, (x) => detail(app, x), q)));
     body.append(h('p', { class: 'mut sm', style: { margin: '0 0 10px' } }, 'Alle Vorschauen sind in deiner Schrift. Tippe eine Kachel an, um sie auszuprobieren.'),
       h('div', { style: { margin: '0 0 12px', overflowX: 'auto' } }, chips(FCATS, () => cat, (v) => { cat = v; draw(); })), grid);
     draw();
-  }, { wide: true });
+  }, { wide: true, onclose: () => { if (curGallery === me) curGallery = null; curDetail?.close(); } });
 }

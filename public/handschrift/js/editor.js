@@ -5,7 +5,7 @@ import { exportVideo, videoSupported } from './video.js';
 import { layout, drawPage, ensureImages, FORMATS, PAPERS, PAPER_COLORS, PENS, DEF, GNPAPER, fmtOf, gnOf, gnApply, INKS } from './render.js';
 import { gnPicker } from './papier.js';
 import { attachHighlight } from './texthl.js';
-import { exportPdf, exportGoodNotes, exportGoodNotesInk, exportPngs, zipOf, fileBase } from './exporter.js';
+import { exportPdf, exportGoodNotes, exportGoodNotesInk, GN_W_DEF, exportPngs, zipOf, fileBase } from './exporter.js';
 import { PACKS } from './packs.js';
 import { openWizard } from './wizard.js';
 import { openTopUp } from './extra.js';
@@ -380,14 +380,17 @@ export function editorView(app) {
       const canShare = !!(navigator.canShare && navigator.canShare({ files: [new File([''], 'a.pdf', { type: 'application/pdf' })] }));
       const pdf = (share) => run(async () => { const blob = await exportPdf(LX(), S(), doc.title, dpi, prog); const r = await saveFile(blob, fileBase(doc.title) + '.pdf', { share }); msg.textContent = r === 'abgebrochen' ? '' : `PDF ${share ? 'geteilt' : 'gespeichert'} (${fmtSize(blob.size)}, ${L.pages.length} ${L.pages.length === 1 ? 'Seite' : 'Seiten'}).`; });
       const gnote = () => run(async () => { const blob = await exportGoodNotes(LX(), S(), doc.title, dpi, prog); const r = await saveFile(blob, fileBase(doc.title) + '.goodnotes'); msg.textContent = r === 'abgebrochen' ? '' : `GoodNotes-Datei gespeichert (${fmtSize(blob.size)}, ${L.pages.length} ${L.pages.length === 1 ? 'Seite' : 'Seiten'}).` + (S().fmt === 'gn' ? '' : ' Tipp: Format „GoodNotes Standard“ passt genau auf leere Standardseiten.'); });
+      let gnW = (() => { try { return +localStorage.getItem('hs:gnw') || GN_W_DEF; } catch (_) { return GN_W_DEF; } })(); const fmtW = (v) => v.toFixed(2).replace(/0$/, '').replace('.', ',');
       const canShareGn = !!(navigator.canShare && navigator.canShare({ files: [new File([''], 'a.goodnotes', { type: 'application/octet-stream' })] }));
-      const gink = (share) => run(async () => { const blob = await exportGoodNotesInk(LX(), S(), doc.title, prog); const r = await saveFile(blob, fileBase(doc.title) + '.goodnotes', { share }); msg.textContent = r === 'abgebrochen' ? '' : `GoodNotes-Datei mit echten Strichen ${r === 'geteilt' ? 'geteilt' : 'gespeichert'} (${fmtSize(blob.size)}, ${L.pages.length} ${L.pages.length === 1 ? 'Seite' : 'Seiten'}).`; });
+      const gink = (share) => run(async () => { const blob = await exportGoodNotesInk(LX(), S(), doc.title, prog, { w: gnW }); const r = await saveFile(blob, fileBase(doc.title) + '.goodnotes', { share }); msg.textContent = r === 'abgebrochen' ? '' : `GoodNotes-Datei mit echten Strichen ${r === 'geteilt' ? 'geteilt' : 'gespeichert'} (${fmtSize(blob.size)}, ${L.pages.length} ${L.pages.length === 1 ? 'Seite' : 'Seiten'}).`; });
       const png = (transparent) => run(async () => { const files = await exportPngs(LX(), S(), doc.title, dpi, transparent, prog); if (files.length === 1) { await saveFile(files[0].blob, files[0].name); } else await saveFile(zipOf(files), fileBase(doc.title) + (transparent ? '-transparent' : '') + '-PNG.zip'); msg.textContent = 'Bilder gespeichert.'; });
       const gnPaper = gnOf(S());
       const selIn = h('input', { type: 'text', placeholder: `Alle ${L.pages.length} Seiten (z. B. 2-3, 5)`, inputmode: 'numeric', oninput: () => { sel = selIn.value; const ps = sel.trim() ? pagesOf(sel) : null; selHint.textContent = !sel.trim() ? '' : ps && ps.length ? `${ps.length} von ${L.pages.length} ${L.pages.length === 1 ? 'Seite' : 'Seiten'}: ${ps.map((i) => i + 1).join(', ')}` : 'Beispiel: 2-3, 5'; } }), selHint = h('p', { class: 'xs mut', style: { margin: '4px 2px 0' } });
       if (L.pages.length > 1) b.append(h('label', { class: 'f' }, 'Seiten'), selIn, selHint);
       b.append(h('label', { class: 'f' }, 'Qualität'), chips([[150, 'Standard'], [200, 'Hoch (empfohlen)'], [300, 'Sehr hoch']], () => dpi, v => { dpi = v; }),
         h('div', { class: 'xgroup' }, 'Für GoodNotes'),
+        (() => { const out = h('output', null, fmtW(gnW)), inp = h('input', { type: 'range', min: .1, max: 1.2, step: .05, value: gnW, oninput: () => { gnW = +inp.value; out.textContent = fmtW(gnW); try { localStorage.setItem('hs:gnw', String(gnW)); } catch (_) { /* egal */ } } });
+          return h('label', { class: 'fx-rng', style: { marginBottom: '10px' } }, h('b', null, 'Strichdicke (echte Striche)'), out, inp); })(),
         h('div', { style: { display: 'grid', gap: '10px' } },
           canShareGn ? btn('Echte Striche: in GoodNotes öffnen', { icon: 'share', cls: 'pri', onclick: gink(true) }) : null,
           btn('Echte Striche (.goodnotes) speichern', { icon: 'download', cls: canShareGn ? '' : 'pri', onclick: gink(false) }),

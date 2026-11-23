@@ -1,4 +1,5 @@
 // Start der App: Zustand, Gerüst, Ansichten
+import { legalLinks } from './legal.js';
 import { startSession } from './session.js';
 import { h, uid } from './util.js';
 import { ic, mark } from './ui.js';
@@ -96,7 +97,7 @@ async function boot() {
   app.fontId = await kvGet('fontId', app.fonts[0].id); if (!app.fonts.find(f => f.id === app.fontId)) app.fontId = app.fonts[0].id;
   app.views.write = editorView(app); app.views.fonts = fontsView(app); app.views.docs = docsView(app); app.views.more = moreView(app);
   const nav = (cls) => NAV.map(([k, t, i]) => h('button', { type: 'button', class: cls, dataset: { nav: k }, onclick: () => app.show(k) }, ic(i), h('span', null, t)));
-  const side = h('nav', { class: 'side', 'aria-label': 'Hauptmenü' }, h('div', { class: 'brand' }, mark(32), 'STools', h('span', { class: 'beta' }, 'Beta')), ...nav('navb'), h('div', { class: 'sp' }), h('p', { class: 'xs mut', style: { margin: '8px' } }, 'Alles bleibt auf deinem Gerät'));
+  const side = h('nav', { class: 'side', 'aria-label': 'Hauptmenü' }, h('div', { class: 'brand' }, mark(32), 'STools', h('span', { class: 'beta' }, 'Beta')), ...nav('navb'), h('div', { class: 'sp' }), h('p', { class: 'xs mut', style: { margin: '8px 8px 2px' } }, 'Alles bleibt auf deinem Gerät'), legalLinks());
   const main = h('main', { class: 'main' });
   for (const k of ['write', 'fonts', 'docs', 'more']) { const v = h('div', { class: 'view' }); v.append(app.views[k].el); viewEls[k] = v; main.append(v); }
   root.append(h('div', { class: 'shell' }, side, main, h('nav', { class: 'tabs', 'aria-label': 'Hauptmenü' }, ...nav('tab'))));

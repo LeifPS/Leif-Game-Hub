@@ -75,6 +75,22 @@ const bv41 = (raw) => { const c = lz4(raw); return cat(te.encode('bv41'), u32(ra
 
 // ---------- Striche ----------
 // pts: [[x,y],...] in GoodNotes-Einheiten (Punkt x 22/12), w: Breite in derselben Einheit
+// GoodNotes glättet die Punkte zu Kurven (Steuerpunkt = Punkt, Ende = Mitte zum nächsten). Damit Ecken spitz bleiben
+// (Kästen, Rahmen, Achsenpfeile), werden lange gerade Stücke unterteilt und Eckpunkte doppelt gesetzt.
+export function sharpen(pts) {
+  if (pts.length < 2) return pts;
+  const out = [pts[0]], STEP = 6;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i], l = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.floor(l / STEP);
+    for (let k = 1; k < n; k++) out.push([a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n]);
+    out.push(b);
+    if (i < pts.length - 1 && l > 1.5) {   // Ecke? (Richtungswechsel > 35°)
+      const c = pts[i + 1], v1x = b[0] - a[0], v1y = b[1] - a[1], v2x = c[0] - b[0], v2y = c[1] - b[1], l2 = Math.hypot(v2x, v2y);
+      if (l2 > 1.5 && (v1x * v2x + v1y * v2y) / (l * l2) < Math.cos(35 * Math.PI / 180)) out.push([b[0], b[1]]);
+    }
+  }
+  return out;
+}
 export function strokeBlock(pts, w) {
   if (pts.length < 2) pts = [pts[0], [pts[0][0] + .05, pts[0][1]]];
   const m = pts.length - 1, sig = te.encode('vuA(v)A(S(uu))A(S(uuuu))vA(f)\0');
@@ -167,7 +183,7 @@ export async function makeGoodNotesInk({ pages, title, thumb, paper }) {
       const sid = uid(), r = rnd(), r2 = rnd(), c = s.color || [.118, .106, .106, 1];
       const hdr = encode([[1, 'b', sid], [2, 'b', encode([[1, 'v', 2], [2, 'v', r]])], [8, 'v', DEV], [9, 'v', ++seq], [14, 'v', 5381], [16, 'v', 24]]);
       const ord = encode([[1, 'b', encode(si > 0 ? [[1, 'v', si], [2, 'v', r2]] : [[2, 'v', r2]])]]);
-      const msg = [[1, 'b', sid], [2, 'b', bv41(strokeBlock(s.pts, s.w))], [4, 'b', encode(c.map((v, i) => [i + 1, 'f', f32(v)]))]];
+      const msg = [[1, 'b', sid], [2, 'b', bv41(strokeBlock(s.marker ? s.pts : (s.sharp ? sharpen(s.pts) : s.pts), s.w))], [4, 'b', encode(c.map((v, i) => [i + 1, 'f', f32(v)]))]];
       if (s.marker) msg.push([5, 'v', 1]);
       msg.push([6, 'b', new Uint8Array(0)], [7, 'b', ord], [9, 'b', new Uint8Array(0)], [15, 'b', encode([[1, 'v', 2], [2, 'v', r]])], [20, 'b', new Uint8Array(0)], [21, 'v', 24]);
       out.push(hdr, encode([[7, 'b', encode(msg)]]));

@@ -39,7 +39,10 @@ export async function exportGoodNotes(L, S, title, dpi = 200, onProgress = () =>
 }
 // GoodNotes mit leerer Standardseite und echten Strichen (radier- und bearbeitbar)
 const cssRgba = (() => { const c = document.createElement('canvas'); c.width = c.height = 1; const g = c.getContext('2d', { willReadFrequently: true }), memo = new Map(); return (col) => { if (memo.has(col)) return memo.get(col); g.clearRect(0, 0, 1, 1); g.fillStyle = '#000'; g.fillStyle = col; g.fillRect(0, 0, 1, 1); const d = g.getImageData(0, 0, 1, 1).data; const r = [d[0] / 255, d[1] / 255, d[2] / 255]; memo.set(col, r); return r; }; })();
-export async function exportGoodNotesInk(L, S, title, onProgress = () => {}) {
+// Strichdicke in GoodNotes (wie dort angezeigt, angenommen in mm); 1 GoodNotes-Einheit = 455,04/834,24 pt
+export const GN_W_DEF = .3;
+export async function exportGoodNotesInk(L, S, title, onProgress = () => {}, opt = {}) {
+  const gnW = (opt.w || GN_W_DEF) * 72 / 25.4 * 834.24 / 455.04;   // feste Dicke für alle Tintenstriche
   const PT = { gn: [455.04, 588.45], gnq: [650.88, 406.8], a4: [595.28, 841.89], a4q: [841.89, 595.28] }[fmtOf(S)] || [455.04, 588.45];   // Seitengröße der GoodNotes-Vorlage (pt)
   const UW = PT[0] * 834.24 / 455.04, UH = PT[1] * 834.24 / 455.04, fit = Math.min(UW / L.PW, UH / L.PH), ox = (UW - L.PW * fit) / 2, oy = (UH - L.PH * fit) / 2;
   const tan = Math.tan(S.slant * Math.PI / 180), wgt = S.weight * .55, T = (x, y) => [x * fit + ox, y * fit + oy];
@@ -53,18 +56,18 @@ export async function exportGoodNotesInk(L, S, title, onProgress = () => {}) {
         const h = e.hl, hh = h.y2 - h.y1, yc = (h.y1 + h.y2) / 2, c = cssRgba(h.col || '#ffe246');
         hl.push({ pts: [T(h.x1 + hh / 2, yc), T(h.x2 - hh / 2, yc)], w: hh * fit, color: [c[0], c[1], c[2], .5], marker: true });
       } else if (e.path) {
-        const p = e.path, c = cssRgba(p.col || S.ink); if (p.pts.length > 1) ink.push({ pts: p.pts.map(([px, py]) => T(px, py)), w: (L.k * 2.1 + wgt) * fit, color: [...c, S.inkAlpha * (p.a == null ? 1 : p.a) * .92] });
+        const p = e.path, c = cssRgba(p.col || S.ink); if (p.pts.length > 1) ink.push({ pts: p.pts.map(([px, py]) => T(px, py)), w: gnW, color: [...c, 1], sharp: true });
       } else if (e.line) {
         const { x1, y1, x2, y2 } = e.line, c = cssRgba(e.line.col || S.ink);
-        ink.push({ pts: quad(x1, y1, (x1 + x2) / 2, (y1 + y2) / 2 + 1.6, x2, y2), w: (L.k * 2.1 + wgt) * fit, color: [...c, S.inkAlpha * .9] });
+        ink.push({ pts: quad(x1, y1, (x1 + x2) / 2, (y1 + y2) / 2 + 1.6, x2, y2), w: gnW, color: [...c, 1] });
       } else if (e.g) {
         const { g } = e, v = g.v, im = v.img; if (!im || im.complete === false) continue;
         const vec = v.st ? { w: im.naturalWidth || im.width, h: im.naturalHeight || im.height, strokes: v.st.map(q => ({ pts: q.p.map(([x, y]) => [x * SC, y * SC]), w: q.w * SC })) } : vectorize(im); if (!vec.w) continue;
         const s = L.k * g.sc * e.m, kx = v.iw * s * g.sx / vec.w, ky = v.ih * s / vec.h, ox0 = v.ox * s * g.sx, oy0 = v.oy * s, cr = Math.cos(e.rot), sr = Math.sin(e.rot);
-        const c = cssRgba(g.st.col || S.ink), al = Math.min(1, g.a * S.inkAlpha), bw = wgt + (g.st.b ? .9 : 0);
+        const c = cssRgba(g.st.col || S.ink), bw = g.st.b ? gnW * .6 : 0;   // volle Deckkraft (GoodNotes-Kugelschreiber ist nicht durchsichtig)
         for (const st of vec.strokes) {
           const pts = st.pts.map(([px, py]) => { const lx = ox0 + px * kx, ly = oy0 + py * ky, x1 = lx - tan * ly; return T(e.x + cr * x1 - sr * ly, e.y + sr * x1 + cr * ly); });
-          ink.push({ pts, w: (st.w * (v.iw * L.k / vec.w + v.ih * L.k / vec.h) / 2 + bw) * fit, color: [...c, al] });
+          ink.push({ pts, w: gnW + bw, color: [...c, 1] });
         }
       }
     }

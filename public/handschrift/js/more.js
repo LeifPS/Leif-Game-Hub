@@ -8,6 +8,7 @@ import { promptBox } from './ui.js';
 import { lastSync, daysLeft, checkNow, SYNC_DAYS } from './session.js';
 import { HDF_DOC, HDF_URL, HDF_PROMPT, HDF_EXAMPLE } from './hdfdoc.js';
 import { featureTiles, openFeatures } from './features.js';
+import { openLegal } from './legal.js';
 
 export const VERSION = '1.0';
 export function moreView(app) {
@@ -80,6 +81,8 @@ export function moreView(app) {
       faq('Wie komme ich in GoodNotes?', 'Beim Export „GoodNotes: echte Striche“ wählen und die .goodnotes-Datei speichern. In GoodNotes dann auf + → Importieren tippen. Du bekommst echte Handschrift-Striche, die du radieren und weiterbearbeiten kannst. Als Papier kannst du unter Einstellungen „GoodNotes liniert“ oder „GoodNotes kariert“ wählen, dann sitzt die Schrift genau auf den Linien. Alternativ geht auch PDF.'),
       faq('Kann ich Zeichen direkt in der App zeichnen?', 'Ja. Beim Erstellen einer Schrift im Schritt „Vorlage“ „Direkt in der App zeichnen“ wählen, oder später bei „Ergänzen“. Jedes Zeichen zeichnest du mit Finger oder Apple Pencil in ein Feld mit Hilfslinien. Die Striche bleiben als echte Striche erhalten und landen im GoodNotes-Export 1:1.'),
       faq('Wo liegen meine Daten?', 'Auf diesem Gerät, in diesem Browser. Es gibt kein Konto. Nur wenn du den Abgleich einschaltest, liegt zusätzlich ein verschlüsselter Stand auf dem Server, den nur Geräte mit deinem Code lesen können. Mit „Alles sichern“ (oben) nimmst du alle Schriften und Dokumente auf ein anderes Gerät mit; eine einzelne Schrift geht auch als .hsfont.')));
+    // Rechtliches
+    wrap.append(grp('Rechtliches', h('div', { class: 'row wrap2' }, btn('Impressum', { cls: 'sm', onclick: () => openLegal('impressum') }), btn('Datenschutz', { cls: 'sm', onclick: () => openLegal('datenschutz') }), btn('Credits & Lizenzen', { cls: 'sm', onclick: () => openLegal('credits') }))));
     wrap.append(h('p', { class: 'xs mut', style: { textAlign: 'center', margin: '18px 0 0' } }, `STools Beta ${VERSION} · läuft komplett auf deinem Gerät · Beispielschrift „always * forever“ © Brittney Murphy (privat/nicht-kommerziell)`));
   }
   draw();
