@@ -471,7 +471,10 @@
       "wiki": "https://erntezeitaufbruch.leifps.workers.dev/wiki/",
       "repo": "LeifPS/erntezeitaufbruch",
       "phase": "alpha",
-      "entwickler": ["leif", "thore"],
+      "entwickler": [
+        "leif",
+        "thore"
+      ],
       "farbe": "#7fb83f",
       "kategorien": [
         "Simulation",
@@ -630,7 +633,9 @@
       "url": "https://alexander-schm.github.io/numberfactory/",
       "repo": "alexander-schm/numberfactory",
       "phase": "beta",
-      "entwickler": ["Teleteddy"],
+      "entwickler": [
+        "Teleteddy"
+      ],
       "sprache": "Englisch",
       "farbe": "#2f8f89",
       "kategorien": [
@@ -661,7 +666,10 @@
       "neuerTab": true,
       "repo": "LeifPS/Manufaktur",
       "phase": "alpha",
-      "entwickler": ["Teleteddy", "irgendwieida13"],
+      "entwickler": [
+        "Teleteddy",
+        "irgendwieida13"
+      ],
       "farbe": "#c9764a",
       "kategorien": [
         "Simulation",
@@ -753,9 +761,14 @@
       "erschienen": "2026-11-08",
       "version": "0.1",
       "aktualisiert": "2026-11-08",
-      "entwickler": ["Alva"],
+      "entwickler": [
+        "Alva"
+      ],
       "farbe": "#5f8a57",
-      "kategorien": ["Rätsel", "Logik"],
+      "kategorien": [
+        "Rätsel",
+        "Logik"
+      ],
       "icon": "screens/mosaik-icon.webp",
       "wallpaper": "screens/mosaik-wallpaper.webp",
       "screenshots": [
@@ -772,8 +785,28 @@
       "repo": "LeifPS/ropeuntangle",
       "phase": "alpha",
       "farbe": "#3f68c4",
-      "kategorien": ["Rätsel", "Logik"],
-      "icon": "screens/ropeuntangle-icon.webp", "wallpaper": "screens/ropeuntangle-wallpaper.webp", "schrift": {"familie": "fredoka", "versalien": false, "abstand": 0.01, "fuell": "#ffffff", "rand": "#22377a", "randbreite": 0.2}, "screenshots": ["screens/shots/ropeuntangle/1.webp", "screens/shots/ropeuntangle/2.webp", "screens/shots/ropeuntangle/3.webp", "screens/shots/ropeuntangle/4.webp", "screens/shots/ropeuntangle/5.webp", "screens/shots/ropeuntangle/6.webp"]
+      "kategorien": [
+        "Rätsel",
+        "Logik"
+      ],
+      "icon": "screens/ropeuntangle-icon.webp",
+      "wallpaper": "screens/ropeuntangle-wallpaper.webp",
+      "schrift": {
+        "familie": "fredoka",
+        "versalien": false,
+        "abstand": 0.01,
+        "fuell": "#ffffff",
+        "rand": "#22377a",
+        "randbreite": 0.2
+      },
+      "screenshots": [
+        "screens/shots/ropeuntangle/1.webp",
+        "screens/shots/ropeuntangle/2.webp",
+        "screens/shots/ropeuntangle/3.webp",
+        "screens/shots/ropeuntangle/4.webp",
+        "screens/shots/ropeuntangle/5.webp",
+        "screens/shots/ropeuntangle/6.webp"
+      ]
     },
     {
       "id": "aurarng",
@@ -783,7 +816,10 @@
       "repo": "LeifPS/aurarng",
       "phase": "alpha",
       "farbe": "#7b4dff",
-      "kategorien": ["Glück", "Sammeln"],
+      "kategorien": [
+        "Glück",
+        "Sammeln"
+      ],
       "icon": "screens/aurarng-icon.webp",
       "screenshots": [
         "screens/shots/aurarng/1.webp",
@@ -792,7 +828,14 @@
         "screens/shots/aurarng/4.webp"
       ],
       "wallpaper": "screens/aurarng-wallpaper.webp",
-      "schrift": {"familie": "fredoka", "versalien": true, "abstand": 0.02, "fuell": "#ffffff", "rand": "#3b1c74", "randbreite": 0.2}
+      "schrift": {
+        "familie": "fredoka",
+        "versalien": true,
+        "abstand": 0.02,
+        "fuell": "#ffffff",
+        "rand": "#3b1c74",
+        "randbreite": 0.2
+      }
     },
     {
       "id": "kristallrng",
@@ -802,11 +845,25 @@
       "repo": "LeifPS/kristallrng",
       "phase": "alpha",
       "farbe": "#3aa8e0",
-      "kategorien": ["Glück", "Sammeln"],
+      "kategorien": [
+        "Glück",
+        "Sammeln"
+      ],
       "icon": "screens/kristallrng-icon.webp",
       "wallpaper": "screens/kristallrng-wallpaper.webp",
-      "screenshots": ["screens/shots/kristallrng/1.webp", "screens/shots/kristallrng/2.webp", "screens/shots/kristallrng/3.webp"],
-      "schrift": {"familie": "fredoka", "versalien": false, "abstand": 0.01, "fuell": "#ffffff", "rand": "#14447a", "randbreite": 0.2}
+      "screenshots": [
+        "screens/shots/kristallrng/1.webp",
+        "screens/shots/kristallrng/2.webp",
+        "screens/shots/kristallrng/3.webp"
+      ],
+      "schrift": {
+        "familie": "fredoka",
+        "versalien": false,
+        "abstand": 0.01,
+        "fuell": "#ffffff",
+        "rand": "#14447a",
+        "randbreite": 0.2
+      }
     },
     {
       "id": "billiard",
@@ -816,7 +873,10 @@
       "repo": "LeifPS/billiard",
       "phase": "alpha",
       "farbe": "#1f7a4a",
-      "kategorien": ["Sport", "Online"],
+      "kategorien": [
+        "Sport",
+        "Online"
+      ],
       "icon": "screens/billiard-icon.webp",
       "wallpaper": "screens/billiard-wallpaper.webp",
       "screenshots": [
@@ -825,7 +885,14 @@
         "screens/shots/billiard/3.webp",
         "screens/shots/billiard/4.webp"
       ],
-      "schrift": {"familie": "fredoka", "versalien": true, "abstand": 0.02, "fuell": "#ffffff", "rand": "#0f3d26", "randbreite": 0.2}
+      "schrift": {
+        "familie": "fredoka",
+        "versalien": true,
+        "abstand": 0.02,
+        "fuell": "#ffffff",
+        "rand": "#0f3d26",
+        "randbreite": 0.2
+      }
     },
     {
       "id": "casino",
@@ -835,7 +902,11 @@
       "repo": "LeifPS/casino",
       "phase": "alpha",
       "farbe": "#0f6b43",
-      "kategorien": ["Glück", "Karten", "Online"],
+      "kategorien": [
+        "Glück",
+        "Karten",
+        "Online"
+      ],
       "icon": "screens/casino-icon.webp",
       "wallpaper": "screens/casino-wallpaper.webp",
       "screenshots": [
@@ -847,8 +918,15 @@
         "screens/shots/casino/6.webp",
         "screens/shots/casino/7.webp"
       ],
-      "schrift": {"familie": "fredoka", "versalien": true, "abstand": 0.02, "fuell": "#ffe27a", "rand": "#0a3a28", "randbreite": 0.2}
-        },
+      "schrift": {
+        "familie": "fredoka",
+        "versalien": true,
+        "abstand": 0.02,
+        "fuell": "#ffe27a",
+        "rand": "#0a3a28",
+        "randbreite": 0.2
+      }
+    },
     {
       "id": "bibliothek",
       "name": "Die Bibliothek der träumenden Bücher",
@@ -857,7 +935,11 @@
       "url": "https://bibliothek.leifps.workers.dev",
       "repo": "LeifPS/bibliothek",
       "farbe": "#6b4f9e",
-      "kategorien": ["Rätsel", "Erkunden", "Abenteuer"],
+      "kategorien": [
+        "Rätsel",
+        "Erkunden",
+        "Abenteuer"
+      ],
       "icon": "screens/bibliothek-icon.webp",
       "wallpaper": "screens/bibliothek-wallpaper.webp",
       "screenshots": [
@@ -870,7 +952,14 @@
         "screens/shots/bibliothek/7.webp",
         "screens/shots/bibliothek/8.webp"
       ],
-      "schrift": {"familie": "cinzel", "versalien": false, "abstand": 0.0, "fuell": "#ffe9a8", "rand": "#3b2c66", "randbreite": 0.12}
+      "schrift": {
+        "familie": "cinzel",
+        "versalien": false,
+        "abstand": 0.0,
+        "fuell": "#ffe9a8",
+        "rand": "#3b2c66",
+        "randbreite": 0.12
+      }
     },
     {
       "id": "volkkarten",
@@ -941,6 +1030,28 @@
         "rand": "#5a3a1a",
         "randbreite": 0.2
       }
+    },
+    {
+      "id": "zeitenlager",
+      "name": "Zeitenlager",
+      "text": "Baue dein Kriegslager, merge gleiche Einheiten zu Legenden und führe deine Armee von der Antike bis zu den Sternen.",
+      "url": "https://zeitenlager.leifps.workers.dev",
+      "repo": "LeifPS/zeitenlager",
+      "phase": "alpha",
+      "farbe": "#c9a24a",
+      "kategorien": [
+        "Strategie",
+        "Aufbau",
+        "Online"
+      ],
+      "icon": "screens/zeitenlager-icon.webp",
+      "screenshots": [
+        "screens/shots/zeitenlager/1.webp",
+        "screens/shots/zeitenlager/2.webp",
+        "screens/shots/zeitenlager/3.webp",
+        "screens/shots/zeitenlager/4.webp"
+      ],
+      "beschreibung": "Zeitenlager verbindet Lagerbau wie in Clash of Clans mit dem Fortschritt von Civilization. Bilde Schwertkämpfer, Bogenschützen, Katapulte und viele andere Einheiten aus – und merge zwei gleiche Einheiten zu einer stärkeren: von Normal über Bronze, Silber, Gold, Diamant und Rubin bis Meister und Legende. Erforsche einen großen Forschungsbaum durch elf Zeitalter, von der Antike über die Industrie bis ins Interstellare Zeitalter, und sieh zu, wie dein Lager mitwächst. Schicke Handwerker und Kundschafter über eine gemeinsame Weltkarte, um Eisen, Pferde, Öl oder Uran zu holen, baue Mauern und Türme und greif Barbarendörfer und die Lager anderer Spieler an. Am PC und auf dem Tablet."
     }
   ]
 }
