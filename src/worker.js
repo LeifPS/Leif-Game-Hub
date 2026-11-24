@@ -2,6 +2,6 @@
 import { handle } from './konten.js';
 import { altAdresseWeiterleiten } from './umzug.js';
 import { handschriftWeiche } from './handschrift.js';
-import { hauptdomainWeiche } from './hauptdomain.js';
+import { logicWeiche } from './logic.js';
 
-export default { fetch: (request, env) => altAdresseWeiterleiten(request) || hauptdomainWeiche(request) || handschriftWeiche(request, env) || handle(request, env) };
+export default { fetch: (request, env) => altAdresseWeiterleiten(request) || logicWeiche(request, env) || handschriftWeiche(request, env) || handle(request, env) };
