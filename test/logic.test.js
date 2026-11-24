@@ -24,3 +24,9 @@ test('Andere Adressen bleiben unberührt', () => {
   assert.equal(logicWeiche(r('https://hub.leifps.de/'), env), null);
   assert.equal(logicWeiche(r('https://leifps.de/logicsim'), env), null);
 });
+
+test('logic.leifps.de: App-Dateien (Manifest, Service Worker, Icons) kommen aus /logicsim/', async () => {
+  assert.equal(await (await logicWeiche(r('https://logic.leifps.de/logiklab-sw.js'), env)).text(), 'SIM /logicsim/logiklab-sw.js');
+  assert.equal(await (await logicWeiche(r('https://logic.leifps.de/logiklab.webmanifest'), env)).text(), 'SIM /logicsim/logiklab.webmanifest');
+  assert.equal((await logicWeiche(r('https://logic.leifps.de/logiklab/../games.json'), env)).status, 302);
+});

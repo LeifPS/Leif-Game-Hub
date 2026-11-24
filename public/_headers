@@ -32,3 +32,7 @@
   Cache-Control: no-cache
 /logicsim/index.html
   Cache-Control: no-cache
+/logicsim/logiklab-sw.js
+  Cache-Control: no-cache
+/logicsim/logiklab.webmanifest
+  Cache-Control: no-cache
