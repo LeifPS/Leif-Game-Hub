@@ -2,12 +2,12 @@
 import { h } from './util.js';
 import { sheet } from './ui.js';
 
-export const OWNER = { name: 'Leif Schmale', street: 'Hoppersheider Busch 13b', city: '51467 Bergisch Gladbach', mail: 'leifps@icloud.com' };
+export const OWNER = { name: 'Leif Schmale', street: '', city: '', mail: 'leifps@icloud.com' };
 const STAND = 'November 2026';
 
 const P = (...c) => h('p', null, ...c), H = (t) => h('h3', null, t), A = (href, t) => h('a', { href, target: '_blank', rel: 'noopener' }, t || href);
 const UL = (...li) => h('ul', null, ...li.map((t) => h('li', null, t)));
-const addr = () => h('p', null, OWNER.name, h('br'), OWNER.street, ...(OWNER.city ? [h('br'), OWNER.city] : []), h('br'), 'E-Mail: ', A('mailto:' + OWNER.mail, OWNER.mail));
+const addr = () => h('p', null, OWNER.name, ...(OWNER.street ? [h('br'), OWNER.street] : []), ...(OWNER.city ? [h('br'), OWNER.city] : []), h('br'), 'E-Mail: ', A('mailto:' + OWNER.mail, OWNER.mail));
 
 const MIT = (who) => `MIT License
 
@@ -22,7 +22,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 const PAGES = {
   impressum: ['Impressum', () => [
     H('Angaben gemäß § 5 DDG'), addr(),
-    H('Verantwortlich für den Inhalt'), P('Verantwortlich nach § 18 Abs. 2 MStV: ', OWNER.name, ', Anschrift wie oben.'),
+    H('Verantwortlich für den Inhalt'), P('Verantwortlich nach § 18 Abs. 2 MStV: ', OWNER.name, OWNER.street ? ', Anschrift wie oben.' : ', Kontakt wie oben.'),
     H('Hinweis'), P('Tippschrift ist ein privates, nicht-kommerzielles Projekt. Es gibt keine Werbung und nichts zu kaufen.'),
     H('Haftung'), P('Die Inhalte wurden mit Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität kann ich jedoch keine Gewähr übernehmen. Für Inhalte verlinkter fremder Seiten sind ausschließlich deren Betreiber verantwortlich.'),
   ]],
@@ -40,7 +40,6 @@ const PAGES = {
   credits: ['Credits & Lizenzen', () => [
     H('Papier „Kariert perfekte Kästchen“'), P('Vorlage von Tom Behrens (', A('https://codebytom.de', 'codebytom.de'), '), veröffentlicht unter der MIT-Lizenz. Danke, Tom!'),
     h('details', { class: 'faq' }, h('summary', null, 'MIT-Lizenz (Tom Behrens)'), h('pre', { class: 'lic' }, MIT('Tom Behrens'))),
-    H('Notenschrift'), P('Die Vorlage beim Zeichnen von Noten nutzt Noto Music von Google, lizenziert unter der ', A('https://openfontlicense.org', 'SIL Open Font License 1.1'), '.'),
     H('Marken'), P('GoodNotes ist eine Marke der Goodnotes Limited. Tippschrift ist ein unabhängiges Projekt und steht in keiner Verbindung zu Goodnotes.'),
     H('Tippschrift'), P('Ein Projekt von Leif Schmale (früher „STools“).'),
   ]],
