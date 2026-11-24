@@ -155,7 +155,7 @@ footer .hide-s{display:none}
 <input type="file" id="file" accept=".json,application/json" class="sr">
 <script>
 {
-const VERSION='1.1',G=20,$=s=>document.querySelector(s),FONT='"IBM Plex Sans",system-ui,sans-serif';
+const VERSION='1.2',G=20,$=s=>document.querySelector(s),FONT='"IBM Plex Sans",system-ui,sans-serif';
 const cv=$('#cv'),ctx=cv.getContext('2d');
 let X=ctx;
 let comps=[],wires=[],nid=1,cam={x:60,y:40,z:1},sel=new Set(),norm='din',running=true,osc=false,need=true,touch=false;
@@ -197,7 +197,7 @@ T.HEX={cat:'Ausgänge',name:'Hex-Anzeige',info:'Zeigt den 4-Bit-Wert (Gewichte 1
 const nb=c=>clamp(c.b||8,1,8),numv=c=>(c.v|0)&((1<<nb(c))-1);
 T.NUM={cat:'Eingänge',name:'Zahleneingabe',info:'Gibt eine Zahl als Bits aus (oberster Ausgang = Wertigkeit 1). Zahl in den Eigenschaften eingeben: dezimal, 0x2F (hex), 0b1010 (binär) oder negativ (Zweierkomplement). Pfeiltasten ↑/↓ zählen, Doppelklick öffnet die Eingabe.',lab:'L',
  size:c=>[5,Math.max(2,nb(c)+1)],ins:()=>[],outs:c=>Array.from({length:nb(c)},(_,i)=>[5,i+1]),ev:c=>Array.from({length:nb(c)},(_,i)=>(numv(c)>>i)&1),draw:drawNUM,
- text:c=>{const n=nb(c),H=Math.max(2,n+1)*G,v=numv(c),r=Array.from({length:n},(_,i)=>({x:72,y:(i+1)*G,s:String(1<<i),sz:10,c:C.lo}));r.push({x:34,y:n>2?H/2-7:H/2,s:String(v),sz:n>2?22:16,f:600,m:1});if(n>2)r.push({x:34,y:H/2+14,s:'0x'+v.toString(16).toUpperCase().padStart(Math.ceil(n/4),'0'),sz:11,c:C.lo,m:1});return r}};
+ text:c=>{const n=nb(c),H=Math.max(2,n+1)*G,v=numv(c),r=Array.from({length:n},(_,i)=>({x:69,y:(i+1)*G,s:String(1<<i),sz:10,c:C.lo}));r.push({x:30,y:n>2?H/2-7:H/2,s:String(v),sz:n>2?22:16,f:600,m:1});if(n>2)r.push({x:30,y:H/2+14,s:'0x'+v.toString(16).toUpperCase().padStart(Math.ceil(n/4),'0'),sz:11,c:C.lo,m:1});return r}};
 T.DEC={cat:'Ausgänge',name:'Zahlenanzeige',info:'Zeigt die anliegenden Bits als Dezimalzahl (oberster Eingang = Wertigkeit 1), wahlweise ohne oder mit Vorzeichen (Zweierkomplement).',lab:'R',
  size:c=>[6,Math.max(2,nb(c)+1)],ins:c=>Array.from({length:nb(c)},(_,i)=>[0,i+1]),outs:()=>[],
  ev:(c,a)=>{let v=0;a.forEach((x,i)=>{v+=x<<i});if(c.sg===1&&a[a.length-1])v-=1<<a.length;c.v=v;return[]},draw:drawDEC,
@@ -268,7 +268,7 @@ function drawSW(c){stub(44,20,60,20);body(2,3,42,34,7);X.beginPath();rr(9,13,28,
 function drawBTN(c){stub(44,20,60,20);body(2,3,42,34,7);X.beginPath();X.arc(23,20,10,0,7);X.fillStyle=c.v?C.hi:C.body;X.fill();X.stroke();X.beginPath();X.arc(23,20,4.5,0,7);X.fillStyle=c.v?'#fff':C.lo;X.fill()}
 function drawCLK(c){stub(44,20,60,20);body(2,3,42,34,7);X.beginPath();X.moveTo(8,26);X.lineTo(14,26);X.lineTo(14,14);X.lineTo(22,14);X.lineTo(22,26);X.lineTo(30,26);X.lineTo(30,14);X.lineTo(38,14);X.strokeStyle=c.v?C.hi:C.lo;X.stroke()}
 function drawCONST(){stub(28,20,40,20);body(2,4,26,32,6)}
-function drawNUM(c,W,H){for(let i=1;i<=nb(c);i++)stub(82,i*G,W,i*G);body(2,2,80,H-4,7);X.beginPath();X.moveTo(62,8);X.lineTo(62,H-8);X.strokeStyle=C.grid;X.lineWidth=1;X.stroke()}
+function drawNUM(c,W,H){for(let i=1;i<=nb(c);i++)stub(82,i*G,W,i*G);body(2,2,80,H-4,7);X.beginPath();X.moveTo(56,8);X.lineTo(56,H-8);X.strokeStyle=C.grid;X.lineWidth=1;X.stroke()}
 function drawDEC(c,W,H){for(let i=1;i<=nb(c);i++)stub(0,i*G,16,i*G);X.beginPath();rr(16,2,W-18,H-4,6);X.fillStyle='#14181b';X.fill();X.stroke()}
 function drawLED(c){stub(0,20,12,20);const col=LEDC[c.col||'rot']||LEDC.rot;X.beginPath();X.arc(24,20,12,0,7);
  if(c.v){X.save();X.shadowColor=col;X.shadowBlur=18;X.fillStyle=col;X.fill();X.restore()}else{X.fillStyle=C.body;X.fill();X.save();X.globalAlpha=.22;X.fillStyle=col;X.fill();X.restore()}
@@ -425,7 +425,7 @@ addEventListener('keyup',e=>{if(e.key===' '){space=false;cv.style.cursor='defaul
 
 /* ---------- Bauteilleiste ---------- */
 function renderPalette(){const p=$('#palette');p.innerHTML=ORDER.map(([cat,ts])=>`<h4>${cat}</h4><div class="pgrid">${ts.map(t=>`<button class="pal" data-t="${t}" title="${esc(T[t].name)} – ${esc(T[t].info)}"><canvas width="128" height="80"></canvas>${esc(T[t].name)}</button>`).join('')}</div>`).join('');
- p.querySelectorAll('.pal').forEach(b=>{const t=b.dataset.t,c={id:0,t,x:0,y:0,r:0,n:2,v:t==='LED'||t==='SW'||t==='CONST'?1:0,txt:'Abc',sz:18,o:[0,0],hz:1};if(t==='HEX')c.v=10;if(t==='NUM'||t==='DEC'){c.v=45;c.b=8}
+ p.querySelectorAll('.pal').forEach(b=>{const t=b.dataset.t,c={id:0,t,x:0,y:0,r:0,n:2,v:t==='LED'||t==='SW'||t==='CONST'?1:0,txt:'Abc',sz:18,o:[0,0],hz:1};if(t==='HEX')c.v=10;if(t==='NUM'||t==='DEC'){c.v=13;c.b=4}
   const cn=b.querySelector('canvas'),g=cn.getContext('2d'),[w,h]=T[t].size(c),s=Math.min(116/(w*G),68/(h*G),1.6);X=g;g.setTransform(s,0,0,s,(128-w*G*s)/2,(80-h*G*s)/2);drawComp(c,false);X=ctx;
   b.addEventListener('pointerdown',palDown)})}
 let pd=null;
