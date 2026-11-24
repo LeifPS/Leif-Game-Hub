@@ -28,3 +28,7 @@
   Cache-Control: no-cache
 /dev/dev.css
   Cache-Control: no-cache
+/logicsim/
+  Cache-Control: no-cache
+/logicsim/index.html
+  Cache-Control: no-cache
