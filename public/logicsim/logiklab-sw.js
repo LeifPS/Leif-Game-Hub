@@ -1,6 +1,6 @@
 // LogikLab offline: hält die App im Zwischenspeicher. Antwortet sofort aus dem Speicher und lädt im Hintergrund die neueste Fassung
 // (wirkt beim nächsten Start). Gilt nur für den eigenen Bereich (logic.leifps.de/ bzw. /logicsim/), nie für den Hub.
-const V = 'logiklab-v2';
+const V = 'logiklab-v3';
 const FILES = ['', 'logiklab.webmanifest', 'logiklab-icon.svg', 'logiklab-icon-192.png', 'logiklab-icon-512.png', 'logiklab-maskable-512.png'];
 const base = () => self.registration.scope;
 self.addEventListener('install', (e) => {

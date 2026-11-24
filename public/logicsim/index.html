@@ -194,6 +194,16 @@ T.CONST={cat:'Eingänge',name:'Konstante',info:'Liefert dauerhaft 0 oder 1.',lab
 T.LED={cat:'Ausgänge',name:'Lampe',info:'Leuchtet, wenn am Eingang 1 anliegt.',lab:'R',size:()=>[2,2],ins:()=>[[0,1]],outs:()=>[],ev:(c,a)=>{c.v=a[0];return[]},draw:drawLED};
 T.HEX={cat:'Ausgänge',name:'Hex-Anzeige',info:'Zeigt den 4-Bit-Wert (Gewichte 1, 2, 4, 8 von oben) als Hex-Ziffer 0–F.',lab:'R',size:()=>[4,6],ins:()=>[[0,1,'1'],[0,2,'2'],[0,3,'4'],[0,4,'8']],outs:()=>[],ev:(c,a)=>{c.v=a[0]+2*a[1]+4*a[2]+8*a[3];return[]},draw:drawHEX,
  text:()=>['1','2','4','8'].map((s,i)=>({x:17,y:(i+1)*G,s,sz:10,c:'#9aa5ad'}))};
+const nb=c=>clamp(c.b||8,1,8),numv=c=>(c.v|0)&((1<<nb(c))-1);
+T.NUM={cat:'Eingänge',name:'Zahleneingabe',info:'Gibt eine Zahl als Bits aus (oberster Ausgang = Wertigkeit 1). Zahl in den Eigenschaften eingeben: dezimal, 0x2F (hex), 0b1010 (binär) oder negativ (Zweierkomplement). Pfeiltasten ↑/↓ zählen, Doppelklick öffnet die Eingabe.',lab:'L',
+ size:c=>[5,Math.max(2,nb(c)+1)],ins:()=>[],outs:c=>Array.from({length:nb(c)},(_,i)=>[5,i+1]),ev:c=>Array.from({length:nb(c)},(_,i)=>(numv(c)>>i)&1),draw:drawNUM,
+ text:c=>{const n=nb(c),H=Math.max(2,n+1)*G,v=numv(c),r=Array.from({length:n},(_,i)=>({x:72,y:(i+1)*G,s:String(1<<i),sz:10,c:C.lo}));r.push({x:34,y:n>2?H/2-7:H/2,s:String(v),sz:n>2?22:16,f:600,m:1});if(n>2)r.push({x:34,y:H/2+14,s:'0x'+v.toString(16).toUpperCase().padStart(Math.ceil(n/4),'0'),sz:11,c:C.lo,m:1});return r}};
+T.DEC={cat:'Ausgänge',name:'Zahlenanzeige',info:'Zeigt die anliegenden Bits als Dezimalzahl (oberster Eingang = Wertigkeit 1), wahlweise ohne oder mit Vorzeichen (Zweierkomplement).',lab:'R',
+ size:c=>[6,Math.max(2,nb(c)+1)],ins:c=>Array.from({length:nb(c)},(_,i)=>[0,i+1]),outs:()=>[],
+ ev:(c,a)=>{let v=0;a.forEach((x,i)=>{v+=x<<i});if(c.sg===1&&a[a.length-1])v-=1<<a.length;c.v=v;return[]},draw:drawDEC,
+ text:c=>{const n=nb(c),H=Math.max(2,n+1)*G,r=Array.from({length:n},(_,i)=>({x:23,y:(i+1)*G,s:String(1<<i),sz:10,c:'#9aa5ad'}));
+  const s=c.sg===2?'0x'+((c.v|0)>>>0).toString(16).toUpperCase().padStart(Math.ceil(n/4),'0'):String(c.v|0);
+  r.push({x:72,y:H/2,s,sz:n>2?(s.length>4?22:26):14,f:600,m:1,c:'#ff5b4f'});if(n>2&&c.sg)r.push({x:72,y:H/2+20,s:c.sg===2?'hexadezimal':'mit Vorzeichen',sz:9,c:'#9aa5ad'});return r}};
 const q2=c=>[c.q?1:0,c.q?0:1];
 const edge=(c,clk)=>{const e=clk&&c.pc===0;c.pc=clk;return e};
 const FF=(name,info,ins,step)=>({cat:'Speicher',name,info,size:()=>[4,4],ins:()=>ins,outs:()=>[[4,1,'Q'],[4,3,'Q̅']],ev:step,draw:drawFF,
@@ -205,7 +215,7 @@ T.TFF=FF('T-Flipflop','Kippt bei steigender Taktflanke, wenn T = 1.',[[0,1,'T'],
 T.TEXT={cat:'Sonstiges',name:'Text',info:'Freie Beschriftung für Erklärungen und Arbeitsblätter.',size:c=>textSize(c),ins:()=>[],outs:()=>[],ev:()=>[],draw:()=>{},
  text:c=>(c.txt||'Text').split('\n').map((s,i)=>({x:4,y:(c.sz||16)*(0.75+i*1.35),s,sz:c.sz||16,a:'left',f:500}))};
 function textSize(c){const sz=c.sz||16,ls=(c.txt||'Text').split('\n');ctx.font=`500 ${sz}px ${FONT}`;const w=Math.max(...ls.map(l=>ctx.measureText(l).width));return[Math.max(2,Math.ceil((w+10)/G)),Math.max(1,Math.ceil((ls.length*sz*1.35)/G))]}
-const ORDER=[['Eingänge',['SW','BTN','CLK','CONST']],['Ausgänge',['LED','HEX']],['Gatter',['AND','OR','NOT','NAND','NOR','XOR','XNOR','BUF']],['Speicher',['RS','DFF','JK','TFF']],['Sonstiges',['TEXT']]];
+const ORDER=[['Eingänge',['SW','BTN','CLK','CONST','NUM']],['Ausgänge',['LED','HEX','DEC']],['Gatter',['AND','OR','NOT','NAND','NOR','XOR','XNOR','BUF']],['Speicher',['RS','DFF','JK','TFF']],['Sonstiges',['TEXT']]];
 
 /* ---------- Geometrie ---------- */
 function sizeR(c){const[w,h]=T[c.t].size(c);return(c.r||0)%2?[h,w]:[w,h]}
@@ -258,6 +268,8 @@ function drawSW(c){stub(44,20,60,20);body(2,3,42,34,7);X.beginPath();rr(9,13,28,
 function drawBTN(c){stub(44,20,60,20);body(2,3,42,34,7);X.beginPath();X.arc(23,20,10,0,7);X.fillStyle=c.v?C.hi:C.body;X.fill();X.stroke();X.beginPath();X.arc(23,20,4.5,0,7);X.fillStyle=c.v?'#fff':C.lo;X.fill()}
 function drawCLK(c){stub(44,20,60,20);body(2,3,42,34,7);X.beginPath();X.moveTo(8,26);X.lineTo(14,26);X.lineTo(14,14);X.lineTo(22,14);X.lineTo(22,26);X.lineTo(30,26);X.lineTo(30,14);X.lineTo(38,14);X.strokeStyle=c.v?C.hi:C.lo;X.stroke()}
 function drawCONST(){stub(28,20,40,20);body(2,4,26,32,6)}
+function drawNUM(c,W,H){for(let i=1;i<=nb(c);i++)stub(82,i*G,W,i*G);body(2,2,80,H-4,7);X.beginPath();X.moveTo(62,8);X.lineTo(62,H-8);X.strokeStyle=C.grid;X.lineWidth=1;X.stroke()}
+function drawDEC(c,W,H){for(let i=1;i<=nb(c);i++)stub(0,i*G,16,i*G);X.beginPath();rr(16,2,W-18,H-4,6);X.fillStyle='#14181b';X.fill();X.stroke()}
 function drawLED(c){stub(0,20,12,20);const col=LEDC[c.col||'rot']||LEDC.rot;X.beginPath();X.arc(24,20,12,0,7);
  if(c.v){X.save();X.shadowColor=col;X.shadowBlur=18;X.fillStyle=col;X.fill();X.restore()}else{X.fillStyle=C.body;X.fill();X.save();X.globalAlpha=.22;X.fillStyle=col;X.fill();X.restore()}
  X.stroke();if(c.v){X.beginPath();X.arc(20,16,3.5,0,7);X.fillStyle='rgba(255,255,255,.75)';X.fill()}}
@@ -270,7 +282,7 @@ function drawComp(c,labels){const t=T[c.t],[w,h]=t.size(c),W=w*G,H=h*G,r=c.r||0;
  if(r===1)X.transform(0,1,-1,0,H,0);else if(r===2)X.transform(-1,0,0,-1,W,H);else if(r===3)X.transform(0,-1,1,0,0,W);
  X.lineWidth=2;X.strokeStyle=C.line;X.fillStyle=C.body;X.lineJoin='round';X.lineCap='round';t.draw(c,W,H);X.restore();
  X.textBaseline='middle';
- for(const s of(t.text?t.text(c):[])){const p=lp(c,s.x,s.y);X.fillStyle=s.c||C.txt;X.font=`${s.f||500} ${s.sz||13}px ${FONT}`;X.textAlign=s.a||'center';X.fillText(s.s,p.x,p.y)}
+ for(const s of(t.text?t.text(c):[])){const p=lp(c,s.x,s.y);X.fillStyle=s.c||C.txt;X.font=`${s.f||500} ${s.sz||13}px ${s.m?'"IBM Plex Mono",ui-monospace,monospace':FONT}`;X.textAlign=s.a||'center';X.fillText(s.s,p.x,p.y)}
  if(labels&&c.l){const b=bb(c);X.font=`600 14px ${FONT}`;X.fillStyle=C.txt;
   if(t.lab==='L'){X.textAlign='right';X.fillText(c.l,b.x-6,b.y+b.h/2)}else if(t.lab==='R'){X.textAlign='left';X.fillText(c.l,b.x+b.w+6,b.y+b.h/2)}else{X.textAlign='center';X.fillText(c.l,b.x+b.w/2,b.y-9)}}}
 function drawWire(w,selw){const r=route(w);if(!r)return;const A=idx.get(w.a[0]),v=A.o[w.a[1]];
@@ -330,10 +342,11 @@ function paste(){if(!clip)return;const map=new Map();sel.clear();
  clip={c:clip.c.map(c=>({...c,x:c.x+2,y:c.y+2})),w:clip.w.map(w=>({...w,mx:w.mx!=null?w.mx+2:undefined,my:w.my!=null?w.my+2:undefined,ex:w.ex!=null?w.ex+2:undefined}))};
  rebuild();settle(comps);renderProps();commit()}
 function nextLabel(t){const used=new Set(comps.map(c=>c.l));
- if(t==='SW'||t==='BTN'){for(const l of'ABCDEFGHIJKLMNOP')if(!used.has(l))return l;let i=1;while(used.has('E'+i))i++;return'E'+i}
+ if(t==='DEC')t='LED';
+ if(t==='SW'||t==='BTN'||t==='NUM'){for(const l of'ABCDEFGHIJKLMNOP')if(!used.has(l))return l;let i=1;while(used.has('E'+i))i++;return'E'+i}
  if(t==='LED'){for(const l of['Y','Z','X','W','V','U'])if(!used.has(l))return l;let i=1;while(used.has('Y'+i))i++;return'Y'+i}
  if(t==='CLK')return used.has('Takt')?'':'Takt';return''}
-function addComp(t,x,y,props){const c={id:nid++,t,x,y,r:0,...props};if(c.l===undefined)c.l=nextLabel(t);if(t==='TEXT'&&!c.txt)c.txt='Beschriftung';if(t==='CLK'&&!c.hz)c.hz=1;if(t==='CONST'&&c.v===undefined)c.v=1;
+function addComp(t,x,y,props){const c={id:nid++,t,x,y,r:0,...props};if(c.l===undefined)c.l=nextLabel(t);if(t==='TEXT'&&!c.txt)c.txt='Beschriftung';if(t==='CLK'&&!c.hz)c.hz=1;if(t==='CONST'&&c.v===undefined)c.v=1;if((t==='NUM'||t==='DEC')&&!c.b)c.b=8;if(t==='NUM'&&c.v===undefined)c.v=0;
  comps.push(c);rebuild();settle([c]);sel.clear();sel.add(c.id);renderProps();commit();return c}
 function connect(p1,p2){if(p1.io===p2.io){toast('Bitte einen Ausgang mit einem Eingang verbinden');return}const o=p1.io==='o'?p1:p2,i=p1.io==='o'?p2:p1;
  wires=wires.filter(w=>!(w.b[0]===i.c.id&&w.b[1]===i.p));wires.push({id:nid++,a:[o.c.id,o.p],b:[i.c.id,i.p]});rebuild();settle([i.c]);commit()}
@@ -375,12 +388,15 @@ cv.addEventListener('pointermove',e=>{const{sx,sy}=evPos(e);if(ptrs.has(e.pointe
 function up(e){ptrs.delete(e.pointerId);if(!act)return;const a=act;
  if(a.k==='pinch'){if(!ptrs.size)act=null;return}
  act=null;cv.style.cursor=space?'grab':'default';
- if(a.k==='move'){if(a.c.t==='BTN'){a.c.v=0;settle([a.c])}if(!a.moved&&a.c.t==='SW'&&!e.shiftKey&&!e.ctrlKey&&!e.metaKey){a.c.v=a.c.v?0:1;settle([a.c]);autosave();renderProps()}if(a.moved)commit()}
+ if(a.k==='move'){if(a.c.t==='BTN'){a.c.v=0;settle([a.c])}if(!a.moved&&a.c.t==='SW'&&!e.shiftKey&&!e.ctrlKey&&!e.metaKey){a.c.v=a.c.v?0:1;settle([a.c]);autosave();renderProps()}
+  if(!a.moved&&touch&&(a.c.t==='NUM'||a.c.t==='TEXT'))focusEdit();if(a.moved)commit()}
  else if(a.k==='wire'){const t=pinAt(a.w.x,a.w.y);if(t&&!(t.c===a.pin.c&&t.io===a.pin.io&&t.p===a.pin.p))connect(a.pin,t);if(touch)hover=null}
  else if(a.k==='seg'){if(a.moved)commit()}
  else if(a.k==='box'){const x1=Math.min(a.a.x,a.b.x),x2=Math.max(a.a.x,a.b.x),y1=Math.min(a.a.y,a.b.y),y2=Math.max(a.a.y,a.b.y);if(x2-x1>3||y2-y1>3){for(const c of comps){const b=bb(c);if(b.x<x2&&b.x+b.w>x1&&b.y<y2&&b.y+b.h>y1)sel.add(c.id)}}renderProps()}
  else if(a.k==='pan'&&a.tap){sel.clear();renderProps()}
  need=true}
+function focusEdit(){setTimeout(()=>{const f=document.querySelector('#props [data-k=num],#props [data-k=txt]');if(f){f.focus();if(f.select)f.select()}},30)}
+cv.addEventListener('dblclick',e=>{const{sx,sy}=evPos(e),w=toW(sx,sy),c=compAt(w.x,w.y);if(c&&(c.t==='NUM'||c.t==='TEXT')){sel.clear();sel.add(c.id);renderProps();focusEdit()}});
 cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
 cv.addEventListener('wheel',e=>{e.preventDefault();const{sx,sy}=evPos(e);
  if(e.ctrlKey||e.metaKey)zoomAt(sx,sy,Math.exp(-e.deltaY*.01));
@@ -400,6 +416,7 @@ addEventListener('keydown',e=>{if(e.target.closest&&e.target.closest('input,text
  else if(m&&k==='a'){e.preventDefault();comps.forEach(c=>sel.add(c.id));renderProps();need=true}
  else if(m&&k==='s'){e.preventDefault();saveCircuit()}
  else if(m&&k==='o'){e.preventDefault();openDialog()}
+ else if(k==='arrowup'||k==='arrowdown'){const cs=selComps();if(cs.length===1&&cs[0].t==='NUM'){const c=cs[0],md=1<<nb(c);c.v=((numv(c)+(k==='arrowup'?1:-1)*(e.shiftKey?10:1))%md+md)%md;settle([c]);renderProps();autosave();e.preventDefault()}}
  else if(!m&&k==='r')rotate();
  else if(!m&&k==='f')fit();
  else if(!m&&k==='w')truthTable();
@@ -408,7 +425,7 @@ addEventListener('keyup',e=>{if(e.key===' '){space=false;cv.style.cursor='defaul
 
 /* ---------- Bauteilleiste ---------- */
 function renderPalette(){const p=$('#palette');p.innerHTML=ORDER.map(([cat,ts])=>`<h4>${cat}</h4><div class="pgrid">${ts.map(t=>`<button class="pal" data-t="${t}" title="${esc(T[t].name)} – ${esc(T[t].info)}"><canvas width="128" height="80"></canvas>${esc(T[t].name)}</button>`).join('')}</div>`).join('');
- p.querySelectorAll('.pal').forEach(b=>{const t=b.dataset.t,c={id:0,t,x:0,y:0,r:0,n:2,v:t==='LED'||t==='SW'||t==='CONST'?1:0,txt:'Abc',sz:18,o:[0,0],hz:1};if(t==='HEX')c.v=10;
+ p.querySelectorAll('.pal').forEach(b=>{const t=b.dataset.t,c={id:0,t,x:0,y:0,r:0,n:2,v:t==='LED'||t==='SW'||t==='CONST'?1:0,txt:'Abc',sz:18,o:[0,0],hz:1};if(t==='HEX')c.v=10;if(t==='NUM'||t==='DEC'){c.v=45;c.b=8}
   const cn=b.querySelector('canvas'),g=cn.getContext('2d'),[w,h]=T[t].size(c),s=Math.min(116/(w*G),68/(h*G),1.6);X=g;g.setTransform(s,0,0,s,(128-w*G*s)/2,(80-h*G*s)/2);drawComp(c,false);X=ctx;
   b.addEventListener('pointerdown',palDown)})}
 let pd=null;
@@ -454,13 +471,21 @@ function renderProps(){const p=$('#props'),cs=selComps(),ws=selWires();document.
   if(t.cat==='Gatter'&&!GATES[c.t].one)h+=fld('Anzahl Eingänge',`<select data-k="n">${[2,3,4,5,6,7,8].map(n=>opt(n,c.n||2)).join('')}</select>`);
   if(c.t==='LED')h+=fld('Farbe',`<select data-k="col">${Object.keys(LEDC).map(k=>opt(k,c.col||'rot',k[0].toUpperCase()+k.slice(1))).join('')}</select>`);
   if(c.t==='CLK')h+=fld('Frequenz',`<select data-k="hz">${[0.25,0.5,1,2,4,8].map(v=>opt(v,c.hz||1,String(v).replace('.',',')+' Hz')).join('')}</select>`);
+  if(c.t==='NUM')h+=fld('Zahl',`<input data-k="num" value="${numv(c)}" inputmode="text" autocomplete="off" spellcheck="false">`)+`<p class="info" style="margin-top:-6px">Dezimal (45), hex (0x2D), binär (0b101101) oder negativ (−19). Bits: <b>${numv(c).toString(2).padStart(nb(c),'0')}</b></p>`;
+  if(c.t==='NUM'||c.t==='DEC')h+=fld('Anzahl Bits',`<select data-k="b">${[1,2,3,4,5,6,7,8].map(n=>opt(n,nb(c))).join('')}</select>`);
+  if(c.t==='DEC')h+=fld('Darstellung',`<select data-k="sg">${opt(0,c.sg|0,'Dezimal ohne Vorzeichen')}${opt(1,c.sg|0,'Dezimal mit Vorzeichen (Zweierkomplement)')}${opt(2,c.sg|0,'Hexadezimal')}</select>`);
   if(c.t==='CONST')h+=fld('Wert',`<select data-k="v">${opt(1,c.v?1:0)}${opt(0,c.v?1:0)}</select>`);
   if(c.t==='TEXT')h+=fld('Text',`<textarea data-k="txt">${esc(c.txt||'')}</textarea>`)+fld('Schriftgröße',`<select data-k="sz">${[12,14,16,20,24,32].map(v=>opt(v,c.sz||16,v+' px')).join('')}</select>`);
   if(c.t==='SW'||c.t==='LED'||t.cat==='Speicher')h+=`<p class="info">Aktueller Zustand: <b>${c.t==='SW'||c.t==='LED'?(c.v?1:0):(c.o[0]?'Q = 1':'Q = 0')}</b></p>`;
   h+=`<div class="row">${c.t!=='TEXT'?'<button class="btn" data-act="rotate">Drehen</button>':''}<button class="btn" data-act="dup">Duplizieren</button><button class="btn danger" data-act="del">Löschen</button></div>`}
  p.innerHTML=h}
-$('#props').addEventListener('input',e=>{const k=e.target.dataset.k;if(!k)return;const c=selComps()[0];if(!c)return;let v=e.target.value;if(['n','hz','sz','v'].includes(k))v=+v;c[k]=v;
- if(k==='n'){rebuild();settle(comps)}if(k==='v')settle([c]);need=true});
+function parseNum(s,bits){s=String(s).trim().toLowerCase().replace(/[−–]/g,'-').replace(/[\s_]/g,'');let neg=false;if(s[0]==='-'){neg=true;s=s.slice(1)}
+ let n=s.startsWith('0x')?parseInt(s.slice(2),16):s.startsWith('0b')?parseInt(s.slice(2),2):/^\d+$/.test(s)?parseInt(s,10):NaN;if(!Number.isFinite(n))return null;const m=1<<bits;if(neg)n=-n;return((n%m)+m)%m}
+$('#props').addEventListener('input',e=>{const k=e.target.dataset.k;if(!k)return;const c=selComps()[0];if(!c)return;let v=e.target.value;
+ if(k==='num'){const n=parseNum(v,nb(c));e.target.style.borderColor=n==null&&v.trim()?'var(--danger)':'';if(n==null)return;c.v=n;settle([c]);const b=e.target.closest('label').nextElementSibling.querySelector('b');if(b)b.textContent=n.toString(2).padStart(nb(c),'0');need=true;return}
+ if(['n','hz','sz','v','b','sg'].includes(k))v=+v;c[k]=v;
+ if(k==='b'&&c.t==='NUM')c.v=numv(c);
+ if(k==='n'||k==='b'||k==='sg'){rebuild();settle(comps)}if(k==='v')settle([c]);if(k==='b'){commit();renderProps()}need=true});
 $('#props').addEventListener('change',e=>{if(e.target.dataset.k)commit()});
 
 /* ---------- Dialoge ---------- */
@@ -567,6 +592,7 @@ const EX=[
  {n:'Volladdierer',d:'Zwei Halbaddierer und ein ODER – Grundbaustein jedes Rechenwerks.',f:()=>hand((a,W)=>{const A=a('SW',2,1,{l:'A'}),B=a('SW',2,5,{l:'B'}),Ci=a('SW',2,9,{l:'Cin'}),X1=a('XOR',10,1),U1=a('AND',10,12),X2=a('XOR',18,3),U2=a('AND',18,8),O=a('OR',26,10),S=a('LED',26,4,{l:'S'}),Co=a('LED',34,11,{l:'Cout'});
   W(A,0,X1,0,{mx:6});W(A,0,U1,0,{mx:6});W(B,0,X1,1,{mx:7});W(B,0,U1,1,{mx:7});W(X1,0,X2,0);W(Ci,0,X2,1,{mx:8});W(X1,0,U2,0);W(Ci,0,U2,1,{mx:8});W(U2,0,O,0);W(U1,0,O,1);W(X2,0,S,0);W(O,0,Co,0);
   a('TEXT',2,18,{txt:'S = A ⊕ B ⊕ Cin\nCout = (A ∧ B) ∨ (Cin ∧ (A ⊕ B))',sz:16})})},
+ {n:'8-Bit-Rechenwerk',d:'Addiert und subtrahiert zwei 8-Bit-Zahlen mit Übertrag-, Überlauf- und Null-Flag – wie in einer CPU.',f:()=>hand(alu8)},
  {n:'RS-Flipflop aus NOR',d:'Zwei rückgekoppelte NOR-Gatter speichern ein Bit.',f:()=>hand((a,W)=>{const R=a('SW',2,1,{l:'R'}),S=a('SW',2,10,{l:'S'}),N1=a('NOR',9,1),N2=a('NOR',9,8),Q=a('LED',18,2,{l:'Q'}),Qn=a('LED',18,9,{l:'Q̅'});
   W(R,0,N1,0);W(S,0,N2,1);W(N1,0,N2,0,{my:6});W(N2,0,N1,1,{my:7,ex:7});W(N1,0,Q,0);W(N2,0,Qn,0);a('TEXT',2,14,{txt:'S = 1 setzt, R = 1 setzt zurück, beide 0 = speichern',sz:14})})},
  {n:'4-Bit-Zähler',d:'Asynchroner Binärzähler aus T-Flipflops mit Hex-Anzeige.',f:()=>hand((a,W)=>{const clk=a('CLK',2,4,{l:'Takt',hz:2});let prev=null;const ff=[];
@@ -576,6 +602,18 @@ const EX=[
  {n:'Mehrheitsentscheider',d:'Ausgang 1, wenn mindestens zwei von drei Eingängen 1 sind.',e:'Y = (A ∧ B) ∨ (A ∧ C) ∨ (B ∧ C)'},
  {n:'De Morgan',d:'Zwei Schaltungen mit gleicher Wahrheitstabelle zum Vergleichen.',e:'Y1 = ¬(A ∧ B)\nY2 = ¬A ∨ ¬B'},
  {n:'Vergleicher (1 Bit)',d:'Prüft, ob zwei Bits gleich sind, und welches größer ist.',e:'Gleich = ¬(A ⊕ B)\nGroesser = A ∧ ¬B\nKleiner = ¬A ∧ B'}];
+function alu8(a,W){const D=22;
+ a('TEXT',33,-10,{txt:'8-Bit-Rechenwerk (Addierer / Subtrahierer)\nSUB = 0: S = A + B     SUB = 1: S = A − B (Zweierkomplement)\nC = Übertrag   V = Überlauf (mit Vorzeichen)   Z = Ergebnis ist 0',sz:16});
+ const nA=a('NUM',2,-22,{l:'A',b:8,v:45}),nB=a('NUM',2,-11,{l:'B',b:8,v:26}),sub=a('SW',2,-1,{l:'SUB',v:0});
+ const du=a('DEC',96,4,{l:'ohne Vorzeichen',b:8}),ds=a('DEC',96,15,{l:'mit Vorzeichen',b:8,sg:1}),nor=a('NOR',96,27,{n:8}),lz=a('LED',104,31,{l:'Z',col:'gelb'});W(nor,0,lz,0);
+ let prev=null;const co=[];
+ for(let i=0;i<8;i++){const y=4+14*i,xb=a('XOR',9+D,y+4),x1=a('XOR',17+D,y),a1=a('AND',17+D,y+8),x2=a('XOR',26+D,y+1),a2=a('AND',26+D,y+6),o=a('OR',34+D,y+8),led=a('LED',44+D,y+2,{l:'S'+i,col:'grün'});
+  W(nB,i,xb,0,{mx:18+i});W(sub,0,xb,1,{mx:27});W(nA,i,x1,0,{mx:9+i});W(nA,i,a1,0,{mx:9+i});W(xb,0,x1,1,{mx:15+D});W(xb,0,a1,1,{mx:15+D});
+  W(x1,0,x2,0);W(x1,0,a2,0,{mx:24+D});
+  if(prev==null){W(sub,0,x2,1,{mx:25+D});W(sub,0,a2,1,{mx:25+D})}else{W(prev,0,x2,1,{my:y-1,ex:25+D});W(prev,0,a2,1,{my:y-1,ex:25+D})}
+  W(a2,0,o,0);W(a1,0,o,1,{mx:23+D});W(x2,0,led,0);W(x2,0,nor,i,{mx:70+i});W(x2,0,du,i,{mx:78+i});W(x2,0,ds,i,{mx:86+i});co.push(o);prev=o}
+ const y7=4+14*7,xv=a('XOR',66,y7+14),lv=a('LED',74,y7+15,{l:'V',col:'rot'}),lc=a('LED',74,y7+9,{l:'C',col:'blau'});
+ W(co[7],0,lc,0);W(co[7],0,xv,0,{mx:63});W(co[6],0,xv,1,{mx:64});W(xv,0,lv,0)}
 function exDialog(){modal('Beispiele',`<p>Öffnet eine fertige Schaltung. Die aktuelle Schaltung lässt sich mit „Rückgängig“ zurückholen.</p><div class="exl">${EX.map((x,i)=>`<button class="exc" data-act="exload" data-i="${i}"><b>${esc(x.n)}</b><span>${esc(x.d)}</span></button>`).join('')}</div>`)}
 function helpDialog(){modal('Hilfe',`<ul class="hl">
 <li><b>Bauteile einfügen:</b> aus der Leiste auf die Fläche ziehen oder antippen.</li>
