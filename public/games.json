@@ -1030,37 +1030,6 @@
         "rand": "#5a3a1a",
         "randbreite": 0.2
       }
-    },
-    {
-      "id": "zeitenlager",
-      "name": "Zeitenlager",
-      "text": "Baue dein Kriegslager, merge gleiche Einheiten zu Legenden und führe deine Armee von der Antike bis zu den Sternen.",
-      "url": "https://zeitenlager.leifps.workers.dev",
-      "repo": "LeifPS/zeitenlager",
-      "phase": "alpha",
-      "farbe": "#c9a24a",
-      "kategorien": [
-        "Strategie",
-        "Aufbau",
-        "Online"
-      ],
-      "icon": "screens/zeitenlager-icon.webp",
-      "screenshots": [
-        "screens/shots/zeitenlager/1.webp",
-        "screens/shots/zeitenlager/2.webp",
-        "screens/shots/zeitenlager/3.webp",
-        "screens/shots/zeitenlager/4.webp"
-      ],
-      "beschreibung": "Zeitenlager verbindet Lagerbau wie in Clash of Clans mit dem Fortschritt von Civilization. Bilde Schwertkämpfer, Bogenschützen, Katapulte und viele andere Einheiten aus – und merge zwei gleiche Einheiten zu einer stärkeren: von Normal über Bronze, Silber, Gold, Diamant und Rubin bis Meister und Legende. Erforsche einen großen Forschungsbaum durch elf Zeitalter, von der Antike über die Industrie bis ins Interstellare Zeitalter, und sieh zu, wie dein Lager mitwächst. Schicke Handwerker und Kundschafter über eine gemeinsame Weltkarte, um Eisen, Pferde, Öl oder Uran zu holen, baue Mauern und Türme und greif Barbarendörfer und die Lager anderer Spieler an. Am PC und auf dem Tablet.",
-      "wallpaper": "screens/zeitenlager-wallpaper.webp",
-      "schrift": {
-        "familie": "fredoka",
-        "versalien": false,
-        "abstand": 0.01,
-        "fuell": "#ffd23f",
-        "rand": "#3a2414",
-        "randbreite": 0.22
-      }
     }
   ]
 }
