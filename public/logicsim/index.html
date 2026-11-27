@@ -80,6 +80,11 @@ footer .grow{flex:1}
 .warn{display:none;background:#b4232c;color:#fff;border-radius:999px;padding:2px 10px;font-size:12.5px;font-weight:500}
 .warn.show{display:inline-block}
 .lnk{border:0;background:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline;padding:4px}
+#editbar{position:absolute;top:10px;left:50%;transform:translateX(-50%);display:none;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;background:var(--panel);border:2px solid var(--acc);border-radius:12px;padding:8px 10px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:5;max-width:calc(100% - 20px)}
+#editbar.show{display:flex}#editbar span{font-weight:600;font-size:14px}
+#editbar input{font-size:16px;padding:7px 10px;border:1px solid var(--rule);border-radius:8px;background:var(--bg);width:12em}
+main.editing{box-shadow:inset 0 0 0 3px var(--acc)}
+.pmake{width:100%;margin-top:8px}.subrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--rule);flex-wrap:wrap}
 .zb{width:30px;height:28px;border:1px solid var(--rule);background:var(--bg);border-radius:6px;cursor:pointer}
 #modal{position:fixed;inset:0;background:rgba(10,14,16,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
 #modal.open{display:flex}
@@ -119,6 +124,7 @@ body{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) a
 #palette h4{display:none}
 .pgrid{display:flex;gap:6px;flex:none}
 .pal{flex:none;width:76px}
+.pextra{display:none}.pmake{flex:none;width:auto;margin:0;align-self:center;white-space:nowrap}
 #props{position:fixed;left:0;right:0;bottom:0;max-height:52dvh;border-left:0;border-top:1px solid var(--rule);border-radius:14px 14px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.18);transform:translateY(105%);transition:transform .2s;z-index:30}
 body.has-sel #props{transform:none}
 #props .x{display:block;position:absolute;right:10px;top:8px;width:40px;height:40px;border:0;background:none;font-size:22px;cursor:pointer;color:var(--muted)}
@@ -137,7 +143,7 @@ footer .hide-s{display:none}
   <nav class="tools" id="tools" aria-label="Werkzeuge"></nav>
 </header>
 <aside id="palette" aria-label="Bauteile"></aside>
-<main><canvas id="cv" aria-label="Arbeitsfläche der Schaltung"></canvas></main>
+<main><canvas id="cv" aria-label="Arbeitsfläche der Schaltung"></canvas><div id="editbar"><span>Baustein bearbeiten:</span><input id="subnm" maxlength="24" aria-label="Name des Bausteins" autocomplete="off"><button class="btn" data-act="subcancel">Abbrechen</button><button class="btn primary" data-act="subdone">Fertig</button></div></main>
 <section id="props" aria-label="Eigenschaften"></section>
 <footer>
   <span id="st-info"></span>
@@ -155,7 +161,7 @@ footer .hide-s{display:none}
 <input type="file" id="file" accept=".json,application/json" class="sr">
 <script>
 {
-const VERSION='1.2',G=20,$=s=>document.querySelector(s),FONT='"IBM Plex Sans",system-ui,sans-serif';
+const VERSION='1.3',G=20,$=s=>document.querySelector(s),FONT='"IBM Plex Sans",system-ui,sans-serif';
 const cv=$('#cv'),ctx=cv.getContext('2d');
 let X=ctx;
 let comps=[],wires=[],nid=1,cam={x:60,y:40,z:1},sel=new Set(),norm='din',running=true,osc=false,need=true,touch=false;
@@ -207,6 +213,34 @@ T.TEXT={cat:'Sonstiges',name:'Text',info:'Freie Beschriftung für Erklärungen u
 function textSize(c){const sz=c.sz||16,ls=(c.txt||'Text').split('\n');ctx.font=`500 ${sz}px ${FONT}`;const w=Math.max(...ls.map(l=>ctx.measureText(l).width));return[Math.max(2,Math.ceil((w+10)/G)),Math.max(1,Math.ceil((ls.length*sz*1.35)/G))]}
 T.TFFR=FF('T-Flipflop mit Löschen','Wie das T-Flipflop, zusätzlich mit Lösch-Eingang R: Solange R = 1 ist, steht Q sofort auf 0 – ganz ohne Takt (wie CLR bei echten Zähler-Chips).',[[0,1,'T'],[0,3,'>'],[0,2,'R',1]],(c,a)=>{const e=edge(c,a[1]);if(a[2]){c.q=0;return q2(c)}if(e&&a[0])c.q=c.q?0:1;return q2(c)});
 T.DFFR=FF('D-Flipflop mit Löschen','Wie das D-Flipflop, zusätzlich mit Lösch-Eingang R: Solange R = 1 ist, steht Q sofort auf 0 – ganz ohne Takt.',[[0,1,'D'],[0,3,'>'],[0,2,'R',1]],(c,a)=>{const e=edge(c,a[1]);if(a[2]){c.q=0;return q2(c)}if(e)c.q=a[0];return q2(c)});
+let SUBS=[],editing=null,pendingSub=null;
+const subDef=id=>SUBS.find(x=>x.id===id),portSort=(a,b)=>a.y-b.y||a.x-b.x,portName=(c,i,p)=>c.l||(p+(i+1));
+const cloneC=c=>{const{o,pc,acc,pd,inner,...r}=c;return JSON.parse(JSON.stringify(r))};
+const cleanSub=x=>({id:x.id,name:x.name,v:x.v||1,c:x.c.map(cloneC),w:x.w.map(w=>({...w}))});
+function subPorts(x){if(!x._p)x._p={ins:x.c.filter(c=>c.t==='SW'||c.t==='BTN').sort(portSort),outs:x.c.filter(c=>c.t==='LED').sort(portSort)};return x._p}
+function subGeom(x){if(x._g)return x._g;const p=subPorts(x),n=Math.max(p.ins.length,p.outs.length,1);ctx.font=`500 10.5px ${FONT}`;
+ const li=Math.max(0,...p.ins.map((c,i)=>ctx.measureText(portName(c,i,'E')).width)),lo=Math.max(0,...p.outs.map((c,i)=>ctx.measureText(portName(c,i,'A')).width));
+ ctx.font=`600 13px ${FONT}`;const nw=ctx.measureText(x.name).width;x._g={w:Math.max(4,Math.ceil((li+lo+nw+52)/G)),h:n+1};return x._g}
+function usesSub(x,target,d=0){return d<20&&x.c.some(c=>c.t==='SUB'&&(c.s===target||(subDef(c.s)&&usesSub(subDef(c.s),target,d+1))))}
+function mkInner(x,iq){const n=rebuildNet({comps:x.c.map(cloneC),wires:x.w.map(w=>({...w}))});
+ if(iq)for(const c of n.comps){const v=iq[c.id];if(v==null)continue;if(typeof v==='object')c.iq=v;else c.q=v}
+ const p=subPorts(x);n.v=x.v;n.ins=p.ins.map(k=>n.idx.get(k.id));n.outs=p.outs.map(k=>n.idx.get(k.id));n.init=false;return n}
+function innerQ(N){const r={};for(const c of N.comps){if(c.t==='SUB'){if(c.inner)r[c.id]=innerQ(c.inner);else if(c.iq)r[c.id]=c.iq}else if(c.q!=null)r[c.id]=c.q}return r}
+function subEv(c,a){const x=subDef(c.s);if(!x)return[];if(subDepth>12)return subPorts(x).outs.map(()=>0);
+ if(!c.inner||c.inner.v!==x.v){c.inner=mkInner(x,c.iq);delete c.iq}
+ const N=c.inner,seed=[];
+ subDepth++;try{if(!N.init){N.init=true;N.ins.forEach((k,i)=>{if(k)k.v=a[i]|0});settleN(N,N.comps)}
+  else{N.ins.forEach((k,i)=>{if(k&&(k.v|0)!==(a[i]|0)){k.v=a[i]|0;seed.push(k)}});if(seed.length)settleN(N,seed)}}finally{subDepth--}
+ return N.outs.map(l=>l?(l.v|0):0)}
+function drawSUB(c,W,H){const x=subDef(c.s);if(x){const p=subPorts(x);p.ins.forEach((_,i)=>stub(0,(i+1)*G,10,(i+1)*G));p.outs.forEach((_,i)=>stub(W-10,(i+1)*G,W,(i+1)*G))}
+ X.beginPath();rr(10,2,W-20,H-4,6);X.fillStyle=C.body;X.fill();X.stroke();X.beginPath();X.moveTo(17,6);X.lineTo(W-17,6);X.strokeStyle=C.sel;X.lineWidth=3;X.stroke()}
+T.SUB={cat:'Eigene',name:'Eigener Baustein',info:'',
+ size:c=>{const x=subDef(c.s);if(!x)return[4,2];const g=subGeom(x);return[g.w,g.h]},
+ ins:c=>{const x=subDef(c.s);return x?subPorts(x).ins.map((k,i)=>[0,i+1,portName(k,i,'E')]):[]},
+ outs:c=>{const x=subDef(c.s);if(!x)return[];const w=subGeom(x).w;return subPorts(x).outs.map((k,i)=>[w,i+1,portName(k,i,'A')])},
+ ev:subEv,draw:drawSUB,
+ text:c=>{const x=subDef(c.s);if(!x)return[{x:40,y:20,s:'Baustein fehlt',sz:11,c:'#b4232c'}];const g=subGeom(x),p=subPorts(x),W=g.w*G,H=g.h*G;
+  return[...p.ins.map((k,i)=>({x:15,y:(i+1)*G,s:portName(k,i,'E'),sz:10.5,a:'left',c:C.lo})),...p.outs.map((k,i)=>({x:W-15,y:(i+1)*G,s:portName(k,i,'A'),sz:10.5,a:'right',c:C.lo})),{x:W/2,y:H/2+(g.h>2?0:0),s:x.name,sz:13,f:600}]}};
 const ORDER=[['Eingänge',['SW','BTN','CLK','CONST']],['Ausgänge',['LED','HEX']],['Gatter',['AND','OR','NOT','NAND','NOR','XOR','XNOR','BUF']],['Speicher',['RS','DFF','JK','TFF','DFFR','TFFR']],['Sonstiges',['TEXT']]];
 
 /* ---------- Geometrie ---------- */
@@ -225,17 +259,20 @@ function routePts(P,Q,w){w=w||{};const s={x:P.x+P.dx*G,y:P.y+P.dy*G},e={x:Q.x+Q.
 function route(w){const A=idx.get(w.a[0]),B=idx.get(w.b[0]);if(!A||!B)return null;const P=pinW(A,'o',w.a[1]),Q=pinW(B,'i',w.b[1]);if(!P||!Q)return null;return routePts(P,Q,w)}
 
 /* ---------- Simulation ---------- */
-function rebuild(){idx=new Map(comps.map(c=>[c.id,c]));
- const seen=new Map();for(const w of wires){const A=idx.get(w.a[0]),B=idx.get(w.b[0]);if(A&&B&&w.a[1]<T[A.t].outs(A).length&&w.b[1]<T[B.t].ins(B).length)seen.set(w.b[0]+':'+w.b[1],w)}
- wires=[...seen.values()];srcOf=new Map();fan=new Map();
- for(const w of wires){if(!srcOf.has(w.b[0]))srcOf.set(w.b[0],[]);srcOf.get(w.b[0])[w.b[1]]=w.a;if(!fan.has(w.a[0]))fan.set(w.a[0],new Set());fan.get(w.a[0]).add(w.b[0])}
- for(const c of comps){const n=T[c.t].outs(c).length;if(!c.o||c.o.length!==n)c.o=Array(n).fill(0)}}
-function inVals(c){const s=srcOf.get(c.id),n=T[c.t].ins(c).length,a=[];for(let i=0;i<n;i++){const r=s&&s[i];const k=r&&idx.get(r[0]);a.push(k?(k.o[r[1]]|0):0)}return a}
-function settle(seed){const q=[],inq=new Set();for(const c of seed){q.push(c.id);inq.add(c.id)}let qi=0,steps=0;osc=false;
- while(qi<q.length){if(++steps>60000){osc=true;break}const id=q[qi++];inq.delete(id);const c=idx.get(id);if(!c)continue;
-  const o=T[c.t].ev(c,inVals(c))||[];let ch=false;for(let i=0;i<o.length;i++)if(o[i]!==c.o[i]){ch=true;break}
-  if(ch){c.o=o;const f=fan.get(id);if(f)for(const t of f)if(!inq.has(t)){inq.add(t);q.push(t)}}}
- need=true;updStatus()}
+let oscFlag=false,subDepth=0,M={};
+function rebuildNet(n){const ix=new Map(n.comps.map(c=>[c.id,c]));
+ const seen=new Map();for(const w of n.wires){const A=ix.get(w.a[0]),B=ix.get(w.b[0]);if(A&&B&&w.a[1]<T[A.t].outs(A).length&&w.b[1]<T[B.t].ins(B).length)seen.set(w.b[0]+':'+w.b[1],w)}
+ n.wires=[...seen.values()];n.idx=ix;n.srcOf=new Map();n.fan=new Map();
+ for(const w of n.wires){if(!n.srcOf.has(w.b[0]))n.srcOf.set(w.b[0],[]);n.srcOf.get(w.b[0])[w.b[1]]=w.a;if(!n.fan.has(w.a[0]))n.fan.set(w.a[0],new Set());n.fan.get(w.a[0]).add(w.b[0])}
+ for(const c of n.comps){const k=T[c.t].outs(c).length;if(!c.o||c.o.length!==k)c.o=Array(k).fill(0)}return n}
+function inValsN(n,c){const s=n.srcOf.get(c.id),k=T[c.t].ins(c).length,a=[];for(let i=0;i<k;i++){const r=s&&s[i];const m=r&&n.idx.get(r[0]);a.push(m?(m.o[r[1]]|0):0)}return a}
+function settleN(n,seed){const q=[],inq=new Set();for(const c of seed){q.push(c.id);inq.add(c.id)}let qi=0,steps=0;
+ while(qi<q.length){if(++steps>60000){oscFlag=true;break}const id=q[qi++];inq.delete(id);const c=n.idx.get(id);if(!c)continue;
+  const o=T[c.t].ev(c,inValsN(n,c))||[];let ch=false;for(let i=0;i<o.length;i++)if(o[i]!==c.o[i]){ch=true;break}
+  if(ch){c.o=o;const f=n.fan.get(id);if(f)for(const t of f)if(!inq.has(t)){inq.add(t);q.push(t)}}}}
+function rebuild(){M=rebuildNet({comps,wires});wires=M.wires;idx=M.idx;srcOf=M.srcOf;fan=M.fan}
+function inVals(c){return inValsN(M,c)}
+function settle(seed){M.comps=comps;oscFlag=false;settleN(M,seed);osc=oscFlag;need=true;updStatus()}
 let last=performance.now();
 setInterval(()=>{const now=performance.now(),dt=now-last;last=now;if(!running)return;const ch=[];
  for(const c of comps)if(c.t==='CLK'){c.acc=(c.acc||0)+dt;const half=500/(c.hz||1);if(c.acc>=half){c.acc%=half;c.v=c.v?0:1;ch.push(c)}}
@@ -311,21 +348,24 @@ function bounds(){let x1=1e9,y1=1e9,x2=-1e9,y2=-1e9;for(const c of comps){const 
 
 /* ---------- Bearbeiten ---------- */
 let hist=[],hi=-1,clip=null;
-function ser(){return JSON.stringify({app:'LogikLab',v:1,norm,c:comps.map(({o,pc,acc,pd,...r})=>r),w:wires})}
-function autosave(){store.set('logiklab.v1',ser())}
-function commit(){const s=ser();if(hist[hi]===s)return;hist=hist.slice(0,hi+1);hist.push(s);if(hist.length>150)hist.shift();hi=hist.length-1;store.set('logiklab.v1',s);updBtns()}
+function serComp(c){const r=cloneC(c);if(c.t==='SUB'&&c.inner)r.iq=innerQ(c.inner);return r}
+function ser(){return JSON.stringify({app:'LogikLab',v:1,norm,c:comps.map(serComp),w:wires,subs:SUBS.map(cleanSub)})}
+function persist(x){if(!editing)store.set('logiklab.v1',x)}
+function autosave(){persist(ser())}
+function commit(){const s=ser();if(hist[hi]===s)return;hist=hist.slice(0,hi+1);hist.push(s);if(hist.length>150)hist.shift();hi=hist.length-1;persist(s);updBtns()}
 function load(json,quiet){const d=typeof json==='string'?JSON.parse(json):json;if(!d||!Array.isArray(d.c)||!Array.isArray(d.w))throw new Error('Keine LogikLab-Datei');
+ SUBS=Array.isArray(d.subs)?d.subs.filter(x=>x&&x.id&&Array.isArray(x.c)&&Array.isArray(x.w)).map(cleanSub):[];
  comps=d.c.filter(c=>T[c.t]).map(c=>({...c}));wires=d.w.map(w=>({...w}));nid=1+Math.max(0,...comps.map(c=>c.id),...wires.map(w=>w.id));
- sel.clear();rebuild();settle(comps);renderProps();if(!quiet)fit();need=true}
-function undo(){if(hi>0){hi--;load(hist[hi],true);store.set('logiklab.v1',hist[hi]);updBtns()}}
-function redo(){if(hi<hist.length-1){hi++;load(hist[hi],true);store.set('logiklab.v1',hist[hi]);updBtns()}}
+ sel.clear();rebuild();settle(comps);renderPalette();renderProps();if(!quiet)fit();need=true}
+function undo(){if(hi>0){hi--;load(hist[hi],true);persist(hist[hi]);updBtns()}}
+function redo(){if(hi<hist.length-1){hi++;load(hist[hi],true);persist(hist[hi]);updBtns()}}
 function selComps(){return[...sel].filter(i=>typeof i==='number').map(i=>idx.get(i)).filter(Boolean)}
 function selWires(){return[...sel].filter(i=>typeof i==='string').map(i=>wires.find(w=>'w'+w.id===i)).filter(Boolean)}
 function del(){const cs=new Set(selComps().map(c=>c.id)),ws=new Set(selWires().map(w=>w.id));if(!cs.size&&!ws.size)return;
  comps=comps.filter(c=>!cs.has(c.id));wires=wires.filter(w=>!ws.has(w.id)&&!cs.has(w.a[0])&&!cs.has(w.b[0]));sel.clear();rebuild();settle(comps);renderProps();commit()}
 function rotate(){const cs=selComps().filter(c=>c.t!=='TEXT');if(!cs.length)return;for(const c of cs){c.r=((c.r||0)+1)%4;delete c.mx}
  for(const w of wires)if(cs.some(c=>c.id===w.a[0]||c.id===w.b[0])){delete w.mx;delete w.my;delete w.ex}need=true;commit()}
-function copy(){const cs=selComps();if(!cs.length)return;const ids=new Set(cs.map(c=>c.id));clip={c:cs.map(({o,pc,acc,pd,...r})=>({...r})),w:wires.filter(w=>ids.has(w.a[0])&&ids.has(w.b[0])).map(w=>({...w}))};toast(cs.length+' Bauteil(e) kopiert')}
+function copy(){const cs=selComps();if(!cs.length)return;const ids=new Set(cs.map(c=>c.id));clip={c:cs.map(cloneC),w:wires.filter(w=>ids.has(w.a[0])&&ids.has(w.b[0])).map(w=>({...w}))};toast(cs.length+' Bauteil(e) kopiert')}
 function paste(){if(!clip)return;const map=new Map();sel.clear();
  for(const c of clip.c){const n={...c,id:nid++,x:c.x+2,y:c.y+2};map.set(c.id,n.id);comps.push(n);sel.add(n.id)}
  for(const w of clip.w)wires.push({...w,id:nid++,a:[map.get(w.a[0]),w.a[1]],b:[map.get(w.b[0]),w.b[1]],mx:w.mx!=null?w.mx+2:undefined,my:w.my!=null?w.my+2:undefined,ex:w.ex!=null?w.ex+2:undefined});
@@ -409,19 +449,20 @@ addEventListener('keydown',e=>{if(e.target.closest&&e.target.closest('input,text
 addEventListener('keyup',e=>{if(e.key===' '){space=false;cv.style.cursor='default'}});
 
 /* ---------- Bauteilleiste ---------- */
-function renderPalette(){const p=$('#palette');p.innerHTML=ORDER.map(([cat,ts])=>`<h4>${cat}</h4><div class="pgrid">${ts.map(t=>`<button class="pal" data-t="${t}" title="${esc(T[t].name)} – ${esc(T[t].info)}"><canvas width="128" height="80"></canvas>${esc(T[t].name)}</button>`).join('')}</div>`).join('');
- p.querySelectorAll('.pal').forEach(b=>{const t=b.dataset.t,c={id:0,t,x:0,y:0,r:0,n:2,v:t==='LED'||t==='SW'||t==='CONST'?1:0,txt:'Abc',sz:18,o:[0,0],hz:1};if(t==='HEX')c.v=10;
+function renderPalette(){const p=$('#palette'),sv=SUBS.filter(x=>!editing||(x.id!==editing.sid&&!usesSub(x,editing.sid)));p.innerHTML=ORDER.map(([cat,ts])=>`<h4>${cat}</h4><div class="pgrid">${ts.map(t=>`<button class="pal" data-t="${t}" title="${esc(T[t].name)} – ${esc(T[t].info)}"><canvas width="128" height="80"></canvas>${esc(T[t].name)}</button>`).join('')}</div>`).join('')
+  +`<h4>Eigene Bausteine</h4>`+(sv.length?`<div class="pgrid">${sv.map(x=>`<button class="pal" data-t="SUB" data-s="${esc(x.id)}" title="${esc(x.name)}"><canvas width="128" height="80"></canvas>${esc(x.name)}</button>`).join('')}</div><button class="lnk pextra" data-act="sublib">Bausteine verwalten</button>`:`<p class="muted pextra" style="margin:0 4px 8px">Schaltung mit Schaltern (Eingänge) und Lampen (Ausgänge) bauen, auswählen und daraus einen Baustein machen.</p>`)+`<button class="btn pmake" data-act="submake">+ Baustein erstellen</button>`;
+ p.querySelectorAll('.pal').forEach(b=>{const t=b.dataset.t,c={id:0,t,s:b.dataset.s,x:0,y:0,r:0,n:2,v:t==='LED'||t==='SW'||t==='CONST'?1:0,txt:'Abc',sz:18,o:[0,0],hz:1};if(t==='HEX')c.v=10;
   const cn=b.querySelector('canvas'),g=cn.getContext('2d'),[w,h]=T[t].size(c),s=Math.min(116/(w*G),68/(h*G),1.6);X=g;g.setTransform(s,0,0,s,(128-w*G*s)/2,(80-h*G*s)/2);drawComp(c,false);X=ctx;
   b.addEventListener('pointerdown',palDown)})}
 let pd=null;
-function palDown(e){const b=e.currentTarget;b.setPointerCapture(e.pointerId);pd={t:b.dataset.t,x:e.clientX,y:e.clientY,moved:false};
- const mv=ev=>{if(!pd)return;if(Math.hypot(ev.clientX-pd.x,ev.clientY-pd.y)>8){pd.moved=true;const g=$('#ghost');g.textContent=T[pd.t].name;g.style.display='block';g.style.left=ev.clientX+'px';g.style.top=ev.clientY+'px'}};
- const fin=ev=>{b.removeEventListener('pointermove',mv);b.removeEventListener('pointerup',fin);b.removeEventListener('pointercancel',fin);$('#ghost').style.display='none';if(!pd)return;const t=pd.t,moved=pd.moved;pd=null;
+function palDown(e){const b=e.currentTarget;b.setPointerCapture(e.pointerId);pd={t:b.dataset.t,s:b.dataset.s,x:e.clientX,y:e.clientY,moved:false};
+ const mv=ev=>{if(!pd)return;if(Math.hypot(ev.clientX-pd.x,ev.clientY-pd.y)>8){pd.moved=true;const g=$('#ghost');g.textContent=pd.t==='SUB'?(subDef(pd.s)||{}).name:T[pd.t].name;g.style.display='block';g.style.left=ev.clientX+'px';g.style.top=ev.clientY+'px'}};
+ const fin=ev=>{b.removeEventListener('pointermove',mv);b.removeEventListener('pointerup',fin);b.removeEventListener('pointercancel',fin);$('#ghost').style.display='none';if(!pd)return;const t=pd.t,sid=pd.s,moved=pd.moved,xp=t==='SUB'?{s:sid}:undefined;pd=null;
   const r=cv.getBoundingClientRect(),inside=ev.clientX>=r.left&&ev.clientX<=r.right&&ev.clientY>=r.top&&ev.clientY<=r.bottom;
-  const tmp={t,n:2,txt:'Beschriftung',sz:16},[w,h]=T[t].size(tmp);
-  if(moved&&inside&&ev.type==='pointerup'){const p=toW(ev.clientX-r.left,ev.clientY-r.top);addComp(t,Math.round(p.x/G-w/2),Math.round(p.y/G-h/2))}
+  const tmp={t,s:sid,n:2,txt:'Beschriftung',sz:16},[w,h]=T[t].size(tmp);
+  if(moved&&inside&&ev.type==='pointerup'){const p=toW(ev.clientX-r.left,ev.clientY-r.top);addComp(t,Math.round(p.x/G-w/2),Math.round(p.y/G-h/2),xp)}
   else if(!moved){const p=toW(cv.clientWidth/2,cv.clientHeight/2);let x=Math.round(p.x/G-w/2),y=Math.round(p.y/G-h/2);
-   for(let i=0;i<40;i++){const hit=comps.some(c=>{const b2=bb(c);return x*G<b2.x+b2.w+G&&x*G+w*G>b2.x-G&&y*G<b2.y+b2.h+G&&y*G+h*G>b2.y-G});if(!hit)break;y+=2}addComp(t,x,y)}};
+   for(let i=0;i<40;i++){const hit=comps.some(c=>{const b2=bb(c);return x*G<b2.x+b2.w+G&&x*G+w*G>b2.x-G&&y*G<b2.y+b2.h+G&&y*G+h*G>b2.y-G});if(!hit)break;y+=2}addComp(t,x,y,xp)}};
  b.addEventListener('pointermove',mv);b.addEventListener('pointerup',fin);b.addEventListener('pointercancel',fin)}
 
 /* ---------- Werkzeugleiste ---------- */
@@ -432,12 +473,12 @@ redo:'<path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 000 10h3"/>',del:'<path d
 table:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M10 4v16"/>',expr:'<path d="M8 20c2 0 2-3 3-8s1-8 3-8M7 11h7M15 13l5 6M20 13l-5 6"/>',
 examples:'<path d="M4 5a2 2 0 012-2h5v17H6a2 2 0 00-2 2zM20 5a2 2 0 00-2-2h-5v17h5a2 2 0 012 2z"/>',run:'<path d="M8 5v14l11-7z"/>',pause:'<path d="M7 5h3v14H7zM14 5h3v14h-3z"/>',
 step:'<path d="M5 5v14"/><path d="M9 5l10 7-10 7z"/>',fit:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 015 0c0 2-2.5 2-2.5 4M12 17h.01"/>',
-norm:'<path d="M4 6h7v12H4zM14 6h3a5 6 0 010 12h-3z"/>'};
+norm:'<path d="M4 6h7v12H4zM14 6h3a5 6 0 010 12h-3z"/>',sub:'<rect x="6" y="4" width="12" height="16" rx="2"/><path d="M2 9h4M2 15h4M18 12h4M9 8h6"/>'};
 const ic=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[k]}</svg>`;
 const TB=[['new','Neu'],['open','Öffnen'],['save','Speichern'],['png','Als Bild'],'|',['undo','Rückgängig'],['redo','Wiederholen'],['rotate','Drehen'],['del','Löschen'],'|',
- ['table','Wahrheitstabelle',1],['expr','Term → Schaltung',1],['examples','Beispiele',1],'|',['run','Takt läuft'],['step','Einzeltakt'],'|',['norm','DIN'],['fit','Einpassen'],['help','Hilfe']];
+ ['table','Wahrheitstabelle',1],['expr','Term → Schaltung',1],['examples','Beispiele',1],['sub','Baustein erstellen'],'|',['run','Takt läuft'],['step','Einzeltakt'],'|',['norm','DIN'],['fit','Einpassen'],['help','Hilfe']];
 $('#tools').innerHTML=TB.map(b=>b==='|'?'<span class="sep"></span>':`<button class="tb${b[2]?' always':''}" data-act="${b[0]}" id="tb-${b[0]}" title="${b[1]}">${ic(b[0])}<span class="lb">${b[1]}</span></button>`).join('');
-function updBtns(){$('#tb-undo').disabled=hi<=0;$('#tb-redo').disabled=hi>=hist.length-1;
+function updBtns(){['new','open','examples'].forEach(k=>{$('#tb-'+k).disabled=!!editing});$('#tb-undo').disabled=hi<=0;$('#tb-redo').disabled=hi>=hist.length-1;
  const r=$('#tb-run');r.innerHTML=ic(running?'pause':'run')+`<span class="lb">${running?'Takt anhalten':'Takt starten'}</span>`;r.title=running?'Takt anhalten':'Takt starten';
  const n=$('#tb-norm');n.querySelector('.lb').textContent=norm==='din'?'Norm: DIN':'Norm: ANSI';n.title='Schaltzeichen umschalten (DIN/IEC ↔ ANSI/US)'}
 function updStatus(){$('#st-info').textContent=`${comps.length} Bauteile · ${wires.length} Leitungen`;$('#st-warn').classList.toggle('show',osc);$('#zoomv').textContent=Math.round(cam.z*100)+' %';
@@ -448,10 +489,11 @@ const fld=(l,h)=>`<label class="fld"><span>${l}</span>${h}</label>`;
 const opt=(v,cur,l)=>`<option value="${esc(v)}"${String(v)===String(cur)?' selected':''}>${esc(l==null?v:l)}</option>`;
 function renderProps(){const p=$('#props'),cs=selComps(),ws=selWires();document.body.classList.toggle('has-sel',cs.length+ws.length>0);let h='<button class="x" data-act="desel" aria-label="Schließen">×</button>';
  if(!cs.length&&!ws.length){h+=`<h3>Eigenschaften</h3><p class="info">Nichts ausgewählt. Ziehe ein Bauteil aus der Leiste auf die Fläche oder tippe es an. Verbinde Bauteile, indem du von einem Anschlusspunkt zu einem anderen ziehst.</p>
- <ul class="keys"><li>Schalter umlegen<kbd>Klick</kbd></li><li>Verschieben<kbd>Ziehen</kbd></li><li>Fläche verschieben<kbd>Leertaste + Ziehen</kbd></li><li>Zoomen<kbd>Mausrad</kbd></li><li>Drehen<kbd>R</kbd></li><li>Löschen<kbd>Entf</kbd></li><li>Kopieren / Einfügen<kbd>Strg C / V</kbd></li><li>Rückgängig<kbd>Strg Z</kbd></li><li>Wahrheitstabelle<kbd>W</kbd></li><li>Einpassen<kbd>F</kbd></li></ul>`}
- else if(cs.length+ws.length>1){h+=`<h3>${cs.length+ws.length} Elemente ausgewählt</h3><div class="row"><button class="btn" data-act="rotate">Drehen</button><button class="btn" data-act="dup">Duplizieren</button><button class="btn danger" data-act="del">Löschen</button></div>`}
+ <ul class="keys"><li>Schalter umlegen<kbd>Klick</kbd></li><li>Verschieben<kbd>Ziehen</kbd></li><li>Fläche verschieben<kbd>Leertaste + Ziehen</kbd></li><li>Zoomen<kbd>Mausrad</kbd></li><li>Drehen<kbd>R</kbd></li><li>Löschen<kbd>Entf</kbd></li><li>Kopieren / Einfügen<kbd>Strg C / V</kbd></li><li>Rückgängig<kbd>Strg Z</kbd></li><li>Wahrheitstabelle<kbd>W</kbd></li><li>Eigener Baustein<kbd>Auswahl → Baustein</kbd></li><li>Einpassen<kbd>F</kbd></li></ul>`}
+ else if(cs.length+ws.length>1){h+=`<h3>${cs.length+ws.length} Elemente ausgewählt</h3><div class="row">${cs.length?'<button class="btn primary" data-act="submake">Als Baustein speichern</button>':''}<button class="btn" data-act="rotate">Drehen</button><button class="btn" data-act="dup">Duplizieren</button><button class="btn danger" data-act="del">Löschen</button></div>`}
  else if(ws.length){const w=ws[0],A=idx.get(w.a[0]);h+=`<h3>Leitung</h3><p class="info">Signal: <b>${A&&A.o[w.a[1]]?1:0}</b>. Ziehe das mittlere Teilstück, um den Verlauf anzupassen.</p><div class="row"><button class="btn" data-act="resetwire">Verlauf zurücksetzen</button><button class="btn danger" data-act="del">Löschen</button></div>`}
- else{const c=cs[0],t=T[c.t];h+=`<h3>${esc(t.name)}</h3><p class="info">${esc(t.info)}</p>`;
+ else{const c=cs[0],t=T[c.t],sd=c.t==='SUB'?subDef(c.s):null,sp=sd?subPorts(sd):null;h+=`<h3>${esc(sd?sd.name:t.name)}</h3><p class="info">${sd?`Eigener Baustein mit ${sp.ins.length} Eingängen (${esc(sp.ins.map((k,i)=>portName(k,i,'E')).join(', ')||'–')}) und ${sp.outs.length} Ausgängen (${esc(sp.outs.map((k,i)=>portName(k,i,'A')).join(', ')||'–')}). Änderungen am Inneren gelten für alle Kopien.`:esc(t.info)}</p>`;
+  if(sd)h+=`<div class="row" style="margin:0 0 14px"><button class="btn primary" data-act="subedit" data-s="${esc(sd.id)}">Inneres ansehen &amp; bearbeiten</button></div>`;
   if(c.t!=='TEXT')h+=fld('Beschriftung',`<input data-k="l" value="${esc(c.l||'')}" maxlength="16" autocomplete="off">`);
   if(t.cat==='Gatter'&&!GATES[c.t].one)h+=fld('Anzahl Eingänge',`<select data-k="n">${[2,3,4,5,6,7,8].map(n=>opt(n,c.n||2)).join('')}</select>`);
   if(c.t==='LED')h+=fld('Farbe',`<select data-k="col">${Object.keys(LEDC).map(k=>opt(k,c.col||'rot',k[0].toUpperCase()+k.slice(1))).join('')}</select>`);
@@ -569,6 +611,7 @@ const EX=[
  {n:'Volladdierer',d:'Zwei Halbaddierer und ein ODER – Grundbaustein jedes Rechenwerks.',f:()=>hand((a,W)=>{const A=a('SW',2,1,{l:'A'}),B=a('SW',2,5,{l:'B'}),Ci=a('SW',2,9,{l:'Cin'}),X1=a('XOR',10,1),U1=a('AND',10,12),X2=a('XOR',18,3),U2=a('AND',18,8),O=a('OR',26,10),S=a('LED',26,4,{l:'S'}),Co=a('LED',34,11,{l:'Cout'});
   W(A,0,X1,0,{mx:6});W(A,0,U1,0,{mx:6});W(B,0,X1,1,{mx:7});W(B,0,U1,1,{mx:7});W(X1,0,X2,0);W(Ci,0,X2,1,{mx:8});W(X1,0,U2,0);W(Ci,0,U2,1,{mx:8});W(U2,0,O,0);W(U1,0,O,1);W(X2,0,S,0);W(O,0,Co,0);
   a('TEXT',2,18,{txt:'S = A ⊕ B ⊕ Cin\nCout = (A ∧ B) ∨ (Cin ∧ (A ⊕ B))',sz:16})})},
+ {n:'Addierer aus Bausteinen',d:'4-Bit-Addierer aus vier Kopien des eigenen Bausteins „Volladdierer“.',f:exSubAdder},
  {n:'RS-Flipflop aus NOR',d:'Zwei rückgekoppelte NOR-Gatter speichern ein Bit.',f:()=>hand((a,W)=>{const R=a('SW',2,1,{l:'R'}),S=a('SW',2,10,{l:'S'}),N1=a('NOR',9,1),N2=a('NOR',9,8),Q=a('LED',18,2,{l:'Q'}),Qn=a('LED',18,9,{l:'Q̅'});
   W(R,0,N1,0);W(S,0,N2,1);W(N1,0,N2,0,{my:6});W(N2,0,N1,1,{my:7,ex:7});W(N1,0,Q,0);W(N2,0,Qn,0);a('TEXT',2,14,{txt:'S = 1 setzt, R = 1 setzt zurück, beide 0 = speichern',sz:14})})},
  {n:'4-Bit-Zähler',d:'Asynchroner Binärzähler aus T-Flipflops mit Hex-Anzeige.',f:()=>hand((a,W)=>{const clk=a('CLK',2,4,{l:'Takt',hz:2});let prev=null;const ff=[];
@@ -578,6 +621,15 @@ const EX=[
  {n:'Mehrheitsentscheider',d:'Ausgang 1, wenn mindestens zwei von drei Eingängen 1 sind.',e:'Y = (A ∧ B) ∨ (A ∧ C) ∨ (B ∧ C)'},
  {n:'De Morgan',d:'Zwei Schaltungen mit gleicher Wahrheitstabelle zum Vergleichen.',e:'Y1 = ¬(A ∧ B)\nY2 = ¬A ∨ ¬B'},
  {n:'Vergleicher (1 Bit)',d:'Prüft, ob zwei Bits gleich sind, und welches größer ist.',e:'Gleich = ¬(A ⊕ B)\nGroesser = A ∧ ¬B\nKleiner = ¬A ∧ B'}];
+function exSubAdder(){const fa={id:'volladdierer',name:'Volladdierer',v:1,c:[],w:[]};let n=1;const a=(t,x,y,p={})=>{const id=n++;fa.c.push({id,t,x,y,r:0,l:'',...p});return id},L=(x,px,y,py,o={})=>fa.w.push({id:n++,a:[x,px],b:[y,py],...o});
+ const A=a('SW',2,1,{l:'A'}),B=a('SW',2,5,{l:'B'}),Ci=a('SW',2,9,{l:'Cin'}),X1=a('XOR',10,1),U1=a('AND',10,12),X2=a('XOR',18,3),U2=a('AND',18,8),O=a('OR',26,10),S=a('LED',26,4,{l:'S'}),Co=a('LED',34,11,{l:'Cout'});
+ L(A,0,X1,0,{mx:6});L(A,0,U1,0,{mx:6});L(B,0,X1,1,{mx:7});L(B,0,U1,1,{mx:7});L(X1,0,X2,0);L(Ci,0,X2,1,{mx:8});L(X1,0,U2,0);L(Ci,0,U2,1,{mx:8});L(U2,0,O,0);L(U1,0,O,1);L(X2,0,S,0);L(O,0,Co,0);
+ SUBS=SUBS.filter(x=>x.id!=='volladdierer').concat(fa);const w=subGeom(fa).w;
+ hand((a,W)=>{a('TEXT',2,-5,{txt:'4-Bit-Addierer aus dem eigenen Baustein „Volladdierer“\nBaustein antippen → „Inneres ansehen“ zeigt die Gatter darin',sz:14});
+  const Hx=21+w,H=a('HEX',Hx,2,{l:'Summe'}),Hh=a('HEX',Hx,10,{l:'16er'});let prev=null;
+  for(let i=0;i<4;i++){const y=2+7*i,sa=a('SW',2,1+7*i,{l:'A'+i,v:(3>>i)&1}),sb=a('SW',2,4+7*i,{l:'B'+i,v:(5>>i)&1}),f=a('SUB',14,y,{s:'volladdierer'});
+   W(sa,0,f,0,{mx:8});W(sb,0,f,1,{mx:9});if(prev)W(prev,1,f,2,{my:7*i,ex:12});W(f,0,H,i,i?{mx:15+w+i}:{});prev=f}
+  W(prev,1,Hh,0,{mx:19+w})});renderPalette()}
 function exDialog(){modal('Beispiele',`<p>Öffnet eine fertige Schaltung. Die aktuelle Schaltung lässt sich mit „Rückgängig“ zurückholen.</p><div class="exl">${EX.map((x,i)=>`<button class="exc" data-act="exload" data-i="${i}"><b>${esc(x.n)}</b><span>${esc(x.d)}</span></button>`).join('')}</div>`)}
 function helpDialog(){modal('Hilfe',`<ul class="hl">
 <li><b>Bauteile einfügen:</b> aus der Leiste auf die Fläche ziehen oder antippen.</li>
@@ -587,6 +639,7 @@ function helpDialog(){modal('Hilfe',`<ul class="hl">
 <li><b>Leitungsverlauf:</b> Leitung anklicken und das mittlere Teilstück verschieben.</li>
 <li><b>Fläche bewegen:</b> Leertaste oder rechte Maustaste gedrückt halten und ziehen; auf Touch-Geräten mit einem Finger auf freier Fläche. Zoomen mit Mausrad oder zwei Fingern.</li>
 <li><b>Wahrheitstabelle:</b> erstellt alle Kombinationen der Schalter und berechnet minimierte Terme (Quine-McCluskey).</li>
+<li><b>Eigene Bausteine:</b> Schaltung mit Schaltern (Eingänge) und Lampen (Ausgänge) bauen, auswählen und „Baustein erstellen“ antippen. Der Baustein lässt sich beliebig oft einsetzen; „Inneres ansehen &amp; bearbeiten“ ändert alle Kopien auf einmal. Bausteine dürfen andere Bausteine enthalten.</li>
 <li><b>Term → Schaltung:</b> baut aus einem booleschen Term automatisch die Gatterschaltung.</li>
 <li><b>Takt:</b> Takt-Bauteile laufen mit eingestellter Frequenz; „Einzeltakt“ erzeugt genau einen Impuls.</li>
 <li><b>Norm:</b> Schaltzeichen nach DIN EN 60617 (Kästen mit &, ≥1, =1) oder amerikanischer Norm ANSI.</li>
@@ -602,11 +655,46 @@ function legalDialog(){modal('Impressum & Datenschutz',`<h3 style="margin:0 0 6p
 <p>Schaltungen und Einstellungen werden ausschließlich lokal im Browser dieses Geräts gespeichert (Local Storage) und nicht übertragen. Sie lassen sich jederzeit über die Browser-Einstellungen („Websitedaten löschen“) entfernen. Gespeicherte Dateien legst du selbst ab.</p>
 <p>Die Website wird über Cloudflare, Inc. ausgeliefert. Beim Aufruf verarbeitet der Hoster technisch notwendige Verbindungsdaten (z. B. IP-Adresse, Zeitpunkt, angefragte Datei), um die Seite auszuliefern und vor Angriffen zu schützen (Art. 6 Abs. 1 lit. f DSGVO). Als installierte App oder Offline-Datei läuft LogikLab ohne jede Verbindung.</p>
 <p>Du hast das Recht auf Auskunft, Berichtigung, Löschung und Beschwerde bei einer Datenschutz-Aufsichtsbehörde. Fragen bitte an die oben genannte E-Mail-Adresse.</p>`)}
+function subMakeDialog(){if(editing&&false)return;let cs=selComps();const all=!cs.length;if(all)cs=comps.slice();
+ const ins=cs.filter(c=>c.t==='SW'||c.t==='BTN').sort(portSort),outs=cs.filter(c=>c.t==='LED').sort(portSort);
+ if(!ins.length&&!outs.length){modal('Eigenen Baustein erstellen','<ol class="hl"><li>Baue die Schaltung ganz normal. <b>Schalter</b> oder Taster werden später die <b>Eingänge</b>, <b>Lampen</b> die <b>Ausgänge</b> des Bausteins.</li><li>Teste sie mit den Schaltern.</li><li>Markiere alles (Rahmen aufziehen oder Strg A) und tippe auf „Baustein erstellen“.</li></ol><p class="muted">Der Baustein erscheint danach in der Leiste unter „Eigene Bausteine“ und lässt sich beliebig oft einsetzen.</p>');return}
+ const ids=new Set(cs.map(c=>c.id)),ext=wires.filter(w=>ids.has(w.a[0])!==ids.has(w.b[0])).length;pendingSub=[...ids];
+ modal('Eigenen Baustein erstellen',`<p>${all?'Die ganze Schaltung':'Die '+cs.length+' ausgewählten Bauteile'} werden zu einem Baustein. Schalter und Taster werden zu Eingängen, Lampen zu Ausgängen – in der Reihenfolge von oben nach unten.</p>
+ ${fld('Name des Bausteins',`<input id="subname" value="Baustein ${SUBS.length+1}" maxlength="24" autocomplete="off">`)}
+ <p class="info"><b>Eingänge:</b> ${esc(ins.map((c,i)=>portName(c,i,'E')).join(', ')||'keine')}<br><b>Ausgänge:</b> ${esc(outs.map((c,i)=>portName(c,i,'A')).join(', ')||'keine')}</p>
+ ${cs.some(c=>c.t==='CLK')?'<p class="note">Takt-Bauteile laufen innerhalb eigener Bausteine nicht. Lege den Takt als Eingang (Schalter) an und verbinde ihn außen mit einem Takt.</p>':''}
+ ${ext?`<p class="note">${ext} Leitung(en) verbinden die Auswahl mit dem Rest der Schaltung. Beim Ersetzen fallen sie weg.</p>`:''}
+ <label class="muted" style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="subrep" ${all?'':'checked'} style="width:20px;height:20px"> Auswahl durch den neuen Baustein ersetzen</label>
+ <div class="row"><button class="btn primary" data-act="subcreate">Baustein erstellen</button></div>`);setTimeout(()=>{const f=$('#subname');if(f){f.focus();f.select()}},30)}
+function subCreate(){const ids=new Set(pendingSub||[]);const cs=comps.filter(c=>ids.has(c.id));if(!cs.length){closeModal();return}
+ const name=($('#subname').value.trim()||'Baustein').slice(0,24),rp=$('#subrep').checked,mx=Math.min(...cs.map(c=>c.x)),my=Math.min(...cs.map(c=>c.y)),dx=2-mx,dy=2-my;
+ const def={id:'b'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),name,v:1,c:cs.map(c=>{const r=cloneC(c);r.x+=dx;r.y+=dy;return r}),
+  w:wires.filter(w=>ids.has(w.a[0])&&ids.has(w.b[0])).map(w=>{const r={...w};if(r.mx!=null)r.mx+=dx;if(r.my!=null)r.my+=dy;if(r.ex!=null)r.ex+=dx;return r})};
+ SUBS.push(def);closeModal();pendingSub=null;
+ if(rp){comps=comps.filter(c=>!ids.has(c.id));wires=wires.filter(w=>!ids.has(w.a[0])&&!ids.has(w.b[0]));const c={id:nid++,t:'SUB',s:def.id,x:mx,y:my,r:0,l:''};comps.push(c);sel.clear();sel.add(c.id)}
+ rebuild();settle(comps);renderPalette();renderProps();commit();toast(`Baustein „${name}“ erstellt – zu finden unter „Eigene Bausteine“`)}
+function subEdit(sid){if(editing){toast('Erst den geöffneten Baustein mit „Fertig“ schließen');return}const x=subDef(sid);if(!x)return;closeModal();
+ editing={sid,main:ser(),hist,hi,cam:{...cam}};comps=x.c.map(cloneC);wires=x.w.map(w=>({...w}));nid=1+Math.max(0,...comps.map(c=>c.id),...wires.map(w=>w.id));
+ sel.clear();hist=[];hi=-1;rebuild();settle(comps);
+ const bar=$('#editbar');bar.querySelector('#subnm').value=x.name;bar.classList.add('show');$('main').classList.add('editing');
+ renderPalette();renderProps();fit();commit();updBtns()}
+function subFinish(save){if(!editing)return;const m=editing,x=subDef(m.sid);
+ if(save&&x){const nm=$('#subnm').value.trim();x.c=comps.map(cloneC);x.w=wires.map(w=>({...w}));if(nm)x.name=nm.slice(0,24);delete x._p;delete x._g;x.v=(x.v||1)+1}
+ const lib=SUBS.map(cleanSub);editing=null;$('#editbar').classList.remove('show');$('main').classList.remove('editing');
+ load(m.main,true);SUBS=lib;for(const c of comps)if(c.t==='SUB')delete c.inner;rebuild();settle(comps);
+ hist=m.hist;hi=m.hi;cam=m.cam;renderPalette();renderProps();commit();updBtns();need=true;
+ toast(save?'Baustein gespeichert – alle Kopien sind aktualisiert':'Änderungen verworfen')}
+function subUses(id){let n=0;comps.forEach(c=>{if(c.t==='SUB'&&c.s===id)n++});SUBS.forEach(x=>x.c.forEach(c=>{if(c.t==='SUB'&&c.s===id)n++}));return n}
+function subLibDialog(){modal('Eigene Bausteine',SUBS.length?`<p>Eigene Bausteine werden zusammen mit der Schaltung gespeichert. „Bearbeiten“ öffnet das Innere – alle Kopien übernehmen die Änderung.</p>`+SUBS.map(x=>{const p=subPorts(x),u=subUses(x.id);
+  return`<div class="subrow"><div><b>${esc(x.name)}</b><br><span class="muted">${p.ins.length} Eingänge · ${p.outs.length} Ausgänge · ${u}× verwendet</span></div><div class="row" style="margin:0"><button class="btn" data-act="subedit" data-s="${esc(x.id)}">Bearbeiten</button><button class="btn danger" data-act="subdel" data-s="${esc(x.id)}"${u?' disabled title="Wird noch verwendet"':''}>Löschen</button></div></div>`}).join(''):'<p>Noch keine eigenen Bausteine.</p>')}
 function stepClock(){const cl=comps.filter(c=>c.t==='CLK');if(!cl.length){toast('Kein Takt-Bauteil in der Schaltung');return}if(running){running=false;updBtns()}
  cl.forEach(c=>c.v=0);settle(cl);cl.forEach(c=>c.v=1);settle(cl);setTimeout(()=>{cl.forEach(c=>c.v=0);settle(cl)},180)}
 
 /* ---------- Aktionen ---------- */
 const ACT={
+ sub:()=>subMakeDialog(),submake:()=>subMakeDialog(),subcreate:subCreate,sublib:subLibDialog,
+ subedit:b=>{const id=b.dataset.s||(selComps()[0]||{}).s;if(id)subEdit(id)},subdone:()=>subFinish(true),subcancel:()=>subFinish(false),
+ subdel:b=>{if(subUses(b.dataset.s))return;SUBS=SUBS.filter(x=>x.id!==b.dataset.s);renderPalette();commit();subLibDialog()},
  new:()=>{comps=[];wires=[];sel.clear();rebuild();settle([]);renderProps();fit();commit();toast('Neue Schaltung – „Rückgängig“ holt die alte zurück')},
  open:openDialog,save:saveCircuit,png:exportPNG,undo,redo,del,rotate,dup:()=>{copy();paste()},table:truthTable,expr:()=>exprDialog(),examples:exDialog,help:helpDialog,fit,
  run:()=>{running=!running;updBtns();updStatus()},step:stepClock,
