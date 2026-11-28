@@ -827,7 +827,7 @@
       var quelle2 = e.source, herkunft = e.origin;
       var ohne = function () { try { quelle2.postMessage({ lgh: 'ausweis', token: null }, herkunft); } catch (x) { } };
       if (!window.LghKonto || !window.LghKonto.angemeldet()) return ohne();
-      window.LghKonto.ausweis(q.id).then(function (r) { try { quelle2.postMessage({ lgh: 'ausweis', token: r && r.token }, herkunft); } catch (x) { } }, ohne);
+      window.LghKonto.ausweis(q.id).then(function (r) { var t = r && r.ok && r.j ? r.j.token : null; try { quelle2.postMessage({ lgh: 'ausweis', token: t || null }, herkunft); } catch (x) { } }, ohne);
       return;
     }
     if (d.lgh === 'fertig') { if (q.el && q.el._uebergabe) q.el._uebergabe.fertig = true; return; }
