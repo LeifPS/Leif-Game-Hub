@@ -813,7 +813,7 @@
   function ausKonto(f) { try { if (window.LghKonto) f(window.LghKonto); } catch (x) { } }
   window.addEventListener('message', function (e) {
     var d = e.data;
-    if (!d || (d.lgh !== 'stand' && d.lgh !== 'status' && d.lgh !== 'hallo' && d.lgh !== 'fertig' && d.lgh !== 'dlc' && d.lgh !== 'ton-bereit' && d.lgh !== 'ausweis')) return;
+    if (!d || (d.lgh !== 'stand' && d.lgh !== 'status' && d.lgh !== 'hallo' && d.lgh !== 'fertig' && d.lgh !== 'dlc' && d.lgh !== 'ton-bereit' && d.lgh !== 'ausweis' && d.lgh !== 'freunde')) return;
     var q = absender(e);
     if (!q) return;
     try { if (e.origin !== new URL(q.url).origin) return; } catch (x) { return; }
@@ -828,6 +828,18 @@
       var ohne = function () { try { quelle2.postMessage({ lgh: 'ausweis', token: null }, herkunft); } catch (x) { } };
       if (!window.LghKonto || !window.LghKonto.angemeldet()) return ohne();
       window.LghKonto.ausweis(q.id).then(function (r) { var t = r && r.ok && r.j ? r.j.token : null; try { quelle2.postMessage({ lgh: 'ausweis', token: t || null }, herkunft); } catch (x) { } }, ohne);
+      return;
+    }
+    // Spiel fragt nach den Hub-Freunden (Namen, Anzeigename, online) – nur an genau dieses Spiel-Fenster
+    if (d.lgh === 'freunde') {
+      if (d.spiel !== q.id || q.abgang) return;
+      var quelle3 = e.source, herkunft3 = e.origin;
+      var leer = function () { try { quelle3.postMessage({ lgh: 'freunde', liste: null }, herkunft3); } catch (x) { } };
+      if (!window.LghKonto || !window.LghKonto.angemeldet()) return leer();
+      window.LghKonto.freunde.liste().then(function (r) {
+        var l = r && r.ok && r.j && r.j.freunde ? r.j.freunde.map(function (f) { return { name: f.name, anzeige: f.anzeige, online: !!f.online }; }) : null;
+        try { quelle3.postMessage({ lgh: 'freunde', liste: l }, herkunft3); } catch (x) { }
+      }, leer);
       return;
     }
     if (d.lgh === 'fertig') { if (q.el && q.el._uebergabe) q.el._uebergabe.fertig = true; return; }
