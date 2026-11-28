@@ -897,7 +897,8 @@
     {
       "id": "casino",
       "name": "Casino",
-      "text": "Blackjack, Texas Hold'em mit Computergegnern und Online-Tischen, Roulette, Video-Poker und ein Automat: alle mit denselben virtuellen Chips.",
+      "text": "Online-Casino ohne Echtgeld: Texas Hold'em, Blackjack und Roulette an 3D-Tischen mit Mitspielern und Chat – ein Chipkonto für alles.",
+      "beschreibung": "Setz dich an echte 3D-Tische: Texas Hold'em mit sechs Plätzen, Blackjack mit Nebenwetten und Roulette mit drehendem Kessel. Du spielst mit anderen am Tisch, chattest und schickst Emojis. Alle Spiele teilen sich ein Chipkonto mit 10.000 Startchips – nur Spielgeld, nichts zu kaufen. Jeden Tag gibt es den Tagesbonus am Glücksrad (je länger deine Serie, desto mehr), alle drei Stunden Gratis-Chips, drei Tagesmissionen, Erfolge, Level mit neuen Tischen, Ranglisten und ein Wochenturnier mit einer Million für Platz 1. Weitere Spiele wie Omaha, Slots und Baccarat folgen.",
       "url": "https://casino.leifps.workers.dev",
       "repo": "LeifPS/casino",
       "phase": "alpha",

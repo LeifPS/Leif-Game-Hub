@@ -2147,7 +2147,7 @@
       devAnwenden(res.j.spiele || []);
     });
   }
-  var BILD_V = '4';
+  var BILD_V = '5';
   function json(url) { return fetch(url, { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); }
   function gamesJson() {
     return fetch('games.json', { cache: 'no-cache' }).then(function (r) {
