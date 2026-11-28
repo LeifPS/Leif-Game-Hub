@@ -987,6 +987,7 @@
     einladung: einladung, chatKurz: chatKurz, raumFuer: raumFuer, spielNamen: function (f) { spielNamen = f; },
     freunde: freunde, chat: chat, gruppen: gruppen, setzeOffene: setzeOffene, avatarStil: avatarStil, avatar: avatarHtml, dialog: dialog,
     dlc: { laden: function () { return api('GET', '/api/dlc'); }, kaufen: function (id) { return api('POST', '/api/dlc/kaufen', { id: id }); }, gesehen: function () { return api('POST', '/api/dlc/gesehen', {}); } },
+    ausweis: function (spiel) { return api('POST', '/api/ausweis', { spiel: spiel }); },
     bewertungen: function () { return api('GET', '/api/bewertungen'); },
     bewertung: { laden: function (id) { return api('GET', '/api/bewertung/' + encodeURIComponent(id)); }, setzen: function (id, sterne) { return api('POST', '/api/bewertung/' + encodeURIComponent(id), { sterne: sterne }); } },
     favoriten: { laden: function () { return api('GET', '/api/favoriten'); }, setzen: function (id, an) { return api('POST', '/api/favoriten', { spiel: id, an: !!an }); } },

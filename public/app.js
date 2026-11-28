@@ -813,7 +813,7 @@
   function ausKonto(f) { try { if (window.LghKonto) f(window.LghKonto); } catch (x) { } }
   window.addEventListener('message', function (e) {
     var d = e.data;
-    if (!d || (d.lgh !== 'stand' && d.lgh !== 'status' && d.lgh !== 'hallo' && d.lgh !== 'fertig' && d.lgh !== 'dlc' && d.lgh !== 'ton-bereit')) return;
+    if (!d || (d.lgh !== 'stand' && d.lgh !== 'status' && d.lgh !== 'hallo' && d.lgh !== 'fertig' && d.lgh !== 'dlc' && d.lgh !== 'ton-bereit' && d.lgh !== 'ausweis')) return;
     var q = absender(e);
     if (!q) return;
     try { if (e.origin !== new URL(q.url).origin) return; } catch (x) { return; }
@@ -821,6 +821,15 @@
     if (d.lgh === 'hallo') { var u = q.el && q.el._uebergabe; if (u && u.art === 'msg') { try { e.source.postMessage({ lgh: 'daten', json: u.json }, e.origin); } catch (x) { } } return; }
     // Das Spiel kann die Lautstärke aus dem Spielmenü übernehmen (siehe spielmenue.js und tools/lgh-vorlade.js)
     if (d.lgh === 'ton-bereit') { if (q.el && !q.abgang) { q.el._ton = true; if (window.LghSpielMenue) window.LghSpielMenue.ton(e.source, e.origin); } return; }
+    // Spiel fragt nach dem Hub-Konto (z. B. Casino mit Online-Chips): Einmal-Ausweis nur an genau dieses Spiel-Fenster
+    if (d.lgh === 'ausweis') {
+      if (d.spiel !== q.id || q.abgang) return;
+      var quelle2 = e.source, herkunft = e.origin;
+      var ohne = function () { try { quelle2.postMessage({ lgh: 'ausweis', token: null }, herkunft); } catch (x) { } };
+      if (!window.LghKonto || !window.LghKonto.angemeldet()) return ohne();
+      window.LghKonto.ausweis(q.id).then(function (r) { try { quelle2.postMessage({ lgh: 'ausweis', token: r && r.token }, herkunft); } catch (x) { } }, ohne);
+      return;
+    }
     if (d.lgh === 'fertig') { if (q.el && q.el._uebergabe) q.el._uebergabe.fertig = true; return; }
     if (d.lgh === 'dlc') {
       if (d.spiel !== q.id || q.abgang) return;

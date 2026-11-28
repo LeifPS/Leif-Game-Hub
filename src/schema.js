@@ -179,6 +179,12 @@ export const SCHEMA = [
     PRIMARY KEY (game, day, user_id)
   )`,
   `CREATE INDEX IF NOT EXISTS spiel_tag_user ON spiel_tag(user_id)`,
+  `CREATE TABLE IF NOT EXISTS spiel_ausweise (
+    token_hash TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    spiel TEXT NOT NULL,
+    ablauf INTEGER NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS limits (
     k TEXT PRIMARY KEY,
     n INTEGER NOT NULL,

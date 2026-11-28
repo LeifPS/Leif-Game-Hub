@@ -768,10 +768,30 @@ export async function handle(request, env, jetztMs = Date.now()) {
     if (pfad === '/api/ping') return antwort({ ok: true });
     if (pfad === '/api/registrieren' && m === 'POST') return await registrieren(request, db, jetzt);
     if (pfad === '/api/anmelden' && m === 'POST') return await anmelden(request, db, jetzt);
+    // Spiel-Ausweis prüfen (vom Spiel-Worker per Service-Binding, ohne Sitzung): einmal gültig, 2 Minuten
+    if (pfad === '/api/ausweis/pruefen' && m === 'POST') {
+      const { b } = await lies(request);
+      if (!b || typeof b.t !== 'string' || !/^[0-9a-f]{64}$/.test(b.t) || !SPIEL_RE.test(String(b.spiel || ''))) return fehler(400, 'eingabe');
+      const th = await sha256(b.t);
+      const a = await db.prepare('DELETE FROM spiel_ausweise WHERE token_hash = ? RETURNING user_id, spiel, ablauf').bind(th).first();
+      if (!a || a.spiel !== b.spiel || a.ablauf < jetzt) return fehler(401, 'ausweis');
+      const u = await db.prepare('SELECT id, name, display FROM users WHERE id = ?').bind(a.user_id).first();
+      if (!u) return fehler(401, 'ausweis');
+      return antwort({ id: u.id, name: u.name, anzeige: u.display || u.name });
+    }
 
     const s = await sitzung(request, db, jetzt);
     if (!s) return fehler(401, 'nicht_angemeldet');
 
+    // Ausweis für ein Spiel im Rahmen ausstellen (das Spiel bekommt nur diesen Einmal-Schlüssel, nie die Hub-Sitzung)
+    if (pfad === '/api/ausweis' && m === 'POST') {
+      const { b } = await lies(request);
+      if (!b || !SPIEL_RE.test(String(b.spiel || ''))) return fehler(400, 'spiel');
+      await db.prepare('DELETE FROM spiel_ausweise WHERE ablauf < ?').bind(jetzt).run();
+      const t = zufall(32);
+      await db.prepare('INSERT INTO spiel_ausweise (token_hash, user_id, spiel, ablauf) VALUES (?, ?, ?, ?)').bind(await sha256(t), s.id, b.spiel, jetzt + 120).run();
+      return antwort({ token: t });
+    }
     if (pfad === '/api/ich' && m === 'GET') return antwort({ name: s.name, anzeige: s.anzeige, av: avParse(s.avatar), sicht: s.sicht });
     if (pfad === '/api/anzeige' && m === 'POST') return await anzeigeAendern(request, db, s);
     if (pfad === '/api/sichtbarkeit' && m === 'POST') return await sichtAendern(request, db, s);
